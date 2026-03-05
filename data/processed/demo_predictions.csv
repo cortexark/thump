@@ -1,0 +1,11 @@
+user_id,date,status,confidence,anomaly_score,regression_flag,stress_flag,cardio_score,daily_nudge,explanation
+u100,2026-02-01,stable,high,0.000,0,0,,Keep momentum: add 10-15 minutes of brisk walking today.,confidence=high; anomaly=0.00; trend=stable-or-improving
+u100,2026-02-02,stable,high,0.000,0,0,,Keep momentum: add 10-15 minutes of brisk walking today.,confidence=high; anomaly=0.00; trend=stable-or-improving
+u100,2026-02-03,stable,high,0.000,0,0,,Keep momentum: add 10-15 minutes of brisk walking today.,confidence=high; anomaly=0.00; trend=stable-or-improving
+u100,2026-02-04,stable,high,0.000,0,0,,Reduce intensity by one level and focus on 20-30 minutes of easy activity.,confidence=high; anomaly=0.00; trend=stable-or-improving
+u100,2026-02-05,stable,high,0.000,0,0,,Reduce intensity by one level and focus on 20-30 minutes of easy activity.,confidence=high; anomaly=0.00; trend=stable-or-improving
+u100,2026-02-06,needs_attention,high,2.597,1,1,24.03,"Take 2 x 10-minute easy walks today, hydrate, and keep intensity low.",confidence=high; anomaly=2.60; trend=regressing; stress-pattern-detected
+u100,2026-02-07,stable,high,0.547,0,0,44.53,Keep momentum: add 10-15 minutes of brisk walking today.,confidence=high; anomaly=0.55; trend=stable-or-improving
+u200,2026-02-01,stable,low,0.000,0,0,,Start with one 10-minute walk today to build consistency.,confidence=low; anomaly=0.00; trend=stable-or-improving
+u200,2026-02-02,stable,low,0.000,0,0,,Start with one 10-minute walk today to build consistency.,confidence=low; anomaly=0.00; trend=stable-or-improving
+u200,2026-02-03,stable,low,0.000,0,0,,Start with one 10-minute walk today to build consistency.,confidence=low; anomaly=0.00; trend=stable-or-improving

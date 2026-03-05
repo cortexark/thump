@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — Thump</title>
+  <meta name="description" content="Terms of Service for Thump — Your Heart Training Buddy. Please read these terms carefully before using the app." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-deep: #0B0E13;
+      --bg-surface: #12161D;
+      --bg-card: #181D26;
+      --bg-elevated: #1E2430;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glow: rgba(255,120,90,0.15);
+      --coral: #FF6B5A;
+      --coral-light: #FF8E7A;
+      --amber: #FFB347;
+      --gold: #FFD93D;
+      --text-primary: #F0F2F5;
+      --text-secondary: #9BA3B0;
+      --text-muted: #5C6370;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'DM Sans', -apple-system, sans-serif;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+      --space-3xl: 4rem;
+      --space-4xl: 6rem;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* Noise texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    /* Layout */
+    .legal-page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: var(--space-4xl) var(--space-xl) var(--space-3xl);
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+      margin-bottom: var(--space-3xl);
+    }
+
+    .back-link:hover { color: var(--coral); }
+
+    .back-link svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .legal-header {
+      margin-bottom: var(--space-3xl);
+      padding-bottom: var(--space-2xl);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .legal-header h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.15;
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-header h1 span {
+      background: linear-gradient(135deg, var(--coral) 0%, var(--amber) 50%, var(--gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .effective-date {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Content */
+    .legal-content h2 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      color: var(--text-primary);
+      margin-top: var(--space-2xl);
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: var(--space-xl);
+      margin-bottom: var(--space-sm);
+    }
+
+    .legal-content p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-content ul, .legal-content ol {
+      padding-left: var(--space-lg);
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-content li {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--space-sm);
+    }
+
+    .legal-content a {
+      color: var(--coral);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.3s ease;
+    }
+
+    .legal-content a:hover { color: var(--coral-light); }
+
+    .legal-content strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .highlight-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--coral);
+      border-radius: var(--radius-sm);
+      padding: var(--space-lg);
+      margin: var(--space-xl) 0;
+    }
+
+    .highlight-box p {
+      margin-bottom: 0;
+    }
+
+    .emergency-box {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 107, 90, 0.3);
+      border-left: 3px solid #FF6B5A;
+      border-radius: var(--radius-sm);
+      padding: var(--space-lg);
+      margin: var(--space-xl) 0;
+    }
+
+    .emergency-box p {
+      margin-bottom: 0;
+      color: var(--text-primary);
+    }
+
+    /* Footer */
+    .legal-footer {
+      margin-top: var(--space-3xl);
+      padding-top: var(--space-2xl);
+      border-top: 1px solid var(--border-subtle);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .legal-footer a {
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+
+    .legal-footer a:hover { color: var(--coral); }
+
+    .legal-footer-links {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-xl);
+      margin-top: var(--space-md);
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <main class="legal-page">
+    <a href="index.html" class="back-link">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="8" x2="4" y2="8" />
+        <polyline points="8,4 4,8 8,12" />
+      </svg>
+      Back to Home
+    </a>
+
+    <header class="legal-header">
+      <h1><span>Terms of Service</span></h1>
+      <p class="effective-date">Effective Date: March 1, 2026</p>
+    </header>
+
+    <div class="legal-content">
+      <p>Please read these Terms of Service ("Terms") carefully before using the Thump app for iOS and watchOS (the "App") operated by Thump ("we", "our", or "us"). By downloading, installing, or using the App, you agree to be bound by these Terms.</p>
+
+      <h2>1. Not a Medical Device</h2>
+
+      <div class="highlight-box">
+        <p><strong>Thump is a wellness and training tool. It is NOT a medical device.</strong> The App does not diagnose, treat, cure, or prevent any disease or medical condition. Nothing in the App should be construed as medical advice.</p>
+      </div>
+
+      <p>The insights, trends, scores, and recommendations provided by Thump are for general wellness and fitness informational purposes only. They are derived from Apple Watch sensor data and general health guidelines, and are not a substitute for professional medical judgment.</p>
+
+      <h2>2. No Doctor-Patient Relationship</h2>
+      <p>Use of the App does not create a doctor-patient relationship, therapist-patient relationship, or any other healthcare provider relationship between you and Thump or its creators. The App is not staffed by medical professionals and does not provide clinical care.</p>
+
+      <h2>3. Medical Decisions and Health Disclaimer</h2>
+      <p>You should always consult a qualified healthcare professional before making any health-related decisions. Do not disregard professional medical advice or delay seeking medical attention because of information you obtained through the App.</p>
+      <p>You acknowledge and agree that:</p>
+      <ul>
+        <li>You are solely responsible for any health decisions you make</li>
+        <li>The App is not a replacement for professional medical care</li>
+        <li>Wellness insights provided by the App may not be applicable to your specific health situation</li>
+        <li>You will seek professional medical advice for any health concerns</li>
+      </ul>
+
+      <h2>4. Emergencies</h2>
+
+      <div class="emergency-box">
+        <p><strong>If you are experiencing a medical emergency, call 911 (or your local emergency number) immediately.</strong> Do not rely on Thump for emergency medical guidance. The App is not designed to detect, respond to, or assist with medical emergencies.</p>
+      </div>
+
+      <h2>5. Data Accuracy Disclaimer</h2>
+      <p>Thump relies on data collected by Apple Watch and iPhone sensors. While we strive to present this data accurately, we cannot guarantee the accuracy, completeness, or reliability of:</p>
+      <ul>
+        <li>Heart rate measurements from the Apple Watch optical sensor</li>
+        <li>Heart rate variability (HRV) calculations</li>
+        <li>VO2 max estimates</li>
+        <li>Step count data from the accelerometer</li>
+        <li>Sleep analysis and stage detection</li>
+        <li>Any derived metrics, scores, trends, or insights generated by the App</li>
+      </ul>
+      <p>Sensor accuracy can be affected by device fit, skin condition, motion, temperature, and other environmental factors. Do not rely on Thump data for clinical or diagnostic purposes.</p>
+
+      <h2>6. Subscriptions</h2>
+      <h3>Auto-Renewal</h3>
+      <p>Thump offers auto-renewing subscription plans. By subscribing, you agree to the following:</p>
+      <ul>
+        <li>Payment will be charged to your Apple ID account at confirmation of purchase</li>
+        <li>Your subscription will automatically renew unless you turn off auto-renewal at least 24 hours before the end of the current billing period</li>
+        <li>Your account will be charged for renewal within 24 hours prior to the end of the current period at the rate of your selected plan</li>
+        <li>You can manage your subscription and turn off auto-renewal in your Apple ID Account Settings after purchase</li>
+        <li>Any unused portion of a free trial period will be forfeited when you purchase a subscription</li>
+      </ul>
+      <p>All billing and payment processing is handled by Apple through StoreKit. We do not collect or store your payment information. Refund requests should be directed to Apple.</p>
+
+      <h3>Price Changes</h3>
+      <p>We may change subscription prices from time to time. Price changes will take effect at the start of the next subscription period following the date of the price change. Your continued use of the App after the price change takes effect constitutes your agreement to pay the new price.</p>
+
+      <h2>7. Apple's Standard EULA</h2>
+      <p>Your use of the App is also governed by Apple's Standard End User License Agreement (EULA) for Licensed Applications, which is available at <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">apple.com/legal/internet-services/itunes/dev/stdeula</a>. In the event of a conflict between these Terms and Apple's Standard EULA, Apple's Standard EULA shall prevail to the extent required by Apple.</p>
+
+      <h2>8. Limitation of Liability</h2>
+      <p><strong>To the maximum extent permitted by applicable law, Thump and its creators, officers, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages</strong>, including but not limited to:</p>
+      <ul>
+        <li>Damages arising from health decisions made based on information from the App</li>
+        <li>Damages resulting from inaccurate sensor data or derived insights</li>
+        <li>Loss of data stored locally on your device</li>
+        <li>Interruption or discontinuation of the App or any features</li>
+        <li>Any actions taken or not taken based on notifications or recommendations from the App</li>
+      </ul>
+      <p>In no event shall our total liability exceed the amount you paid for the App or subscription in the twelve (12) months preceding the claim.</p>
+
+      <h2>9. Disclaimer of Warranties</h2>
+      <p>The App is provided on an "AS IS" and "AS AVAILABLE" basis without warranties of any kind, whether express or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not warrant that the App will be uninterrupted, error-free, or free of harmful components.</p>
+
+      <h2>10. User Responsibilities</h2>
+      <p>By using the App, you represent and agree that:</p>
+      <ul>
+        <li>You are at least 13 years of age</li>
+        <li>You will use the App only for lawful purposes and in accordance with these Terms</li>
+        <li>You understand the limitations of consumer-grade health sensors</li>
+        <li>You will not rely on the App as a substitute for professional medical care</li>
+      </ul>
+
+      <h2>11. Intellectual Property</h2>
+      <p>The App and its original content, features, and functionality are owned by Thump and are protected by international copyright, trademark, and other intellectual property laws. You may not reproduce, distribute, modify, or create derivative works of any content from the App without our prior written consent.</p>
+
+      <h2>12. Termination</h2>
+      <p>We reserve the right to terminate or suspend your access to the App at any time, without prior notice or liability, for any reason, including breach of these Terms. Upon termination, your right to use the App will immediately cease.</p>
+
+      <h2>13. Governing Law</h2>
+      <p>These Terms shall be governed by and construed in accordance with the laws of the State of California, United States, without regard to conflict of law provisions. Any disputes arising from these Terms or your use of the App shall be resolved in the state or federal courts located in the State of California.</p>
+
+      <h2>14. Changes to These Terms</h2>
+      <p>We reserve the right to modify these Terms at any time. When we make material changes, we will update the "Effective Date" at the top of this page. Your continued use of the App following any changes constitutes acceptance of the new Terms.</p>
+
+      <h2>15. Contact Us</h2>
+      <p>If you have questions about these Terms of Service, please contact us at:</p>
+      <p><a href="mailto:support@thump.app">support@thump.app</a></p>
+    </div>
+
+    <footer class="legal-footer">
+      <p>&copy; 2026 Thump. All rights reserved.</p>
+      <div class="legal-footer-links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="disclaimer.html">Health Disclaimer</a>
+        <a href="index.html">Home</a>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>

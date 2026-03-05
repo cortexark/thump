@@ -1,0 +1,20 @@
+{
+  "subreddit": "AppleWatchFitness",
+  "crawl_timestamp_utc": "2026-03-03T23:06:16.367310+00:00",
+  "posts_count": 0,
+  "comments_count": 0,
+  "screenshots_count": 0,
+  "pages_fetched": 0,
+  "more_placeholders": 0,
+  "more_expanded_nodes": 0,
+  "next_after": null,
+  "earliest_post_utc": 0,
+  "latest_post_utc": 0,
+  "earliest_post_iso": "",
+  "latest_post_iso": "",
+  "paths": {
+    "submissions": "/Users/t/workspace/Apple-watch/data/raw/submissions.jsonl",
+    "comments": "/Users/t/workspace/Apple-watch/data/raw/comments.jsonl",
+    "screenshots": "/Users/t/workspace/Apple-watch/data/raw/screenshots.jsonl"
+  }
+}

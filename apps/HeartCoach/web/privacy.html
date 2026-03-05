@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Thump</title>
+  <meta name="description" content="Privacy Policy for Thump — Your Heart Training Buddy. Learn how we protect your health data and what information we collect." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-deep: #0B0E13;
+      --bg-surface: #12161D;
+      --bg-card: #181D26;
+      --bg-elevated: #1E2430;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glow: rgba(255,120,90,0.15);
+      --coral: #FF6B5A;
+      --coral-light: #FF8E7A;
+      --amber: #FFB347;
+      --gold: #FFD93D;
+      --text-primary: #F0F2F5;
+      --text-secondary: #9BA3B0;
+      --text-muted: #5C6370;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'DM Sans', -apple-system, sans-serif;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+      --space-3xl: 4rem;
+      --space-4xl: 6rem;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* Noise texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    /* Layout */
+    .legal-page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: var(--space-4xl) var(--space-xl) var(--space-3xl);
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+      margin-bottom: var(--space-3xl);
+    }
+
+    .back-link:hover { color: var(--coral); }
+
+    .back-link svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .legal-header {
+      margin-bottom: var(--space-3xl);
+      padding-bottom: var(--space-2xl);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .legal-header h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.15;
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-header h1 span {
+      background: linear-gradient(135deg, var(--coral) 0%, var(--amber) 50%, var(--gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .effective-date {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Content */
+    .legal-content h2 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      color: var(--text-primary);
+      margin-top: var(--space-2xl);
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: var(--space-xl);
+      margin-bottom: var(--space-sm);
+    }
+
+    .legal-content p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-content ul, .legal-content ol {
+      padding-left: var(--space-lg);
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-content li {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--space-sm);
+    }
+
+    .legal-content a {
+      color: var(--coral);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.3s ease;
+    }
+
+    .legal-content a:hover { color: var(--coral-light); }
+
+    .legal-content strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .highlight-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--coral);
+      border-radius: var(--radius-sm);
+      padding: var(--space-lg);
+      margin: var(--space-xl) 0;
+    }
+
+    .highlight-box p {
+      margin-bottom: 0;
+    }
+
+    /* Footer */
+    .legal-footer {
+      margin-top: var(--space-3xl);
+      padding-top: var(--space-2xl);
+      border-top: 1px solid var(--border-subtle);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .legal-footer a {
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+
+    .legal-footer a:hover { color: var(--coral); }
+
+    .legal-footer-links {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-xl);
+      margin-top: var(--space-md);
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <main class="legal-page">
+    <a href="index.html" class="back-link">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="8" x2="4" y2="8" />
+        <polyline points="8,4 4,8 8,12" />
+      </svg>
+      Back to Home
+    </a>
+
+    <header class="legal-header">
+      <h1><span>Privacy Policy</span></h1>
+      <p class="effective-date">Effective Date: March 1, 2026</p>
+    </header>
+
+    <div class="legal-content">
+      <p>Thump ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how information is collected, used, and safeguarded when you use the Thump app for iOS and watchOS (the "App").</p>
+
+      <div class="highlight-box">
+        <p><strong>The short version:</strong> All your health data stays on your device. We never see it, store it on our servers, or share it with anyone. We collect only anonymous usage analytics to improve the app.</p>
+      </div>
+
+      <h2>1. Health Data We Read</h2>
+      <p>With your explicit permission via Apple HealthKit, Thump may read the following health data types from your device:</p>
+      <ul>
+        <li><strong>Heart Rate</strong> -- resting, walking, and workout heart rate samples</li>
+        <li><strong>Heart Rate Variability (HRV)</strong> -- SDNN measurements</li>
+        <li><strong>VO2 Max</strong> -- cardio fitness estimates</li>
+        <li><strong>Step Count</strong> -- daily step totals</li>
+        <li><strong>Sleep Analysis</strong> -- sleep stages and duration</li>
+      </ul>
+      <p>We request read-only access to these data types. Thump does not write data to HealthKit.</p>
+
+      <h2>2. What Stays On-Device</h2>
+      <p><strong>All health data is processed and stored locally on your device.</strong> Your heart rate readings, HRV measurements, VO2 max data, step counts, and sleep information never leave your iPhone or Apple Watch. We do not operate servers that receive, process, or store your health data. All analysis, trends, and insights are computed entirely on your device.</p>
+
+      <h2>3. What We Collect</h2>
+      <h3>Anonymous Usage Analytics</h3>
+      <p>To improve the App, we collect anonymous, non-identifiable usage analytics, including:</p>
+      <ul>
+        <li>App open events (how often the App is launched)</li>
+        <li>Feature usage (which screens and features are used, without any health data content)</li>
+        <li>App performance metrics (crash reports, load times)</li>
+        <li>Device type and OS version (for compatibility purposes)</li>
+      </ul>
+      <p>We use <strong>[Analytics Provider]</strong> for anonymous usage analytics. No personally identifiable information is collected. These analytics <strong>cannot be tied to your identity</strong> and contain <strong>no health data whatsoever</strong>. They are used solely to understand how features are used so we can improve the App.</p>
+
+      <h3>What We Do Not Collect</h3>
+      <ul>
+        <li>Names, email addresses, or personal identifiers</li>
+        <li>Health data of any kind</li>
+        <li>Location data</li>
+        <li>Contacts or photos</li>
+        <li>Advertising identifiers</li>
+      </ul>
+
+      <h2>4. Subscriptions and Billing</h2>
+      <p>Thump offers optional subscription plans managed entirely through Apple's StoreKit 2 framework. All billing, payment processing, and subscription management is handled by Apple. We do not collect, process, or store any payment information. For billing inquiries, please refer to your Apple ID account settings or <a href="https://support.apple.com/billing" target="_blank" rel="noopener">Apple Support</a>.</p>
+
+      <h2>5. PDF Export</h2>
+      <p>Thump allows you to export health summaries as PDF files. This feature is entirely user-initiated. When you export a PDF, the file is generated locally on your device and saved to a destination you choose (Files, email, messaging app, etc.). We do not receive a copy of exported PDFs or know when you create them.</p>
+
+      <h2>6. Third-Party Data Sharing</h2>
+      <p><strong>We do not sell, rent, share, or transfer your data to third parties.</strong> Because health data never leaves your device, there is no health data to share. The anonymous usage analytics we collect are used only internally to improve the App and are not shared with advertisers, data brokers, or any other external parties.</p>
+
+      <h2>7. Data Security</h2>
+      <p>Your health data benefits from the security protections built into iOS and watchOS, including device encryption, the Secure Enclave, and app sandboxing. HealthKit data is encrypted at rest on your device and protected by your device passcode, Face ID, or Touch ID.</p>
+
+      <h2>8. Data Deletion</h2>
+      <p>Because all health data is stored locally on your device, you maintain full control over it. To delete all data associated with Thump:</p>
+      <ul>
+        <li><strong>Delete the App</strong> from your iPhone and Apple Watch. This removes all locally stored data, insights, and preferences.</li>
+        <li><strong>Revoke HealthKit access</strong> via Settings &gt; Health &gt; Data Access &amp; Devices &gt; Thump.</li>
+      </ul>
+      <p>No data remains on our servers after deletion because we do not store your data on our servers.</p>
+
+      <h2>9. Children's Privacy</h2>
+      <p>Thump is not designed for or directed at children under the age of 13. We do not knowingly collect information from children under 13. If you believe a child under 13 has used the App, please contact us so we can take appropriate action.</p>
+
+      <h2>10. Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. When we make material changes, we will update the "Effective Date" at the top of this page and may notify you through the App. Your continued use of Thump after changes are posted constitutes acceptance of the updated policy.</p>
+
+      <h2>11. Contact Us</h2>
+      <p>If you have questions or concerns about this Privacy Policy or our data practices, please contact us at:</p>
+      <p><a href="mailto:support@thump.app">support@thump.app</a></p>
+    </div>
+
+    <footer class="legal-footer">
+      <p>&copy; 2026 Thump. All rights reserved.</p>
+      <div class="legal-footer-links">
+        <a href="terms.html">Terms of Service</a>
+        <a href="disclaimer.html">Health Disclaimer</a>
+        <a href="index.html">Home</a>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>

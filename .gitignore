@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+.build/
+build/
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+
+# Playwright MCP
+.playwright-mcp/
+
+# Claude internal
+.claude/
+
+# Agent working directories
+.pm/
+.qae/
+.sde/
+.ux/
+.project/
+
+# IDE
+.vscode/
+.idea/
+
+# Node
+node_modules/

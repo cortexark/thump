@@ -1,0 +1,92 @@
+// ThumpiOSApp.swift
+// Thump iOS
+//
+// App entry point for the Thump iOS application. Initializes all
+// core services as @StateObject dependencies, injects them into the
+// environment, and routes between onboarding and the main tab view
+// based on the user's profile state.
+// Platforms: iOS 17+
+
+import SwiftUI
+
+// MARK: - App Entry Point
+
+/// The main entry point for the Thump iOS application.
+///
+/// Creates and owns all top-level service objects as `@StateObject`
+/// instances, ensuring they persist for the lifetime of the app.
+/// Injects services into the SwiftUI environment for access by
+/// child views and view models.
+///
+/// Routing logic:
+/// - If the user has not completed onboarding, `OnboardingView` is shown.
+/// - Otherwise, `MainTabView` is presented as the root navigation.
+@main
+struct ThumpiOSApp: App {
+
+    // MARK: - Service Dependencies
+
+    /// HealthKit data access and metric query service.
+    @StateObject var healthKitService = HealthKitService()
+
+    /// StoreKit 2 subscription management service.
+    @StateObject var subscriptionService = SubscriptionService()
+
+    /// iOS-side WatchConnectivity service for watch communication.
+    @StateObject var connectivityService = ConnectivityService()
+
+    /// UserDefaults-backed local persistence for profile, history, and settings.
+    @StateObject var localStore = LocalStore()
+
+    // MARK: - Scene
+
+    var body: some Scene {
+        WindowGroup {
+            rootView
+                .environmentObject(healthKitService)
+                .environmentObject(subscriptionService)
+                .environmentObject(connectivityService)
+                .environmentObject(localStore)
+                .task {
+                    await performStartupTasks()
+                }
+        }
+    }
+
+    // MARK: - Root View Routing
+
+    /// Routes to either onboarding or the main tab view based on
+    /// the user's onboarding completion state.
+    @ViewBuilder
+    private var rootView: some View {
+        if localStore.profile.onboardingComplete {
+            MainTabView()
+        } else {
+            OnboardingView()
+        }
+    }
+
+    // MARK: - Startup Tasks
+
+    /// Performs asynchronous initialization tasks when the app launches.
+    ///
+    /// - Loads available subscription products from the App Store.
+    /// - Updates the current subscription status from StoreKit.
+    /// - Syncs the subscription tier to the local store.
+    private func performStartupTasks() async {
+        // Start MetricKit crash reporting and performance monitoring
+        MetricKitService.shared.start()
+
+        // Load subscription products and status
+        await subscriptionService.loadProducts()
+        await subscriptionService.updateSubscriptionStatus()
+
+        // Sync subscription tier to local store
+        await MainActor.run {
+            if subscriptionService.currentTier != localStore.tier {
+                localStore.tier = subscriptionService.currentTier
+                localStore.saveTier()
+            }
+        }
+    }
+}
