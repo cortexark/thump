@@ -39,7 +39,7 @@ public struct ConfigService: Sendable {
     /// The default ``AlertPolicy`` shipped with the app.
     /// Individual thresholds can be overridden by Coach-tier users
     /// in a future settings screen.
-    public static let defaultAlertPolicy: AlertPolicy = AlertPolicy(
+    public static let defaultAlertPolicy = AlertPolicy(
         anomalyHigh: 2.0,
         regressionSlope: -0.3,
         stressRHRZ: 1.5,
@@ -117,12 +117,12 @@ public struct ConfigService: Sendable {
     /// Useful for generic gating in view code without hard-coding booleans.
     public static func isFeatureEnabled(_ featureName: String) -> Bool {
         switch featureName {
-        case "weeklyReports":          return enableWeeklyReports
-        case "correlationInsights":    return enableCorrelationInsights
-        case "watchFeedbackCapture":   return enableWatchFeedbackCapture
-        case "anomalyAlerts":          return enableAnomalyAlerts
+        case "weeklyReports": return enableWeeklyReports
+        case "correlationInsights": return enableCorrelationInsights
+        case "watchFeedbackCapture": return enableWatchFeedbackCapture
+        case "anomalyAlerts": return enableAnomalyAlerts
         case "onboardingQuestionnaire": return enableOnboardingQuestionnaire
-        default:                       return false
+        default: return false
         }
     }
 

@@ -136,15 +136,15 @@ final class ConfigServiceTests: XCTestCase {
 
     func testKnownFeatureFlagsReturnExpectedValues() {
         XCTAssertEqual(ConfigService.isFeatureEnabled("weeklyReports"),
-            ConfigService.enableWeeklyReports)
+                       ConfigService.enableWeeklyReports)
         XCTAssertEqual(ConfigService.isFeatureEnabled("correlationInsights"),
-            ConfigService.enableCorrelationInsights)
+                       ConfigService.enableCorrelationInsights)
         XCTAssertEqual(ConfigService.isFeatureEnabled("watchFeedbackCapture"),
-            ConfigService.enableWatchFeedbackCapture)
+                       ConfigService.enableWatchFeedbackCapture)
         XCTAssertEqual(ConfigService.isFeatureEnabled("anomalyAlerts"),
-            ConfigService.enableAnomalyAlerts)
+                       ConfigService.enableAnomalyAlerts)
         XCTAssertEqual(ConfigService.isFeatureEnabled("onboardingQuestionnaire"),
-            ConfigService.enableOnboardingQuestionnaire)
+                       ConfigService.enableOnboardingQuestionnaire)
     }
 
     func testUnknownFeatureFlagReturnsFalse() {
@@ -195,7 +195,7 @@ final class ConfigServiceTests: XCTestCase {
     func testAllTiersHaveDisplayNames() {
         for tier in SubscriptionTier.allCases {
             XCTAssertFalse(tier.displayName.isEmpty,
-                "\(tier) should have a display name")
+                           "\(tier) should have a display name")
         }
     }
 

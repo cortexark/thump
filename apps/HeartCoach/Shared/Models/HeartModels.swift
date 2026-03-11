@@ -26,27 +26,27 @@ public enum ConfidenceLevel: String, Codable, Equatable, Sendable, CaseIterable 
     /// User-facing display name.
     public var displayName: String {
         switch self {
-        case .high:   return "High Confidence"
+        case .high: return "High Confidence"
         case .medium: return "Medium Confidence"
-        case .low:    return "Low Confidence"
+        case .low: return "Low Confidence"
         }
     }
 
     /// Named color for SwiftUI asset catalogs or programmatic mapping.
     public var colorName: String {
         switch self {
-        case .high:   return "confidenceHigh"
+        case .high: return "confidenceHigh"
         case .medium: return "confidenceMedium"
-        case .low:    return "confidenceLow"
+        case .low: return "confidenceLow"
         }
     }
 
     /// SF Symbol icon name.
     public var icon: String {
         switch self {
-        case .high:   return "checkmark.seal.fill"
+        case .high: return "checkmark.seal.fill"
         case .medium: return "exclamationmark.triangle"
-        case .low:    return "questionmark.circle"
+        case .low: return "questionmark.circle"
         }
     }
 }
@@ -75,12 +75,12 @@ public enum NudgeCategory: String, Codable, Equatable, Sendable, CaseIterable {
     /// SF Symbol icon for this nudge category.
     public var icon: String {
         switch self {
-        case .walk:         return "figure.walk"
-        case .rest:         return "bed.double.fill"
-        case .hydrate:      return "drop.fill"
-        case .breathe:      return "wind"
-        case .moderate:     return "gauge.with.dots.needle.33percent"
-        case .celebrate:    return "star.fill"
+        case .walk: return "figure.walk"
+        case .rest: return "bed.double.fill"
+        case .hydrate: return "drop.fill"
+        case .breathe: return "wind"
+        case .moderate: return "gauge.with.dots.needle.33percent"
+        case .celebrate: return "star.fill"
         case .seekGuidance: return "heart.text.square"
         }
     }
@@ -88,12 +88,12 @@ public enum NudgeCategory: String, Codable, Equatable, Sendable, CaseIterable {
     /// Named tint color for the nudge card.
     public var tintColorName: String {
         switch self {
-        case .walk:         return "nudgeWalk"
-        case .rest:         return "nudgeRest"
-        case .hydrate:      return "nudgeHydrate"
-        case .breathe:      return "nudgeBreathe"
-        case .moderate:     return "nudgeModerate"
-        case .celebrate:    return "nudgeCelebrate"
+        case .walk: return "nudgeWalk"
+        case .rest: return "nudgeRest"
+        case .hydrate: return "nudgeHydrate"
+        case .breathe: return "nudgeBreathe"
+        case .moderate: return "nudgeModerate"
+        case .celebrate: return "nudgeCelebrate"
         case .seekGuidance: return "nudgeGuidance"
         }
     }
@@ -139,7 +139,6 @@ public struct HeartSnapshot: Codable, Equatable, Identifiable, Sendable {
     /// Sleep duration in hours.
     public let sleepHours: Double?
 
-    // swiftlint:disable:next function_parameter_count
     public init(
         date: Date,
         restingHeartRate: Double? = nil,
@@ -237,7 +236,6 @@ public struct HeartAssessment: Codable, Equatable, Sendable {
         return "\(dailyNudge.title): \(dailyNudge.description)"
     }
 
-    // swiftlint:disable:next function_parameter_count
     public init(
         status: TrendStatus,
         confidence: ConfidenceLevel,
@@ -318,7 +316,6 @@ public struct WeeklyReport: Codable, Equatable, Sendable {
     /// Percentage of nudges completed (0.0-1.0).
     public let nudgeCompletionRate: Double
 
-    // swiftlint:disable:next function_parameter_count
     public init(
         weekStart: Date,
         weekEnd: Date,
@@ -443,9 +440,9 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     /// User-facing tier name.
     public var displayName: String {
         switch self {
-        case .free:   return "Free"
-        case .pro:    return "Pro"
-        case .coach:  return "Coach"
+        case .free: return "Free"
+        case .pro: return "Pro"
+        case .coach: return "Coach"
         case .family: return "Family"
         }
     }
@@ -453,9 +450,9 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     /// Monthly price in USD.
     public var monthlyPrice: Double {
         switch self {
-        case .free:   return 0.0
-        case .pro:    return 3.99
-        case .coach:  return 6.99
+        case .free: return 0.0
+        case .pro: return 3.99
+        case .coach: return 6.99
         case .family: return 0.0  // Family is annual-only
         }
     }
@@ -463,9 +460,9 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     /// Annual price in USD.
     public var annualPrice: Double {
         switch self {
-        case .free:   return 0.0
-        case .pro:    return 29.99
-        case .coach:  return 59.99
+        case .free: return 0.0
+        case .pro: return 29.99
+        case .coach: return 59.99
         case .family: return 79.99
         }
     }
@@ -508,7 +505,7 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     /// Whether this tier grants access to full metric dashboards.
     public var canAccessFullMetrics: Bool {
         switch self {
-        case .free:   return false
+        case .free: return false
         case .pro, .coach, .family: return true
         }
     }
@@ -516,7 +513,7 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     /// Whether this tier grants access to personalized nudges.
     public var canAccessNudges: Bool {
         switch self {
-        case .free:   return false
+        case .free: return false
         case .pro, .coach, .family: return true
         }
     }
@@ -532,7 +529,7 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     /// Whether this tier grants access to activity-trend correlation analysis.
     public var canAccessCorrelations: Bool {
         switch self {
-        case .free:   return false
+        case .free: return false
         case .pro, .coach, .family: return true
         }
     }

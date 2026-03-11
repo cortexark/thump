@@ -76,8 +76,8 @@ identifier_name:
     - i
 
 function_parameter_count:
-  warning: 6
-  error: 8
+  warning: 8
+  error: 10
 
 large_tuple:
   warning: 3

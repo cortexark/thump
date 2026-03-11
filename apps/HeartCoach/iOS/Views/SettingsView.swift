@@ -147,7 +147,10 @@ struct SettingsView: View {
         } header: {
             Text("Notifications")
         } footer: {
-            Text("Anomaly alerts notify you when unusual heart patterns are detected. Nudge reminders encourage daily engagement.")
+            Text(
+                "Anomaly alerts notify you when unusual heart patterns are detected. "
+                    + "Nudge reminders encourage daily engagement."
+            )
         }
     }
 
@@ -201,8 +204,10 @@ struct SettingsView: View {
                 privacyPolicySheet
             }
 
-            Link(destination: URL(string: "https://thump.app/support")!) {
-                Label("Help & Support", systemImage: "questionmark.circle")
+            if let supportURL = URL(string: "https://thump.app/support") {
+                Link(destination: supportURL) {
+                    Label("Help & Support", systemImage: "questionmark.circle")
+                }
             }
         } header: {
             Text("About")
@@ -225,7 +230,15 @@ struct SettingsView: View {
                         .foregroundStyle(.primary)
                 }
 
-                Text("Thump is not a medical device and is not intended to diagnose, treat, cure, or prevent any disease or health condition. The insights provided are for informational and wellness purposes only. Always consult a qualified healthcare professional before making any changes to your health routine or if you have concerns about your heart health.")
+                Text(
+                    "Thump is not a medical device and is not intended to "
+                        + "diagnose, treat, cure, or prevent any disease or "
+                        + "health condition. The insights provided are for "
+                        + "informational and wellness purposes only. Always "
+                        + "consult a qualified healthcare professional before "
+                        + "making any changes to your health routine or if you "
+                        + "have concerns about your heart health."
+                )
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -244,14 +257,24 @@ struct SettingsView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("Thump takes your privacy seriously. All health data is processed on-device and is never transmitted to external servers. Your data stays on your iPhone and Apple Watch.")
+                    Text(
+                        "Thump takes your privacy seriously. All health data is "
+                            + "processed on-device and is never transmitted to "
+                            + "external servers. Your data stays on your iPhone "
+                            + "and Apple Watch."
+                    )
                         .font(.body)
                         .foregroundStyle(.secondary)
 
                     Text("Data Collection")
                         .font(.headline)
 
-                    Text("Thump reads health metrics from Apple HealthKit with your explicit permission. No data is shared with third parties. Subscription management is handled through Apple's App Store infrastructure.")
+                    Text(
+                        "Thump reads health metrics from Apple HealthKit with "
+                            + "your explicit permission. No data is shared with "
+                            + "third parties. Subscription management is handled "
+                            + "through Apple's App Store infrastructure."
+                    )
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }
@@ -305,25 +328,27 @@ struct SettingsView: View {
         guard !history.isEmpty else { return }
 
         // Build CSV header
-        var csv = "Date,Resting HR,HRV (SDNN),Recovery 1m,Recovery 2m,VO2 Max,Steps,Walk Min,Workout Min,Sleep Hours,Status,Cardio Score\n"
+        var csv = "Date,Resting HR,HRV (SDNN),Recovery 1m,Recovery 2m,"
+            + "VO2 Max,Steps,Walk Min,Workout Min,Sleep Hours,"
+            + "Status,Cardio Score\n"
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
         // Build CSV rows from stored snapshots
         for stored in history {
-            let s = stored.snapshot
+            let snap = stored.snapshot
             let row = [
-                dateFormatter.string(from: s.date),
-                s.restingHeartRate.map { String(format: "%.1f", $0) } ?? "",
-                s.hrvSDNN.map { String(format: "%.1f", $0) } ?? "",
-                s.recoveryHR1m.map { String(format: "%.1f", $0) } ?? "",
-                s.recoveryHR2m.map { String(format: "%.1f", $0) } ?? "",
-                s.vo2Max.map { String(format: "%.1f", $0) } ?? "",
-                s.steps.map { String(format: "%.0f", $0) } ?? "",
-                s.walkMinutes.map { String(format: "%.0f", $0) } ?? "",
-                s.workoutMinutes.map { String(format: "%.0f", $0) } ?? "",
-                s.sleepHours.map { String(format: "%.1f", $0) } ?? "",
+                dateFormatter.string(from: snap.date),
+                snap.restingHeartRate.map { String(format: "%.1f", $0) } ?? "",
+                snap.hrvSDNN.map { String(format: "%.1f", $0) } ?? "",
+                snap.recoveryHR1m.map { String(format: "%.1f", $0) } ?? "",
+                snap.recoveryHR2m.map { String(format: "%.1f", $0) } ?? "",
+                snap.vo2Max.map { String(format: "%.1f", $0) } ?? "",
+                snap.steps.map { String(format: "%.0f", $0) } ?? "",
+                snap.walkMinutes.map { String(format: "%.0f", $0) } ?? "",
+                snap.workoutMinutes.map { String(format: "%.0f", $0) } ?? "",
+                snap.sleepHours.map { String(format: "%.1f", $0) } ?? "",
                 stored.assessment?.status.rawValue ?? "",
                 stored.assessment?.cardioScore.map { String(format: "%.0f", $0) } ?? ""
             ].joined(separator: ",")

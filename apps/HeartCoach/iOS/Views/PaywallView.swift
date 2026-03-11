@@ -88,7 +88,11 @@ struct PaywallView: View {
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
 
-                Text("Your Heart Training Buddy — deep analytics, weekly reports, and personalized wellness insights to help you understand your heart health trends.")
+                Text(
+                    "Your Heart Training Buddy — deep analytics, weekly reports, "
+                        + "and personalized wellness insights to help you "
+                        + "understand your heart health trends."
+                )
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
@@ -342,7 +346,9 @@ struct PaywallView: View {
 
             VStack(spacing: 8) {
                 HStack(spacing: 16) {
-                    Link("Terms of Service", destination: URL(string: "https://thump.app/terms")!)
+                    if let termsURL = URL(string: "https://thump.app/terms") {
+                        Link("Terms of Service", destination: termsURL)
+                    }
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -350,12 +356,19 @@ struct PaywallView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary.opacity(0.5))
 
-                    Link("Privacy Policy", destination: URL(string: "https://thump.app/privacy")!)
+                    if let privacyURL = URL(string: "https://thump.app/privacy") {
+                        Link("Privacy Policy", destination: privacyURL)
+                    }
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                Text("Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.")
+                Text(
+                    "Payment will be charged to your Apple ID account at "
+                        + "confirmation of purchase. Subscriptions automatically "
+                        + "renew unless canceled at least 24 hours before the "
+                        + "end of the current period."
+                )
                     .font(.caption2)
                     .foregroundStyle(.secondary.opacity(0.7))
                     .multilineTextAlignment(.center)

@@ -31,18 +31,19 @@ final class KeyRotationTests: XCTestCase {
     /// After deleting the key, encrypting with a new key should work.
     func testDeleteKeyThenEncryptCreatesNewKey() throws {
         // Encrypt with initial key
-        let data = "before rotation".data(using: .utf8)!
-        let _ = try CryptoService.encrypt(data)
+        let data = Data("before rotation".utf8)
+        _ = try CryptoService.encrypt(data)
 
         // Delete the key (simulates rotation step 1)
         try CryptoService.deleteKey()
 
         // Encrypt with new key (auto-generated)
-        let newData = "after rotation".data(using: .utf8)!
+        let newData = Data("after rotation".utf8)
         let encrypted = try CryptoService.encrypt(newData)
         let decrypted = try CryptoService.decrypt(encrypted)
         XCTAssertEqual(
-            decrypted, newData,
+            decrypted,
+            newData,
             "Data encrypted after key rotation should decrypt with the new key"
         )
     }
@@ -52,19 +53,20 @@ final class KeyRotationTests: XCTestCase {
     /// be re-encrypted before the old key is deleted.
     func testOldKeyDataFailsAfterRotation() throws {
         // Encrypt with initial key
-        let data = "sensitive health data".data(using: .utf8)!
+        let data = Data("sensitive health data".utf8)
         let encryptedWithOldKey = try CryptoService.encrypt(data)
 
         // Verify it decrypts with the old key
         let decrypted = try CryptoService.decrypt(encryptedWithOldKey)
         XCTAssertEqual(
-            decrypted, data,
+            decrypted,
+            data,
             "Sanity check: old-key data decrypts before rotation"
         )
 
         // Rotate: delete old key → new key auto-generated on next encrypt
         try CryptoService.deleteKey()
-        let _ = try CryptoService.encrypt("trigger new key".data(using: .utf8)!)
+        _ = try CryptoService.encrypt(Data("trigger new key".utf8))
 
         // Attempt to decrypt old-key data with new key — should fail
         XCTAssertThrowsError(try CryptoService.decrypt(encryptedWithOldKey)) { error in
@@ -84,7 +86,7 @@ final class KeyRotationTests: XCTestCase {
             "heart rate: 72 bpm",
             "hrv: 45 ms",
             "steps: 8500"
-        ].map { $0.data(using: .utf8)! }
+        ].map { Data($0.utf8) }
 
         var encryptedRecords = try records.map { try CryptoService.encrypt($0) }
 
@@ -106,7 +108,8 @@ final class KeyRotationTests: XCTestCase {
         for (index, encrypted) in encryptedRecords.enumerated() {
             let decrypted = try CryptoService.decrypt(encrypted)
             XCTAssertEqual(
-                decrypted, records[index],
+                decrypted,
+                records[index],
                 "Record \(index) should round-trip through key rotation"
             )
         }
@@ -115,7 +118,7 @@ final class KeyRotationTests: XCTestCase {
     /// Verifies that multiple key rotations in sequence don't corrupt data
     /// when the correct re-encryption flow is followed.
     func testMultipleRotationsPreserveData() throws {
-        let original = "persistent health snapshot".data(using: .utf8)!
+        let original = Data("persistent health snapshot".utf8)
         var currentEncrypted = try CryptoService.encrypt(original)
 
         // Perform 3 sequential rotations
@@ -123,7 +126,8 @@ final class KeyRotationTests: XCTestCase {
             // Decrypt with current key
             let decrypted = try CryptoService.decrypt(currentEncrypted)
             XCTAssertEqual(
-                decrypted, original,
+                decrypted,
+                original,
                 "Data should be readable before rotation \(rotation)"
             )
 
@@ -137,7 +141,8 @@ final class KeyRotationTests: XCTestCase {
         // Final verification
         let finalDecrypted = try CryptoService.decrypt(currentEncrypted)
         XCTAssertEqual(
-            finalDecrypted, original,
+            finalDecrypted,
+            original,
             "Data should survive 3 sequential key rotations with proper re-encryption"
         )
     }
@@ -148,14 +153,15 @@ final class KeyRotationTests: XCTestCase {
         // Create 10 records
         let recordCount = 10
         let records = (0..<recordCount).map {
-            "record_\($0)".data(using: .utf8)!
+            Data("record_\($0)".utf8)
         }
         var encryptedRecords = try records.map { try CryptoService.encrypt($0) }
 
         // Decrypt all
         let decryptedRecords = try encryptedRecords.map { try CryptoService.decrypt($0) }
         XCTAssertEqual(
-            decryptedRecords.count, recordCount,
+            decryptedRecords.count,
+            recordCount,
             "All records should decrypt before rotation"
         )
 
@@ -165,7 +171,8 @@ final class KeyRotationTests: XCTestCase {
         // Re-encrypt all
         let reencryptedRecords = try decryptedRecords.map { try CryptoService.encrypt($0) }
         XCTAssertEqual(
-            reencryptedRecords.count, recordCount,
+            reencryptedRecords.count,
+            recordCount,
             "Record count must be preserved after rotation"
         )
 
@@ -173,7 +180,8 @@ final class KeyRotationTests: XCTestCase {
         for (index, encrypted) in reencryptedRecords.enumerated() {
             let decrypted = try CryptoService.decrypt(encrypted)
             XCTAssertEqual(
-                decrypted, records[index],
+                decrypted,
+                records[index],
                 "Record \(index) content must be preserved after rotation"
             )
         }
@@ -182,7 +190,7 @@ final class KeyRotationTests: XCTestCase {
     /// deleteKey() is idempotent — calling it when no key exists should not throw.
     func testDeleteKeyIdempotent() throws {
         // Ensure a key exists
-        let _ = try CryptoService.encrypt(Data([0x01]))
+        _ = try CryptoService.encrypt(Data([0x01]))
 
         // First delete — should succeed
         try CryptoService.deleteKey()

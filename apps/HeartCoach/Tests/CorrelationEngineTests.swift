@@ -1,4 +1,3 @@
-// swiftlint:disable single_test_class
 // CorrelationEngineTests.swift
 // ThumpCoreTests
 //
@@ -15,20 +14,7 @@ final class CorrelationEngineTests: XCTestCase {
 
     // MARK: - Properties
 
-    // swiftlint:disable:next implicitly_unwrapped_optional
-    private var engine: CorrelationEngine!
-
-    // MARK: - Lifecycle
-
-    override func setUp() {
-        super.setUp()
-        engine = CorrelationEngine()
-    }
-
-    override func tearDown() {
-        engine = nil
-        super.tearDown()
-    }
+    private let engine = CorrelationEngine()
 
     // MARK: - Test: Empty History
 
@@ -100,11 +86,13 @@ final class CorrelationEngineTests: XCTestCase {
         let results = engine.analyze(history: history)
         for result in results {
             XCTAssertGreaterThanOrEqual(
-                result.correlationStrength, -1.0,
+                result.correlationStrength,
+                -1.0,
                 "\(result.factorName) correlation should be >= -1.0"
             )
             XCTAssertLessThanOrEqual(
-                result.correlationStrength, 1.0,
+                result.correlationStrength,
+                1.0,
                 "\(result.factorName) correlation should be <= 1.0"
             )
         }
@@ -114,14 +102,13 @@ final class CorrelationEngineTests: XCTestCase {
 
     /// Linearly increasing steps with linearly decreasing RHR should yield
     /// a strong negative correlation (beneficial direction for steps vs RHR).
-    func testPerfectNegativeCorrelation() {
+    func testPerfectNegativeCorrelation() throws {
         let calendar = Calendar.current
         let baseDate = Date()
 
         var history: [HeartSnapshot] = []
         for i in 0..<14 {
-            // swiftlint:disable:next force_unwrapping
-            let date = calendar.date(byAdding: .day, value: -(14 - i), to: baseDate)!
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: -(14 - i), to: baseDate))
             history.append(HeartSnapshot(
                 date: date,
                 restingHeartRate: 70.0 - Double(i) * 0.5,  // Decreasing RHR
@@ -136,7 +123,8 @@ final class CorrelationEngineTests: XCTestCase {
         if let r = stepsResult {
             // Steps up, RHR down = negative correlation = beneficial
             XCTAssertLessThan(
-                r.correlationStrength, -0.8,
+                r.correlationStrength,
+                -0.8,
                 "Perfectly inverse linear relationship should yield strong negative r"
             )
         }
@@ -145,14 +133,13 @@ final class CorrelationEngineTests: XCTestCase {
     // MARK: - Test: No Correlation With Constant Values
 
     /// Constant steps with varying RHR should yield near-zero correlation.
-    func testConstantFactorYieldsZeroCorrelation() {
+    func testConstantFactorYieldsZeroCorrelation() throws {
         let calendar = Calendar.current
         let baseDate = Date()
 
         var history: [HeartSnapshot] = []
         for i in 0..<14 {
-            // swiftlint:disable:next force_unwrapping
-            let date = calendar.date(byAdding: .day, value: -(14 - i), to: baseDate)!
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: -(14 - i), to: baseDate))
             let variation = sin(Double(i) * 0.7) * 3.0
             history.append(HeartSnapshot(
                 date: date,
@@ -167,7 +154,9 @@ final class CorrelationEngineTests: XCTestCase {
         XCTAssertNotNil(stepsResult, "Steps vs RHR correlation should exist")
         if let r = stepsResult {
             XCTAssertEqual(
-                r.correlationStrength, 0.0, accuracy: 0.01,
+                r.correlationStrength,
+                0.0,
+                accuracy: 0.01,
                 "Constant steps should yield zero correlation with varying RHR"
             )
         }
@@ -176,16 +165,15 @@ final class CorrelationEngineTests: XCTestCase {
     // MARK: - Test: Nil Values Excluded From Pairing
 
     /// Days with nil steps should be excluded; only paired days count.
-    func testNilValuesExcludedFromPairing() {
+    func testNilValuesExcludedFromPairing() throws {
         let calendar = Calendar.current
         let baseDate = Date()
 
         var history: [HeartSnapshot] = []
         for i in 0..<14 {
-            // swiftlint:disable:next force_unwrapping
-            let date = calendar.date(byAdding: .day, value: -(14 - i), to: baseDate)!
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: -(14 - i), to: baseDate))
             // Only give steps to even days (7 out of 14)
-            let steps: Double? = (i % 2 == 0) ? 8000.0 + Double(i) * 100 : nil
+            let steps: Double? = i.isMultiple(of: 2) ? 8000.0 + Double(i) * 100 : nil
             history.append(HeartSnapshot(
                 date: date,
                 restingHeartRate: 62.0 + sin(Double(i)) * 2.0,
@@ -276,7 +264,6 @@ final class CorrelationEngineTests: XCTestCase {
 extension CorrelationEngineTests {
 
     /// Creates an array of HeartSnapshots with deterministic pseudo-variation.
-    // swiftlint:disable:next function_parameter_count
     private func makeHistory(
         days: Int,
         steps: Double?,
@@ -290,9 +277,10 @@ extension CorrelationEngineTests {
         let calendar = Calendar.current
         let today = Date()
 
-        return (0..<days).map { i in
-            // swiftlint:disable:next force_unwrapping
-            let date = calendar.date(byAdding: .day, value: -(days - i), to: today)!
+        return (0..<days).compactMap { i in
+            guard let date = calendar.date(byAdding: .day, value: -(days - i), to: today) else {
+                return nil
+            }
             let variation = sin(Double(i) * 0.5) * 2.0
             return HeartSnapshot(
                 date: date,

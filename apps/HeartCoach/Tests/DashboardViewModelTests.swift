@@ -9,13 +9,13 @@ import XCTest
 @MainActor
 final class DashboardViewModelTests: XCTestCase {
 
-    private var defaults: UserDefaults!
-    private var localStore: LocalStore!
+    private var defaults: UserDefaults?
+    private var localStore: LocalStore?
 
     override func setUp() {
         super.setUp()
-        defaults = UserDefaults(suiteName: "com.thump.dashboard.\(UUID().uuidString)")!
-        localStore = LocalStore(defaults: defaults)
+        defaults = UserDefaults(suiteName: "com.thump.dashboard.\(UUID().uuidString)")
+        localStore = defaults.map { LocalStore(defaults: $0) }
     }
 
     override func tearDown() {
@@ -25,7 +25,8 @@ final class DashboardViewModelTests: XCTestCase {
         super.tearDown()
     }
 
-    func testRefreshRequestsAuthorizationAndProducesAssessment() async {
+    func testRefreshRequestsAuthorizationAndProducesAssessment() async throws {
+        let localStore = try XCTUnwrap(localStore)
         let provider = MockHealthDataProvider(
             todaySnapshot: makeSnapshot(daysAgo: 0, rhr: 64.0, hrv: 48.0),
             history: makeHistory(days: 14),
@@ -48,7 +49,8 @@ final class DashboardViewModelTests: XCTestCase {
         XCTAssertEqual(localStore.loadHistory().count, 1)
     }
 
-    func testRefreshSurfacesProviderError() async {
+    func testRefreshSurfacesProviderError() async throws {
+        let localStore = try XCTUnwrap(localStore)
         let provider = MockHealthDataProvider(
             fetchError: NSError(domain: "TestError", code: -1)
         )
@@ -65,7 +67,8 @@ final class DashboardViewModelTests: XCTestCase {
         XCTAssertTrue(localStore.loadHistory().isEmpty)
     }
 
-    func testMarkNudgeCompletePersistsFeedbackAndIncrementsStreak() {
+    func testMarkNudgeCompletePersistsFeedbackAndIncrementsStreak() throws {
+        let localStore = try XCTUnwrap(localStore)
         let viewModel = DashboardViewModel(
             healthKitService: MockHealthDataProvider(),
             localStore: localStore

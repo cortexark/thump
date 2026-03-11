@@ -9,19 +9,20 @@ import XCTest
 @MainActor
 final class WatchConnectivityProviderTests: XCTestCase {
 
-    private var sut: MockWatchConnectivityProvider!
+    private var provider: MockWatchConnectivityProvider?
 
     override func setUp() {
         super.setUp()
-        sut = MockWatchConnectivityProvider()
+        provider = MockWatchConnectivityProvider()
     }
 
     override func tearDown() {
-        sut = nil
+        provider = nil
         super.tearDown()
     }
 
-    func testInitialStateDefaultValues() {
+    func testInitialStateDefaultValues() throws {
+        let sut = try XCTUnwrap(provider)
         XCTAssertNil(sut.latestAssessment)
         XCTAssertTrue(sut.isPhoneReachable)
         XCTAssertNil(sut.lastSyncDate)
@@ -30,7 +31,8 @@ final class WatchConnectivityProviderTests: XCTestCase {
         XCTAssertEqual(sut.requestAssessmentCallCount, 0)
     }
 
-    func testSendFeedbackTracksCalls() {
+    func testSendFeedbackTracksCalls() throws {
+        let sut = try XCTUnwrap(provider)
         XCTAssertTrue(sut.sendFeedback(.positive))
         XCTAssertTrue(sut.sendFeedback(.negative))
 
@@ -38,7 +40,8 @@ final class WatchConnectivityProviderTests: XCTestCase {
         XCTAssertEqual(sut.lastSentFeedback, .negative)
     }
 
-    func testRequestAssessmentDeliversConfiguredAssessment() {
+    func testRequestAssessmentDeliversConfiguredAssessment() throws {
+        let sut = try XCTUnwrap(provider)
         sut.assessmentToDeliver = makeAssessment(status: .stable)
         sut.shouldRespondToRequest = true
 
@@ -50,7 +53,8 @@ final class WatchConnectivityProviderTests: XCTestCase {
         XCTAssertNil(sut.connectionError)
     }
 
-    func testRequestAssessmentWhenPhoneUnreachableSetsError() {
+    func testRequestAssessmentWhenPhoneUnreachableSetsError() throws {
+        let sut = try XCTUnwrap(provider)
         sut.isPhoneReachable = false
 
         sut.requestLatestAssessment()
@@ -60,7 +64,8 @@ final class WatchConnectivityProviderTests: XCTestCase {
         XCTAssertTrue(sut.connectionError?.contains("not reachable") == true)
     }
 
-    func testResetClearsTrackedState() {
+    func testResetClearsTrackedState() throws {
+        let sut = try XCTUnwrap(provider)
         sut.sendFeedback(.positive)
         sut.assessmentToDeliver = makeAssessment(status: .needsAttention)
         sut.requestLatestAssessment()

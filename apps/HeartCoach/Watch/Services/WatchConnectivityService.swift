@@ -91,7 +91,10 @@ final class WatchConnectivityService: NSObject, ObservableObject {
             session.sendMessage(message, replyHandler: nil) { error in
                 // Reachability changed between check and send; fall back to transfer.
                 session.transferUserInfo(message)
-                debugPrint("[WatchConnectivity] sendMessage failed, transferred userInfo: \(error.localizedDescription)")
+                debugPrint(
+                    "[WatchConnectivity] sendMessage failed, "
+                    + "transferred userInfo: \(error.localizedDescription)"
+                )
             }
         } else {
             session.transferUserInfo(message)
@@ -121,14 +124,21 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         let request: [String: Any] = [
             "type": ConnectivityMessageType.requestAssessment.rawValue
         ]
-        session.sendMessage(request, replyHandler: { [weak self] reply in
-            self?.handleAssessmentReply(reply)
-        }, errorHandler: { [weak self] error in
-            Task { @MainActor in
-                self?.connectionError = "Sync failed: \(error.localizedDescription)"
+        session.sendMessage(
+            request,
+            replyHandler: { [weak self] reply in
+                self?.handleAssessmentReply(reply)
+            },
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    self?.connectionError = "Sync failed: \(error.localizedDescription)"
+                }
+                debugPrint(
+                    "[WatchConnectivity] requestAssessment failed: "
+                    + "\(error.localizedDescription)"
+                )
             }
-            debugPrint("[WatchConnectivity] requestAssessment failed: \(error.localizedDescription)")
-        })
+        )
     }
 
     // MARK: - Inbound Handling

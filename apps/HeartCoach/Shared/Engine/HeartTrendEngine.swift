@@ -32,7 +32,6 @@ public struct AlertPolicy: Codable, Equatable, Sendable {
     /// Maximum alerts allowed per calendar day.
     public let maxAlertsPerDay: Int
 
-    // swiftlint:disable:next function_parameter_count
     public init(
         anomalyHigh: Double = 2.0,
         regressionSlope: Double = -0.3,
@@ -191,9 +190,9 @@ public struct HeartTrendEngine: Sendable {
         if let currentRHR = current.restingHeartRate {
             let rhrValues = history.compactMap(\.restingHeartRate)
             if rhrValues.count >= 3 {
-                let z = robustZ(value: currentRHR, baseline: rhrValues)
+                let zScore = robustZ(value: currentRHR, baseline: rhrValues)
                 // For RHR, positive Z (elevated) is bad
-                weightedSum += max(z, 0) * weightRHR
+                weightedSum += max(zScore, 0) * weightRHR
                 totalWeight += weightRHR
             }
         }
@@ -202,9 +201,9 @@ public struct HeartTrendEngine: Sendable {
         if let currentHRV = current.hrvSDNN {
             let hrvValues = history.compactMap(\.hrvSDNN)
             if hrvValues.count >= 3 {
-                let z = robustZ(value: currentHRV, baseline: hrvValues)
+                let zScore = robustZ(value: currentHRV, baseline: hrvValues)
                 // For HRV, negative Z (depressed) is bad
-                weightedSum += max(-z, 0) * weightHRV
+                weightedSum += max(-zScore, 0) * weightHRV
                 totalWeight += weightHRV
             }
         }
@@ -213,8 +212,8 @@ public struct HeartTrendEngine: Sendable {
         if let currentRec1 = current.recoveryHR1m {
             let rec1Values = history.compactMap(\.recoveryHR1m)
             if rec1Values.count >= 3 {
-                let z = robustZ(value: currentRec1, baseline: rec1Values)
-                weightedSum += max(-z, 0) * weightRecovery1m
+                let zScore = robustZ(value: currentRec1, baseline: rec1Values)
+                weightedSum += max(-zScore, 0) * weightRecovery1m
                 totalWeight += weightRecovery1m
             }
         }
@@ -223,8 +222,8 @@ public struct HeartTrendEngine: Sendable {
         if let currentRec2 = current.recoveryHR2m {
             let rec2Values = history.compactMap(\.recoveryHR2m)
             if rec2Values.count >= 3 {
-                let z = robustZ(value: currentRec2, baseline: rec2Values)
-                weightedSum += max(-z, 0) * weightRecovery2m
+                let zScore = robustZ(value: currentRec2, baseline: rec2Values)
+                weightedSum += max(-zScore, 0) * weightRecovery2m
                 totalWeight += weightRecovery2m
             }
         }
@@ -233,8 +232,8 @@ public struct HeartTrendEngine: Sendable {
         if let currentVO2 = current.vo2Max {
             let vo2Values = history.compactMap(\.vo2Max)
             if vo2Values.count >= 3 {
-                let z = robustZ(value: currentVO2, baseline: vo2Values)
-                weightedSum += max(-z, 0) * weightVO2
+                let zScore = robustZ(value: currentVO2, baseline: vo2Values)
+                weightedSum += max(-zScore, 0) * weightVO2
                 totalWeight += weightVO2
             }
         }
@@ -337,8 +336,8 @@ public struct HeartTrendEngine: Sendable {
         if let currentRHR = current.restingHeartRate {
             let rhrValues = history.compactMap(\.restingHeartRate)
             if rhrValues.count >= 3 {
-                let z = robustZ(value: currentRHR, baseline: rhrValues)
-                rhrElevated = z >= policy.stressRHRZ
+                let zScore = robustZ(value: currentRHR, baseline: rhrValues)
+                rhrElevated = zScore >= policy.stressRHRZ
             }
         }
 
@@ -346,8 +345,8 @@ public struct HeartTrendEngine: Sendable {
         if let currentHRV = current.hrvSDNN {
             let hrvValues = history.compactMap(\.hrvSDNN)
             if hrvValues.count >= 3 {
-                let z = robustZ(value: currentHRV, baseline: hrvValues)
-                hrvDepressed = z <= policy.stressHRVZ
+                let zScore = robustZ(value: currentHRV, baseline: hrvValues)
+                hrvDepressed = zScore <= policy.stressHRVZ
             }
         }
 
@@ -355,14 +354,14 @@ public struct HeartTrendEngine: Sendable {
         if let currentRec = current.recoveryHR1m {
             let recValues = history.compactMap(\.recoveryHR1m)
             if recValues.count >= 3 {
-                let z = robustZ(value: currentRec, baseline: recValues)
-                recoveryDepressed = z <= policy.stressRecoveryZ
+                let zScore = robustZ(value: currentRec, baseline: recValues)
+                recoveryDepressed = zScore <= policy.stressRecoveryZ
             }
         } else if let currentRec = current.recoveryHR2m {
             let recValues = history.compactMap(\.recoveryHR2m)
             if recValues.count >= 3 {
-                let z = robustZ(value: currentRec, baseline: recValues)
-                recoveryDepressed = z <= policy.stressRecoveryZ
+                let zScore = robustZ(value: currentRec, baseline: recValues)
+                recoveryDepressed = zScore <= policy.stressRecoveryZ
             }
         }
 
@@ -392,7 +391,6 @@ public struct HeartTrendEngine: Sendable {
     // MARK: - Explanation Builder
 
     /// Build a human-readable explanation string.
-    // swiftlint:disable:next function_parameter_count
     private func buildExplanation(
         status: TrendStatus,
         confidence: ConfidenceLevel,
@@ -511,7 +509,7 @@ public struct HeartTrendEngine: Sendable {
         guard !values.isEmpty else { return 0.0 }
         let sorted = values.sorted()
         let count = sorted.count
-        if count % 2 == 0 {
+        if count.isMultiple(of: 2) {
             return (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0
         }
         return sorted[count / 2]

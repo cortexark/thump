@@ -202,23 +202,21 @@ public enum MockData {
     // MARK: - Sample Profile
 
     /// A completed-onboarding user profile for preview use.
-    // swiftlint:disable force_unwrapping
     public static let sampleProfile = UserProfile(
         displayName: "Alex",
         joinDate: Calendar.current.date(
             byAdding: .day,
             value: -45,
             to: Date()
-        )!,
+        ) ?? Date(),
         onboardingComplete: true,
         streakDays: 12
     )
-    // swiftlint:enable force_unwrapping
 
     // MARK: - Sample Correlations
 
     /// Realistic correlation results across four factor pairs.
-    public static let sampleCorrelations: [CorrelationResult] = [
+    public static let sampleCorrelations = [
         CorrelationResult(
             factorName: "Daily Steps",
             correlationStrength: -0.42,
@@ -252,7 +250,7 @@ public enum MockData {
     // MARK: - Sample Weekly Report
 
     /// A representative weekly report for preview use.
-    public static let sampleWeeklyReport: WeeklyReport = {
+    public static let sampleWeeklyReport = {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         // swiftlint:disable:next force_unwrapping

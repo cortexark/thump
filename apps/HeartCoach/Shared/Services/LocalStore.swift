@@ -259,7 +259,10 @@ public final class LocalStore: ObservableObject {
         // Log the error so data corruption is visible in production builds.
         // assertionFailure is a no-op in release, which silently swallows
         // the failure and leaves the user unaware of unreadable data.
-        print("[LocalStore] ERROR: Failed to decrypt/decode \(T.self) from key \(key.rawValue). Stored data may be corrupted.")
+        print(
+            "[LocalStore] ERROR: Failed to decrypt/decode \(T.self) "
+            + "from key \(key.rawValue). Stored data may be corrupted."
+        )
         #if DEBUG
         assertionFailure("[LocalStore] Failed to decrypt/decode \(T.self)")
         #endif

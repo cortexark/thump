@@ -37,7 +37,6 @@ public struct NudgeGenerator: Sendable {
     ///   - current: Today's snapshot.
     ///   - history: Recent historical snapshots.
     /// - Returns: A contextually appropriate `DailyNudge`.
-    // swiftlint:disable:next function_parameter_count
     public func generate(
         confidence: ConfidenceLevel,
         anomaly: Double,

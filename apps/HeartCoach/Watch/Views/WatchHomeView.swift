@@ -143,19 +143,30 @@ struct WatchHomeView: View {
             .buttonStyle(.plain)
             .disabled(viewModel.feedbackSubmitted)
             .accessibilityLabel("Thumbs up")
-            .accessibilityHint(viewModel.feedbackSubmitted ? "Feedback already submitted" : "Double tap to rate this assessment positively")
+            .accessibilityHint(
+                viewModel.feedbackSubmitted
+                    ? "Feedback already submitted"
+                    : "Double tap to rate this assessment positively"
+            )
 
             Button {
                 viewModel.submitFeedback(.negative)
             } label: {
-                Image(systemName: viewModel.submittedFeedbackType == .negative ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                Image(
+                    systemName: viewModel.submittedFeedbackType == .negative
+                        ? "hand.thumbsdown.fill" : "hand.thumbsdown"
+                )
                     .font(.title3)
                     .foregroundStyle(.orange)
             }
             .buttonStyle(.plain)
             .disabled(viewModel.feedbackSubmitted)
             .accessibilityLabel("Thumbs down")
-            .accessibilityHint(viewModel.feedbackSubmitted ? "Feedback already submitted" : "Double tap to rate this assessment negatively")
+            .accessibilityHint(
+                viewModel.feedbackSubmitted
+                    ? "Feedback already submitted"
+                    : "Double tap to rate this assessment negatively"
+            )
         }
         .padding(.vertical, 4)
     }

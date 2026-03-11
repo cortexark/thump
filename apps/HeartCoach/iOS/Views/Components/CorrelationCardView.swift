@@ -187,7 +187,8 @@ struct CorrelationCardView: View {
         correlation: CorrelationResult(
             factorName: "Daily Steps",
             correlationStrength: 0.72,
-            interpretation: "Higher daily step counts are strongly associated with improved HRV readings the following day.",
+            interpretation: "Higher daily step counts are strongly associated "
+                + "with improved HRV readings the following day.",
             confidence: .high
         )
     )
@@ -199,7 +200,8 @@ struct CorrelationCardView: View {
         correlation: CorrelationResult(
             factorName: "Alcohol Consumption",
             correlationStrength: -0.45,
-            interpretation: "Days with reported alcohol consumption tend to show elevated resting heart rate and reduced HRV.",
+            interpretation: "Days with reported alcohol consumption tend to show "
+                + "elevated resting heart rate and reduced HRV.",
             confidence: .medium
         )
     )
@@ -223,7 +225,9 @@ struct CorrelationCardView: View {
         correlation: CorrelationResult(
             factorName: "Late-Night Screen Time",
             correlationStrength: -0.68,
-            interpretation: "Extended screen time before bed is strongly correlated with reduced sleep quality and elevated next-day resting heart rate.",
+            interpretation: "Extended screen time before bed is strongly "
+                + "correlated with reduced sleep quality and elevated "
+                + "next-day resting heart rate.",
             confidence: .high
         )
     )

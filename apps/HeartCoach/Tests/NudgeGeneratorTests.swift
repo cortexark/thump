@@ -14,20 +14,7 @@ final class NudgeGeneratorTests: XCTestCase {
 
     // MARK: - Properties
 
-    // swiftlint:disable:next implicitly_unwrapped_optional
-    private var generator: NudgeGenerator!
-
-    // MARK: - Lifecycle
-
-    override func setUp() {
-        super.setUp()
-        generator = NudgeGenerator()
-    }
-
-    override func tearDown() {
-        generator = nil
-        super.tearDown()
-    }
+    private let generator = NudgeGenerator()
 
     // MARK: - Test: Stress Context Nudge
 
@@ -129,32 +116,39 @@ final class NudgeGeneratorTests: XCTestCase {
 
     /// Every generated nudge must have non-empty title, description, and icon.
     func testNudgeStructuralValidity() {
-        let contexts: [(ConfidenceLevel, Double, Bool, Bool, DailyFeedback?)] = [
-            (.high, 3.0, false, true, nil),        // stress
-            (.high, 1.5, true, false, nil),         // regression
-            (.low, 0.5, false, false, nil),          // low confidence
-            (.high, 0.3, false, false, .negative),   // negative feedback
-            (.high, 0.2, false, false, .positive),   // positive
-            (.medium, 0.8, false, false, nil),        // default
+        let contexts: [NudgeTestContext] = [
+            NudgeTestContext(confidence: .high, anomaly: 3.0, regression: false, stress: true, feedback: nil),
+            NudgeTestContext(confidence: .high, anomaly: 1.5, regression: true, stress: false, feedback: nil),
+            NudgeTestContext(confidence: .low, anomaly: 0.5, regression: false, stress: false, feedback: nil),
+            NudgeTestContext(confidence: .high, anomaly: 0.3, regression: false, stress: false, feedback: .negative),
+            NudgeTestContext(confidence: .high, anomaly: 0.2, regression: false, stress: false, feedback: .positive),
+            NudgeTestContext(confidence: .medium, anomaly: 0.8, regression: false, stress: false, feedback: nil)
         ]
 
-        for (confidence, anomaly, regression, stress, feedback) in contexts {
+        for context in contexts {
             let nudge = generator.generate(
-                confidence: confidence,
-                anomaly: anomaly,
-                regression: regression,
-                stress: stress,
-                feedback: feedback,
+                confidence: context.confidence,
+                anomaly: context.anomaly,
+                regression: context.regression,
+                stress: context.stress,
+                feedback: context.feedback,
                 current: makeSnapshot(rhr: 65, hrv: 50),
                 history: makeHistory(days: 14)
             )
 
-            XCTAssertFalse(nudge.title.isEmpty,
-                           "Nudge title should not be empty for context: conf=\(confidence), stress=\(stress)")
-            XCTAssertFalse(nudge.description.isEmpty,
-                           "Nudge description should not be empty for context: conf=\(confidence), stress=\(stress)")
-            XCTAssertFalse(nudge.icon.isEmpty,
-                           "Nudge icon should not be empty for context: conf=\(confidence), stress=\(stress)")
+            let label = "conf=\(context.confidence), stress=\(context.stress)"
+            XCTAssertFalse(
+                nudge.title.isEmpty,
+                "Nudge title should not be empty for context: \(label)"
+            )
+            XCTAssertFalse(
+                nudge.description.isEmpty,
+                "Nudge description should not be empty for context: \(label)"
+            )
+            XCTAssertFalse(
+                nudge.icon.isEmpty,
+                "Nudge icon should not be empty for context: \(label)"
+            )
         }
     }
 
@@ -217,6 +211,16 @@ final class NudgeGeneratorTests: XCTestCase {
     }
 }
 
+// MARK: - NudgeTestContext
+
+private struct NudgeTestContext {
+    let confidence: ConfidenceLevel
+    let anomaly: Double
+    let regression: Bool
+    let stress: Bool
+    let feedback: DailyFeedback?
+}
+
 // MARK: - Test Helpers
 
 extension NudgeGeneratorTests {
@@ -244,9 +248,10 @@ extension NudgeGeneratorTests {
     private func makeHistory(days: Int) -> [HeartSnapshot] {
         let calendar = Calendar.current
         let today = Date()
-        return (0..<days).map { dayOffset in
-            // swiftlint:disable:next force_unwrapping
-            let date = calendar.date(byAdding: .day, value: -(days - dayOffset), to: today)!
+        return (0..<days).compactMap { dayOffset in
+            guard let date = calendar.date(byAdding: .day, value: -(days - dayOffset), to: today) else {
+                return nil
+            }
             let variation = sin(Double(dayOffset) * 0.5) * 2.0
             return HeartSnapshot(
                 date: date,

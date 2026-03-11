@@ -85,7 +85,8 @@ struct InsightsView: View {
                 } else {
                     lockedCard(
                         title: "Weekly Report",
-                        description: "Unlock AI-guided weekly reviews, multi-week trend analysis, and shareable health reports.",
+                        description: "Unlock AI-guided weekly reviews, multi-week trend analysis, "
+                            + "and shareable health reports.",
                         requiredTier: "Coach"
                     )
                 }
@@ -182,7 +183,8 @@ struct InsightsView: View {
             } else {
                 lockedCard(
                     title: "Correlations",
-                    description: "Upgrade to Pro to see how your activity, sleep, and exercise correlate with heart health trends.",
+                    description: "Upgrade to Pro to see how your activity, sleep, "
+                        + "and exercise correlate with heart health trends.",
                     requiredTier: "Pro"
                 )
             }

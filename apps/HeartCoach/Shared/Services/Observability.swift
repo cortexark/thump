@@ -14,18 +14,18 @@ import os
 
 /// Severity levels for structured log messages.
 public enum LogLevel: String, Sendable, Comparable {
-    case debug   = "DEBUG"
-    case info    = "INFO"
+    case debug = "DEBUG"
+    case info = "INFO"
     case warning = "WARNING"
-    case error   = "ERROR"
+    case error = "ERROR"
 
     /// Numeric ordering so that `<` means "less severe".
     private var severity: Int {
         switch self {
-        case .debug:   return 0
-        case .info:    return 1
+        case .debug: return 0
+        case .info: return 1
         case .warning: return 2
-        case .error:   return 3
+        case .error: return 3
         }
     }
 
@@ -36,10 +36,10 @@ public enum LogLevel: String, Sendable, Comparable {
     /// Map to the corresponding `OSLogType` for `os.Logger`.
     var osLogType: OSLogType {
         switch self {
-        case .debug:   return .debug
-        case .info:    return .info
+        case .debug: return .debug
+        case .info: return .info
         case .warning: return .default  // os.Logger has no .warning
-        case .error:   return .error
+        case .error: return .error
         }
     }
 }

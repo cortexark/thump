@@ -207,9 +207,14 @@ struct TrendChartView: View {
 /// Generates mock time-series data for chart previews.
 private func mockDataPoints(count: Int, baseValue: Double, variance: Double) -> [(date: Date, value: Double)] {
     let calendar = Calendar.current
-    return (0..<count).map { i in
-        // swiftlint:disable:next force_unwrapping
-        let date = calendar.date(byAdding: .day, value: -count + i + 1, to: Date())!
+    return (0..<count).compactMap { i in
+        guard let date = calendar.date(
+            byAdding: .day,
+            value: -count + i + 1,
+            to: Date()
+        ) else {
+            return nil
+        }
         let jitter = Double.random(in: -variance...variance)
         let trend = Double(i) * 0.3 // slight upward trend
         return (date: date, value: baseValue + jitter + trend)

@@ -87,7 +87,10 @@ final class ConnectivityService: NSObject, ObservableObject {
         if session.isReachable {
             session.sendMessage(message, replyHandler: nil) { error in
                 // Reachability changed; fall back to guaranteed delivery.
-                debugPrint("[ConnectivityService] sendMessage failed, using transferUserInfo: \(error.localizedDescription)")
+                debugPrint(
+                    "[ConnectivityService] sendMessage failed, "
+                    + "using transferUserInfo: \(error.localizedDescription)"
+                )
                 session.transferUserInfo(message)
             }
         } else {

@@ -70,7 +70,7 @@ final class HealthDataProviderTests: XCTestCase {
         )
 
         do {
-            let _ = try await provider.fetchTodaySnapshot()
+            _ = try await provider.fetchTodaySnapshot()
             XCTFail("Should have thrown")
         } catch {
             XCTAssertEqual(provider.fetchTodayCallCount, 1)
@@ -82,7 +82,11 @@ final class HealthDataProviderTests: XCTestCase {
     func testFetchHistoryReturnsConfiguredData() async throws {
         let history = (1...7).map { day in
             HeartSnapshot(
-                date: Calendar.current.date(byAdding: .day, value: -day, to: Date())!,
+                date: Calendar.current.date(
+                    byAdding: .day,
+                    value: -day,
+                    to: Date()
+                ) ?? Date(),
                 restingHeartRate: Double(60 + day)
             )
         }
@@ -108,8 +112,8 @@ final class HealthDataProviderTests: XCTestCase {
     func testResetClearsCallCounts() async throws {
         let provider = MockHealthDataProvider()
         try await provider.requestAuthorization()
-        let _ = try await provider.fetchTodaySnapshot()
-        let _ = try await provider.fetchHistory(days: 7)
+        _ = try await provider.fetchTodaySnapshot()
+        _ = try await provider.fetchHistory(days: 7)
 
         provider.reset()
 
