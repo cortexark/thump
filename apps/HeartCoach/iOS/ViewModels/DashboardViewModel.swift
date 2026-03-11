@@ -93,12 +93,30 @@ final class DashboardViewModel: ObservableObject {
                 try await healthDataProvider.requestAuthorization()
             }
 
-            // Fetch today's snapshot from HealthKit
-            let snapshot = try await healthDataProvider.fetchTodaySnapshot()
+            // Fetch today's snapshot — fall back to mock data in simulator, empty snapshot on device
+            let snapshot: HeartSnapshot
+            do {
+                snapshot = try await healthDataProvider.fetchTodaySnapshot()
+            } catch {
+                #if targetEnvironment(simulator)
+                snapshot = MockData.mockTodaySnapshot
+                #else
+                snapshot = HeartSnapshot(date: Calendar.current.startOfDay(for: Date()))
+                #endif
+            }
             todaySnapshot = snapshot
 
-            // Fetch historical snapshots from HealthKit
-            let history = try await healthDataProvider.fetchHistory(days: historyDays)
+            // Fetch historical snapshots — fall back to mock history in simulator, empty on device
+            let history: [HeartSnapshot]
+            do {
+                history = try await healthDataProvider.fetchHistory(days: historyDays)
+            } catch {
+                #if targetEnvironment(simulator)
+                history = MockData.mockHistory(days: historyDays)
+                #else
+                history = []
+                #endif
+            }
 
             // Load any persisted feedback for today
             let feedbackPayload = localStore.loadLastFeedback()

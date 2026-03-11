@@ -187,13 +187,9 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack {
-                Label("", systemImage: "heart.circle")
-                Spacer()
-                Text("Your Heart Training Buddy")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Label("Your Heart Training Buddy", systemImage: "heart.circle")
+                .foregroundStyle(.secondary)
+                .font(.subheadline)
 
             Button {
                 showPrivacyPolicy = true
@@ -329,7 +325,7 @@ struct SettingsView: View {
 
         // Build CSV header
         var csv = "Date,Resting HR,HRV (SDNN),Recovery 1m,Recovery 2m,"
-            + "VO2 Max,Steps,Walk Min,Workout Min,Sleep Hours,"
+            + "VO2 Max,Steps,Walk Min,Activity Min,Sleep Hours,"
             + "Status,Cardio Score\n"
 
         let dateFormatter = DateFormatter()
@@ -338,20 +334,20 @@ struct SettingsView: View {
         // Build CSV rows from stored snapshots
         for stored in history {
             let snap = stored.snapshot
-            let row = [
-                dateFormatter.string(from: snap.date),
-                snap.restingHeartRate.map { String(format: "%.1f", $0) } ?? "",
-                snap.hrvSDNN.map { String(format: "%.1f", $0) } ?? "",
-                snap.recoveryHR1m.map { String(format: "%.1f", $0) } ?? "",
-                snap.recoveryHR2m.map { String(format: "%.1f", $0) } ?? "",
-                snap.vo2Max.map { String(format: "%.1f", $0) } ?? "",
-                snap.steps.map { String(format: "%.0f", $0) } ?? "",
-                snap.walkMinutes.map { String(format: "%.0f", $0) } ?? "",
-                snap.workoutMinutes.map { String(format: "%.0f", $0) } ?? "",
-                snap.sleepHours.map { String(format: "%.1f", $0) } ?? "",
-                stored.assessment?.status.rawValue ?? "",
-                stored.assessment?.cardioScore.map { String(format: "%.0f", $0) } ?? ""
-            ].joined(separator: ",")
+            let dateStr = dateFormatter.string(from: snap.date)
+            let rhr: String = snap.restingHeartRate.map { String(format: "%.1f", $0) } ?? ""
+            let hrv: String = snap.hrvSDNN.map { String(format: "%.1f", $0) } ?? ""
+            let rec1: String = snap.recoveryHR1m.map { String(format: "%.1f", $0) } ?? ""
+            let rec2: String = snap.recoveryHR2m.map { String(format: "%.1f", $0) } ?? ""
+            let vo2: String = snap.vo2Max.map { String(format: "%.1f", $0) } ?? ""
+            let steps: String = snap.steps.map { String(format: "%.0f", $0) } ?? ""
+            let walk: String = snap.walkMinutes.map { String(format: "%.0f", $0) } ?? ""
+            let workout: String = snap.workoutMinutes.map { String(format: "%.0f", $0) } ?? ""
+            let sleep: String = snap.sleepHours.map { String(format: "%.1f", $0) } ?? ""
+            let status: String = stored.assessment?.status.rawValue ?? ""
+            let cardio: String = stored.assessment?.cardioScore.map { String(format: "%.0f", $0) } ?? ""
+            let row = [dateStr, rhr, hrv, rec1, rec2, vo2, steps, walk, workout, sleep, status, cardio]
+                .joined(separator: ",")
             csv += row + "\n"
         }
 

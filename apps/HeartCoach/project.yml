@@ -41,6 +41,7 @@ targets:
       - path: Shared/
     resources:
       - path: iOS/PrivacyInfo.xcprivacy
+      - path: iOS/Assets.xcassets
     settings:
       base:
         INFOPLIST_FILE: iOS/Info.plist

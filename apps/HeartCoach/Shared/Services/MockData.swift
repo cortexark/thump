@@ -58,9 +58,14 @@ public enum MockData {
     /// Generate an array of realistic daily ``HeartSnapshot`` values
     /// going back `days` from today.
     ///
-    /// Each day's values have slight random variation around a healthy
-    /// baseline. The seed is derived from the day offset so the output
-    /// is deterministic for snapshot tests.
+    /// Values are generated with realistic physiological correlations
+    /// baked in so that the CorrelationEngine surfaces meaningful insights:
+    /// - High-activity days (more steps/walk/workout) → lower RHR, higher HRV
+    /// - Good sleep → higher HRV
+    /// - More workout minutes → better recovery HR
+    ///
+    /// The seed is derived from the day offset so output is deterministic
+    /// for snapshot tests.
     ///
     /// - Parameter days: Number of historical days to generate.
     ///   Defaults to 21.
@@ -78,71 +83,66 @@ public enum MockData {
 
             let seed = offset &* 7 &+ 42
 
-            // Base RHR drifts slightly across the window
-            let rhrBase = 64.0 + sin(Double(offset) / 5.0) * 3.0
-            let rhr = optionalValue(
-                min: rhrBase - 3.0,
-                max: rhrBase + 3.0,
-                seed: seed,
-                nilChance: 0.05
-            )
+            // ── Activity drivers (0…1 normalized "fitness signal") ──────────
+            // Each varies independently, but cardiac metrics are then derived
+            // from them so the correlation engine finds real relationships.
 
-            let hrvBase = 46.0 + cos(Double(offset) / 4.0) * 6.0
-            let hrv = optionalValue(
-                min: hrvBase - 5.0,
-                max: hrvBase + 5.0,
-                seed: seed &+ 1,
-                nilChance: 0.08
-            )
+            // Daily activity level: 0 = sedentary day, 1 = very active day
+            let activitySignal = seededRandom(min: 0.0, max: 1.0, seed: seed &+ 5)
 
-            let rec1 = optionalValue(
-                min: 18.0,
-                max: 38.0,
-                seed: seed &+ 2,
-                nilChance: 0.25
-            )
+            // Sleep quality: 0 = poor sleep, 1 = great sleep
+            let sleepSignal = seededRandom(min: 0.0, max: 1.0, seed: seed &+ 8)
 
-            let rec2 = optionalValue(
-                min: 30.0,
-                max: 52.0,
-                seed: seed &+ 3,
-                nilChance: 0.30
-            )
+            // Workout intensity signal (slightly correlated with activity)
+            let workoutSignal = seededRandom(min: 0.0, max: 1.0, seed: seed &+ 7)
 
-            let vo2 = optionalValue(
-                min: 32.0,
-                max: 48.0,
-                seed: seed &+ 4,
-                nilChance: 0.15
-            )
+            // ── Activity metrics derived from signals ───────────────────────
+            let stepsRaw = 4_000.0 + activitySignal * 8_000.0
+            let steps: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 5) < 0.05
+                ? nil : stepsRaw + seededRandom(min: -500, max: 500, seed: seed &+ 55)
 
-            let steps = optionalValue(
-                min: 4_000,
-                max: 12_000,
-                seed: seed &+ 5,
-                nilChance: 0.05
-            )
+            let walkMinRaw = 15.0 + activitySignal * 45.0
+            let walkMin: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 6) < 0.08
+                ? nil : walkMinRaw + seededRandom(min: -5, max: 5, seed: seed &+ 56)
 
-            let walkMin = optionalValue(
-                min: 15.0,
-                max: 60.0,
-                seed: seed &+ 6,
-                nilChance: 0.08
-            )
+            let workoutMinRaw = workoutSignal * 45.0
+            let workoutMin: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 7) < 0.20
+                ? nil : workoutMinRaw + seededRandom(min: -3, max: 3, seed: seed &+ 57)
 
-            let workoutMin = optionalValue(
-                min: 0.0,
-                max: 45.0,
-                seed: seed &+ 7,
-                nilChance: 0.20
-            )
+            let sleepHrsRaw = 5.5 + sleepSignal * 3.0
+            let sleepHrs: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 8) < 0.10
+                ? nil : sleepHrsRaw + seededRandom(min: -0.3, max: 0.3, seed: seed &+ 58)
 
-            let sleepHrs = optionalValue(
-                min: 5.5,
-                max: 8.5,
-                seed: seed &+ 8,
-                nilChance: 0.10
-            )
+            // ── Cardiac metrics derived from activity + sleep signals ───────
+            // Noise terms are deliberately larger than the signal terms so the
+            // resulting Pearson r sits in a realistic 0.5–0.8 range rather than
+            // looking suspiciously perfect.
+
+            // RHR: active days → lower; range 58–72 BPM
+            // activitySignal high → rhr low (negative correlation with steps)
+            let rhrRaw = 72.0 - activitySignal * 14.0
+            let rhr: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31) < 0.05
+                ? nil : rhrRaw + seededRandom(min: -5, max: 5, seed: seed)
+
+            // HRV: good sleep + active → higher HRV; range 28–68 ms
+            let hrvRaw = 28.0 + sleepSignal * 24.0 + activitySignal * 16.0
+            let hrv: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 1) < 0.08
+                ? nil : hrvRaw + seededRandom(min: -8, max: 8, seed: seed &+ 1)
+
+            // Recovery HR 1m: more workout → better (higher) recovery drop
+            let rec1Raw = 18.0 + workoutSignal * 20.0
+            let rec1: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 2) < 0.25
+                ? nil : rec1Raw + seededRandom(min: -6, max: 6, seed: seed &+ 2)
+
+            // Recovery HR 2m: similar pattern
+            let rec2Raw = 30.0 + workoutSignal * 22.0
+            let rec2: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 3) < 0.30
+                ? nil : rec2Raw + seededRandom(min: -6, max: 6, seed: seed &+ 3)
+
+            // VO2 max: slowly improves with sustained activity over the window
+            let vo2Raw = 36.0 + activitySignal * 8.0 + Double(offset) / Double(max(days, 1)) * 4.0
+            let vo2: Double? = seededRandom(min: 0, max: 1, seed: seed &* 31 &+ 4) < 0.15
+                ? nil : vo2Raw + seededRandom(min: -2, max: 2, seed: seed &+ 4)
 
             // Zone minutes: 5 zones (rest, light, moderate, vigorous, peak)
             let zoneMinutes: [Double] = (0..<5).map { zone in
@@ -168,6 +168,28 @@ public enum MockData {
                 sleepHours: sleepHrs
             )
         }
+    }
+
+    // MARK: - Today's Mock Snapshot
+
+    /// A fully-populated snapshot representing today's metrics for simulator use.
+    ///
+    /// All fields are present so the dashboard "Today's Metrics" tiles show real
+    /// values rather than "-- " dashes.
+    public static var mockTodaySnapshot: HeartSnapshot {
+        HeartSnapshot(
+            date: Calendar.current.startOfDay(for: Date()),
+            restingHeartRate: 62.0,
+            hrvSDNN: 54.0,
+            recoveryHR1m: 28.0,
+            recoveryHR2m: 44.0,
+            vo2Max: 41.5,
+            zoneMinutes: [175, 48, 28, 12, 4],
+            steps: 9_240,
+            walkMinutes: 42.0,
+            workoutMinutes: 35.0,
+            sleepHours: 7.4
+        )
     }
 
     // MARK: - Sample Nudge
@@ -232,7 +254,7 @@ public enum MockData {
             confidence: .high
         ),
         CorrelationResult(
-            factorName: "Workout Minutes",
+            factorName: "Activity Minutes",
             correlationStrength: 0.38,
             interpretation: "Regular workouts show a moderate positive association "
                 + "with faster heart rate recovery after exercise.",

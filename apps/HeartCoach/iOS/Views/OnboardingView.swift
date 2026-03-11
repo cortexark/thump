@@ -169,7 +169,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 32)
 
             featureRow(icon: "waveform.path.ecg", text: "Resting Heart Rate & HRV")
-            featureRow(icon: "figure.run", text: "Activity & Workout Minutes")
+            featureRow(icon: "figure.run", text: "Activity Minutes")
             featureRow(icon: "bed.double.fill", text: "Sleep Duration")
 
             Spacer()

@@ -16,7 +16,7 @@ import Foundation
 /// The engine evaluates four factor pairs:
 /// 1. **Daily Steps** vs. **Resting Heart Rate**
 /// 2. **Walk Minutes** vs. **HRV (SDNN)**
-/// 3. **Workout Minutes** vs. **Recovery HR (1 min)**
+/// 3. **Activity Minutes** vs. **Recovery HR (1 min)**
 /// 4. **Sleep Hours** vs. **HRV (SDNN)**
 ///
 /// A minimum of ``ConfigService/minimumCorrelationPoints`` paired
@@ -50,7 +50,7 @@ public struct CorrelationEngine: Sendable {
         )
         if stepsRHR.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: stepsRHR.x, y: stepsRHR.y)
-            let (interpretation, confidence) = interpretCorrelation(
+            let result = interpretCorrelation(
                 factor: "Daily Steps",
                 metric: "resting heart rate",
                 r: r,
@@ -59,8 +59,9 @@ public struct CorrelationEngine: Sendable {
             results.append(CorrelationResult(
                 factorName: "Daily Steps",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
@@ -72,7 +73,7 @@ public struct CorrelationEngine: Sendable {
         )
         if walkHRV.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: walkHRV.x, y: walkHRV.y)
-            let (interpretation, confidence) = interpretCorrelation(
+            let result = interpretCorrelation(
                 factor: "Walk Minutes",
                 metric: "heart rate variability",
                 r: r,
@@ -81,12 +82,13 @@ public struct CorrelationEngine: Sendable {
             results.append(CorrelationResult(
                 factorName: "Walk Minutes",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
-        // 3. Workout Minutes vs Recovery HR 1m
+        // 3. Activity Minutes vs Recovery HR 1m
         let workoutRec = pairedValues(
             history: history,
             xKeyPath: \.workoutMinutes,
@@ -94,17 +96,18 @@ public struct CorrelationEngine: Sendable {
         )
         if workoutRec.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: workoutRec.x, y: workoutRec.y)
-            let (interpretation, confidence) = interpretCorrelation(
-                factor: "Workout Minutes",
+            let result = interpretCorrelation(
+                factor: "Activity Minutes",
                 metric: "heart rate recovery",
                 r: r,
                 expectedDirection: .positive
             )
             results.append(CorrelationResult(
-                factorName: "Workout Minutes",
+                factorName: "Activity Minutes",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
@@ -116,7 +119,7 @@ public struct CorrelationEngine: Sendable {
         )
         if sleepHRV.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: sleepHRV.x, y: sleepHRV.y)
-            let (interpretation, confidence) = interpretCorrelation(
+            let result = interpretCorrelation(
                 factor: "Sleep Hours",
                 metric: "heart rate variability",
                 r: r,
@@ -125,8 +128,9 @@ public struct CorrelationEngine: Sendable {
             results.append(CorrelationResult(
                 factorName: "Sleep Hours",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
@@ -187,7 +191,7 @@ public struct CorrelationEngine: Sendable {
         metric: String,
         r: Double,
         expectedDirection: ExpectedDirection
-    ) -> (String, ConfidenceLevel) {
+    ) -> (interpretation: String, confidence: ConfidenceLevel, isBeneficial: Bool) {
         let absR = abs(r)
 
         // Determine strength label and confidence
@@ -199,7 +203,8 @@ public struct CorrelationEngine: Sendable {
             return (
                 "No meaningful relationship was found between \(factor.lowercased()) "
                     + "and \(metric) in your recent data.",
-                .low
+                .low,
+                true  // neutral — not harmful
             )
         case 0.2..<0.4:
             strengthLabel = "weak"
@@ -215,7 +220,7 @@ public struct CorrelationEngine: Sendable {
             confidence = .high
         }
 
-        // Determine direction description
+        // Determine direction description and whether this is a good outcome
         let directionText: String
         let isBeneficial: Bool
 
@@ -246,7 +251,7 @@ public struct CorrelationEngine: Sendable {
             + "(a \(strengthLabel) \(r > 0 ? "positive" : "negative") correlation). "
             + benefitNote
 
-        return (interpretation, confidence)
+        return (interpretation, confidence, isBeneficial)
     }
 
     // MARK: - Data Pairing Helpers

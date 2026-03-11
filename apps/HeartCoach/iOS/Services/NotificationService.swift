@@ -179,10 +179,10 @@ final class NotificationService: ObservableObject {
             trigger: trigger
         )
 
-        center.add(request) { error in
-            if let error = error {
-                debugPrint("[NotificationService] Failed to schedule nudge reminder: \(error.localizedDescription)")
-            }
+        do {
+            try await center.add(request)
+        } catch {
+            debugPrint("[NotificationService] Failed to schedule nudge reminder: \(error.localizedDescription)")
         }
     }
 
