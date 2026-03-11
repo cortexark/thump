@@ -49,12 +49,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: false
     dependencies:
-      - framework: HealthKit.framework
-        implicit: true
-      - framework: WatchConnectivity.framework
-        implicit: true
-      - framework: StoreKit.framework
-        implicit: true
+      - sdk: HealthKit.framework
+      - sdk: WatchConnectivity.framework
+      - sdk: StoreKit.framework
     scheme:
       testTargets:
         - ThumpCoreTests
@@ -74,14 +71,12 @@ targets:
       base:
         INFOPLIST_FILE: Watch/Info.plist
         CODE_SIGN_ENTITLEMENTS: Watch/Watch.entitlements
-        PRODUCT_BUNDLE_IDENTIFIER: com.thump.watch
+        PRODUCT_BUNDLE_IDENTIFIER: com.thump.ios.watchkitapp
         TARGETED_DEVICE_FAMILY: "4"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
     dependencies:
-      - framework: HealthKit.framework
-        implicit: true
-      - framework: WatchConnectivity.framework
-        implicit: true
+      - sdk: HealthKit.framework
+      - sdk: WatchConnectivity.framework
     scheme:
       gatherCoverageData: true
 
