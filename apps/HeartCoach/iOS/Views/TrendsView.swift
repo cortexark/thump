@@ -79,6 +79,7 @@ struct TrendsView: View {
                 } else {
                     chartCard(points: points)
                     summaryStats(points: points)
+                    trendInsightCard(points: points)
                 }
             }
             .padding(16)
@@ -134,6 +135,126 @@ struct TrendsView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
+    }
+
+    // MARK: - Trend Insight Card
+
+    private func trendInsightCard(points: [(date: Date, value: Double)]) -> some View {
+        let insight = trendInsight(for: points)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: insight.icon)
+                    .foregroundStyle(insight.color)
+                Text("What's Happening")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+            }
+
+            Text(insight.headline)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(insight.color)
+
+            Text(insight.detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(insight.color.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(insight.color.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private struct TrendInsight {
+        let headline: String
+        let detail: String
+        let icon: String
+        let color: Color
+    }
+
+    private func trendInsight(for points: [(date: Date, value: Double)]) -> TrendInsight {
+        let values = points.map(\.value)
+        guard values.count >= 4 else {
+            return TrendInsight(
+                headline: "Not enough data yet",
+                detail: "Check back after a few more days of wear to see your trend analysis.",
+                icon: "clock",
+                color: .secondary
+            )
+        }
+
+        let midpoint = values.count / 2
+        let firstAvg = values.prefix(midpoint).reduce(0, +) / Double(midpoint)
+        let secondAvg = values.suffix(values.count - midpoint).reduce(0, +) / Double(values.count - midpoint)
+        let percentChange = (secondAvg - firstAvg) / firstAvg * 100
+
+        // For RHR: lower is better. For everything else: higher is better.
+        let lowerIsBetter = viewModel.selectedMetric == .restingHR
+        let improving = lowerIsBetter ? percentChange < -2 : percentChange > 2
+        let worsening = lowerIsBetter ? percentChange > 2 : percentChange < -2
+        let change = abs(percentChange)
+
+        let rangeDescription: String
+        if change < 2 {
+            rangeDescription = "less than 2%"
+        } else if change < 5 {
+            rangeDescription = "about \(Int(change))%"
+        } else {
+            rangeDescription = "\(Int(change))%"
+        }
+
+        let metricName = metricDisplayName.lowercased()
+
+        // Context note for short windows — 7 days is noisy, so soften "Worth Watching"
+        let shortWindow = viewModel.timeRange == .week
+        let windowNote = shortWindow
+            ? " Short windows can look noisy — switch to 14D or 30D for the bigger picture."
+            : ""
+
+        if change < 2 {
+            return TrendInsight(
+                headline: "Holding Steady",
+                detail: "Your \(metricName) has been consistent — barely any change "
+                    + "between the start and end of this period. "
+                    + "Stability is a good sign of a healthy baseline.",
+                icon: "arrow.right.circle.fill",
+                color: .blue
+            )
+        } else if improving {
+            return TrendInsight(
+                headline: "Trending Better",
+                detail: "Your \(metricName) has improved by \(rangeDescription) "
+                    + "over this period. Keep up whatever you've been doing "
+                    + "— the trend is moving in the right direction.",
+                icon: "arrow.up.right.circle.fill",
+                color: .green
+            )
+        } else if worsening {
+            return TrendInsight(
+                headline: "Worth Watching",
+                detail: "Your \(metricName) has shifted by \(rangeDescription) "
+                    + "in a direction worth monitoring. This is often normal "
+                    + "after a harder training day, poor sleep, "
+                    + "or schedule changes.\(windowNote)",
+                icon: "arrow.down.right.circle.fill",
+                color: .orange
+            )
+        } else {
+            return TrendInsight(
+                headline: "Holding Steady",
+                detail: "Your \(metricName) has been consistent over this "
+                    + "period. Stability is a good sign of a healthy baseline.",
+                icon: "arrow.right.circle.fill",
+                color: .blue
+            )
+        }
     }
 
     private func statItem(label: String, value: String) -> some View {
