@@ -1,0 +1,112 @@
+# TaskPilot v0.1.0 — Inter-Role Challenge Policy
+# Defines who can challenge whom, triggers, evidence requirements, and escalation
+
+challenge_rules:
+  - challenger: ROLE_PM
+    targets: [ROLE_SDE, ROLE_UX]
+    grounds: "Scope creep, value vs. cost misalignment, priority drift"
+    challenge_triggers:
+      - Feature not in approved PRD scope
+      - Effort estimate exceeds 2x initial estimate
+      - Priority shift without stakeholder approval
+    required_evidence:
+      - Reference to PRD scope section
+      - Cost-value analysis
+      - Stakeholder impact assessment
+    resolution_sla_hours: 24
+    escalation_ladder:
+      - level_1: Direct discussion between challenger and target
+      - level_2: Bring evidence to group review
+      - level_3: Human-in-loop escalation
+    human_in_loop: true
+
+  - challenger: ROLE_SDE
+    targets: [ROLE_PM, ROLE_PE]
+    grounds: "Technical infeasibility, architectural debt accumulation, timeline risk"
+    challenge_triggers:
+      - Proposed feature requires architectural change > 500 LOC
+      - Dependency on unproven technology
+      - Timeline conflicts with existing commitments
+    required_evidence:
+      - Technical feasibility analysis
+      - Effort estimate with breakdown
+      - Alternative approaches with trade-offs
+    resolution_sla_hours: 24
+    escalation_ladder:
+      - level_1: Technical discussion with evidence
+      - level_2: Architecture review board
+      - level_3: Human-in-loop escalation
+    human_in_loop: true
+
+  - challenger: ROLE_PE
+    targets: [ROLE_SDE]
+    grounds: "Performance regressions, scalability risks, resource efficiency"
+    challenge_triggers:
+      - P95 latency increase > 10%
+      - Memory usage increase > 20%
+      - Battery impact increase > 15%
+    required_evidence:
+      - Before/after performance measurements
+      - Profiling data
+      - User impact assessment
+    resolution_sla_hours: 12
+    escalation_ladder:
+      - level_1: Performance review with data
+      - level_2: Architecture review with PE lead
+      - level_3: Human-in-loop escalation
+    human_in_loop: false
+
+  - challenger: ROLE_QA
+    targets: [ROLE_PM, ROLE_SDE, ROLE_PE, ROLE_UX]
+    grounds: "Coverage holes, flaky tests, defect escapes, quality regressions"
+    challenge_triggers:
+      - Test coverage drops below 60% for any module
+      - Flake rate exceeds 5%
+      - P0 defect found in production
+      - Defect escape rate exceeds 10%
+    required_evidence:
+      - Coverage reports or test results
+      - Defect escape analysis
+      - Quality trend data
+    resolution_sla_hours: 8
+    escalation_ladder:
+      - level_1: Quality gate block with evidence
+      - level_2: Release hold
+      - level_3: Human-in-loop escalation
+    human_in_loop: false
+
+  - challenger: ROLE_UX
+    targets: [ROLE_PM, ROLE_SDE]
+    grounds: "Usability regression, accessibility violations, HIG non-compliance"
+    challenge_triggers:
+      - WCAG 2.1 AA violation introduced
+      - VoiceOver flow broken
+      - Inconsistency with design system
+    required_evidence:
+      - Accessibility audit findings
+      - HIG reference
+      - User flow comparison (before/after)
+    resolution_sla_hours: 24
+    escalation_ladder:
+      - level_1: Design review with evidence
+      - level_2: UX committee review
+      - level_3: Human-in-loop escalation
+    human_in_loop: true
+
+  - challenger: ROLE_SEC
+    targets: [ROLE_SDE, ROLE_PM]
+    grounds: "Threat model gaps, injection risks, data exposure"
+    challenge_triggers:
+      - Unencrypted PII detected
+      - Missing input validation on user-facing endpoint
+      - Credential exposure in logs or commits
+    required_evidence:
+      - STRIDE analysis findings
+      - Data flow audit
+      - Remediation plan
+    resolution_sla_hours: 4
+    escalation_ladder:
+      - level_1: Security review block
+      - level_2: Mandatory fix before merge
+      - level_3: Human-in-loop escalation (P0 security)
+    human_in_loop: false

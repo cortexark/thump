@@ -298,10 +298,56 @@ struct SettingsView: View {
         return "\(version) (\(build))"
     }
 
-    /// Triggers health data export (placeholder for actual export logic).
+    /// Generates a CSV export of the user's health snapshot history
+    /// and presents a system share sheet for saving or sending.
     private func exportHealthData() {
-        // The actual implementation will generate a CSV via LocalStore
-        // and present a share sheet. This is a placeholder.
+        let history = localStore.loadHistory()
+        guard !history.isEmpty else { return }
+
+        // Build CSV header
+        var csv = "Date,Resting HR,HRV (SDNN),Recovery 1m,Recovery 2m,VO2 Max,Steps,Walk Min,Workout Min,Sleep Hours,Status,Cardio Score\n"
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        // Build CSV rows from stored snapshots
+        for stored in history {
+            let s = stored.snapshot
+            let row = [
+                dateFormatter.string(from: s.date),
+                s.restingHeartRate.map { String(format: "%.1f", $0) } ?? "",
+                s.hrvSDNN.map { String(format: "%.1f", $0) } ?? "",
+                s.recoveryHR1m.map { String(format: "%.1f", $0) } ?? "",
+                s.recoveryHR2m.map { String(format: "%.1f", $0) } ?? "",
+                s.vo2Max.map { String(format: "%.1f", $0) } ?? "",
+                s.steps.map { String(format: "%.0f", $0) } ?? "",
+                s.walkMinutes.map { String(format: "%.0f", $0) } ?? "",
+                s.workoutMinutes.map { String(format: "%.0f", $0) } ?? "",
+                s.sleepHours.map { String(format: "%.1f", $0) } ?? "",
+                stored.assessment?.status.rawValue ?? "",
+                stored.assessment?.cardioScore.map { String(format: "%.0f", $0) } ?? ""
+            ].joined(separator: ",")
+            csv += row + "\n"
+        }
+
+        // Write to temp file and present share sheet
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thump-health-export.csv")
+        do {
+            try csv.write(to: tempURL, atomically: true, encoding: .utf8)
+        } catch {
+            debugPrint("[SettingsView] Failed to write export CSV: \(error)")
+            return
+        }
+
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first,
+              let rootVC = window.rootViewController else { return }
+        let activityVC = UIActivityViewController(
+            activityItems: [tempURL],
+            applicationActivities: nil
+        )
+        rootVC.present(activityVC, animated: true)
     }
 }
 

@@ -1,0 +1,204 @@
+# TaskPilot v0.2.0 — Simulation Scenarios
+# 7 scenarios (5 from v0.1.0 + 2 new security-focused scenarios)
+# Changes from v0.1.0: Added SIM_006, SIM_007; expanded failure taxonomy to 8 modes
+
+scenarios:
+  # === Inherited from v0.1.0 (unchanged) ===
+
+  - scenario_id: SIM_001_MISSING_REQUIREMENTS
+    name: "Missing Requirements"
+    description: >
+      PM produces a PRD with 3 user stories missing acceptance criteria.
+      SDE must detect the gap during system design. QA must flag coverage hole.
+    injected_failures:
+      - type: incomplete_artifact
+        role: ROLE_PM
+        skill: SKILL_PM_REQ_ANALYSIS
+        detail: "3 of 10 user stories have no acceptance criteria"
+    expected_detections:
+      - detector: ROLE_SDE
+        skill: SKILL_SDE_SYSTEM_DESIGN
+        finding: "Cannot design API for stories without acceptance criteria"
+      - detector: ROLE_QA
+        skill: SKILL_QA_TEST_PLAN
+        finding: "Cannot write tests for stories without acceptance criteria"
+    success_criteria:
+      - SDE raises challenge within SKILL_SDE_SYSTEM_DESIGN execution
+      - QA raises challenge within SKILL_QA_TEST_PLAN execution
+      - PM resolves by adding acceptance criteria (SKILL_PM_REQ_ANALYSIS re-run)
+    failure_taxonomy: [goal_drift, incomplete_artifact]
+
+  - scenario_id: SIM_002_FLAKY_TESTS
+    name: "Flaky Test Suite"
+    description: >
+      2 of 50 test cases are non-deterministic (date-dependent, race condition).
+      QA must detect flake rate > 5% threshold and flag for remediation.
+    injected_failures:
+      - type: flaky_test
+        role: ROLE_QA
+        skill: SKILL_QA_TEST_EXECUTION
+        detail: "2 tests fail intermittently (date-dependent comparison, async race)"
+    expected_detections:
+      - detector: ROLE_QA
+        skill: SKILL_QA_TEST_EXECUTION
+        finding: "Flake rate 4% (2/50) — approaching 5% threshold"
+      - detector: ROLE_SDE
+        skill: SKILL_SDE_CODE_REVIEW
+        finding: "Date comparison uses Date() instead of injected clock"
+    success_criteria:
+      - QA identifies both flaky tests
+      - SDE provides fix recommendation (inject clock, use async await)
+      - Flake rate drops to 0% after fix
+    failure_taxonomy: [flaky_test, non_determinism]
+
+  - scenario_id: SIM_003_API_SCHEMA_BREAK
+    name: "API Schema Breaking Change"
+    description: >
+      SDE changes API response schema without updating downstream consumers.
+      PE must detect breaking change, QA must catch integration test failure.
+    injected_failures:
+      - type: breaking_change
+        role: ROLE_SDE
+        skill: SKILL_SDE_IMPLEMENTATION
+        detail: "HeartSnapshot field renamed from 'hrvSDNN' to 'heartRateVariability'"
+    expected_detections:
+      - detector: ROLE_QA
+        skill: SKILL_QA_TEST_EXECUTION
+        finding: "Deserialization failure in CorrelationEngine for renamed field"
+      - detector: ROLE_SDE
+        skill: SKILL_SDE_CODE_REVIEW
+        finding: "Breaking change without API version bump"
+    success_criteria:
+      - QA catches deserialization failure in test execution
+      - SDE identifies breaking change in code review
+      - Resolution: revert rename or update all consumers
+    failure_taxonomy: [breaking_change, coordination_failure]
+
+  - scenario_id: SIM_004_CONFLICTING_STAKEHOLDERS
+    name: "Conflicting Stakeholder Priorities"
+    description: >
+      PM wants to ship nudge feature (user engagement). PE wants to defer
+      nudge for battery optimization work. SDE estimates 2-week delay if both.
+    injected_failures:
+      - type: resource_conflict
+        role: ROLE_PM
+        skill: SKILL_PM_SCOPE_CHALLENGE
+        detail: "PM prioritizes nudge feature; PE prioritizes battery optimization"
+    expected_detections:
+      - detector: ROLE_SDE
+        skill: SKILL_SDE_FEASIBILITY_CHALLENGE
+        finding: "Cannot deliver both in current sprint; one must be deferred"
+      - detector: ROLE_PM
+        skill: SKILL_PM_SCOPE_CHALLENGE
+        finding: "Must prioritize based on user impact data"
+    success_criteria:
+      - SDE raises feasibility challenge with effort estimates
+      - PM produces prioritization decision with data backing
+      - Resolution: sequence the work with clear milestones
+    failure_taxonomy: [coordination_deadlock, resource_conflict]
+
+  - scenario_id: SIM_005_DATA_CORRUPTION
+    name: "Encrypted Data Corruption"
+    description: >
+      CryptoService key rotation fails silently, causing decrypt failures
+      for stored health snapshots. App shows empty dashboard.
+    injected_failures:
+      - type: silent_failure
+        role: ROLE_SDE
+        skill: SKILL_SDE_IMPLEMENTATION
+        detail: "Key rotation creates new key but doesn't re-encrypt existing data"
+    expected_detections:
+      - detector: ROLE_QA
+        skill: SKILL_QA_TEST_EXECUTION
+        finding: "loadHistory returns empty array after key rotation"
+      - detector: ROLE_SEC
+        skill: SKILL_SEC_DATA_HANDLING
+        finding: "Key rotation path doesn't re-encrypt stored data — key lifecycle audit failure"
+      - detector: ROLE_PE
+        skill: SKILL_PE_MEMORY_PROFILING
+        finding: "Repeated decrypt-fail-retry cycles consuming CPU"
+    success_criteria:
+      - QA detects empty dashboard state
+      - SEC identifies root cause via key lifecycle audit (re-encryption check in exit criteria)
+      - SDE implements key rotation with data migration
+    failure_taxonomy: [silent_failure, data_corruption]
+
+  # === NEW in v0.2.0 ===
+
+  - scenario_id: SIM_006_KEY_ROTATION_VARIANT
+    name: "Key Rotation with Partial Re-encryption"
+    description: >
+      Variant of SIM_005. Key rotation partially succeeds — 80% of records
+      re-encrypted but process interrupted (simulating app backgrounding).
+      20% of records become unreadable. App shows partial data with no error.
+    injected_failures:
+      - type: silent_failure
+        role: ROLE_SDE
+        skill: SKILL_SDE_IMPLEMENTATION
+        detail: "Key rotation iterates records but has no transaction/atomicity — app backgrounded mid-rotation leaves 20% un-migrated"
+      - type: data_corruption
+        role: ROLE_SDE
+        skill: SKILL_SDE_IMPLEMENTATION
+        detail: "No integrity check after rotation — partial data presented as complete"
+    expected_detections:
+      - detector: ROLE_SEC
+        skill: SKILL_SEC_DATA_HANDLING
+        finding: "Key rotation lacks atomicity — no rollback on interruption; key lifecycle audit fails on 're-encryption verification' exit criterion"
+      - detector: ROLE_QA
+        skill: SKILL_QA_TEST_EXECUTION
+        finding: "Data count mismatch after simulated background interruption during rotation"
+      - detector: ROLE_SDE
+        skill: SKILL_SDE_CODE_REVIEW
+        finding: "Missing transaction boundary around key rotation loop"
+    success_criteria:
+      - SEC detects atomicity gap via key lifecycle audit within 4-hour SLA
+      - QA detects data count mismatch in background-interruption test
+      - SDE identifies missing transaction boundary in code review
+      - Resolution includes: atomic rotation with rollback, integrity check, data count verification
+    failure_taxonomy: [silent_failure, data_corruption]
+
+  - scenario_id: SIM_007_PII_LOG_LEAK
+    name: "PII Leak via Debug Logging"
+    description: >
+      HealthKit integration logs full HeartSnapshot (including user health data)
+      at debug level. In production build with os_log, this data appears in
+      system console. SEC must detect PII in logs.
+    injected_failures:
+      - type: pii_exposure
+        role: ROLE_SDE
+        skill: SKILL_SDE_IMPLEMENTATION
+        detail: "HealthKitService.swift logs 'Fetched snapshot: \(snapshot)' at .debug level — snapshot contains heartRate, bloodOxygen, sleepHours (health PII)"
+    expected_detections:
+      - detector: ROLE_SEC
+        skill: SKILL_SEC_THREAT_MODEL
+        finding: "PII (health data) logged at debug level — visible in system console; STRIDE: Information Disclosure"
+      - detector: ROLE_SEC
+        skill: SKILL_SEC_DATA_HANDLING
+        finding: "Log audit exit criterion fails — PII found at debug log level"
+      - detector: ROLE_QA
+        skill: SKILL_QA_TEST_EXECUTION
+        finding: "Console output contains health metrics during test execution"
+    success_criteria:
+      - SEC detects PII in logs via threat model log audit AND data handling audit
+      - QA notices health data in console output during test execution
+      - Resolution: replace debug log with redacted summary or .private modifier
+    failure_taxonomy: [pii_exposure, silent_failure]
+
+# Updated failure taxonomy reference (8 of 14 MAST modes)
+failure_taxonomy:
+  - hallucination: "Agent produces factually incorrect output"
+  - infinite_loop: "Agent repeats same action without progress"
+  - context_loss: "Agent loses track of conversation/task state"
+  - tool_misuse: "Agent uses wrong tool or wrong parameters"
+  - goal_drift: "Agent pursues different goal than assigned"
+  - coordination_deadlock: "Two roles block each other"
+  - incomplete_artifact: "Required artifact missing fields"
+  - flaky_test: "Non-deterministic test result"
+  - breaking_change: "Change breaks downstream consumers"
+  - resource_conflict: "Competing priorities exceed capacity"
+  - silent_failure: "Error occurs but is not surfaced"
+  - data_corruption: "Stored data becomes unreadable"
+  - non_determinism: "Same input produces different output"
+  - coordination_failure: "Roles fail to communicate change"
+  - pii_exposure: "Personally identifiable information leaked via logs, APIs, or storage"  # NEW in v0.2.0
+  - atomicity_failure: "Multi-step operation lacks transaction boundary"  # NEW in v0.2.0

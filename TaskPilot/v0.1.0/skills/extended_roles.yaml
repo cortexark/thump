@@ -1,0 +1,112 @@
+# TaskPilot v0.1.0 — Extended Role Skills (activated as needed)
+
+# ROLE_SEC — Security Engineer (3 skills)
+security_skills:
+  - skill_id: SKILL_SEC_THREAT_MODEL
+    role: ROLE_SEC
+    description: Perform STRIDE threat modeling on new endpoints and data flows.
+    prerequisites: [System design available, Data flow diagrams exist]
+    evidence_required: [STRIDE analysis, Data flow diagram with trust boundaries, Mitigation plan]
+    artifacts_produced: [threat_model.md]
+    exit_criteria:
+      - STRIDE analysis completed for all new endpoints
+      - All HIGH findings have mitigation plan
+      - Data flow diagram updated with trust boundaries
+      - SDE reviewed mitigations for feasibility
+
+  - skill_id: SKILL_SEC_DATA_HANDLING
+    role: ROLE_SEC
+    description: Audit data handling for PII exposure, encryption at rest/transit, and key management.
+    prerequisites: [Data model available, Crypto implementation exists]
+    evidence_required: [Data handling audit, Encryption coverage report]
+    artifacts_produced: [data_security_audit.md]
+    exit_criteria:
+      - All PII fields identified and encryption status documented
+      - Key management practices assessed
+      - No unencrypted PII at rest
+      - Keychain usage follows Apple best practices
+
+  - skill_id: SKILL_SEC_AUTH_REVIEW
+    role: ROLE_SEC
+    description: Review authentication and authorization mechanisms for vulnerabilities.
+    prerequisites: [Auth implementation exists]
+    evidence_required: [Auth review document, Vulnerability findings]
+    artifacts_produced: [auth_review.md]
+    exit_criteria:
+      - All auth flows reviewed
+      - No credential storage in plain text
+      - Session management assessed
+      - Findings reviewed by SDE
+
+# ROLE_RM — Release Manager (3 skills)
+release_skills:
+  - skill_id: SKILL_RM_GO_NO_GO
+    role: ROLE_RM
+    description: Collect role sign-offs and make Go/No-Go launch decision.
+    prerequisites: [All P0 features tested, All roles have produced sign-off artifacts]
+    evidence_required: [Sign-off collection, KPI dashboard, Go/No-Go decision]
+    artifacts_produced: [go_no_go.md]
+    exit_criteria:
+      - All role sign-offs collected
+      - Zero open P0/P1 defects
+      - Rollback plan documented and tested
+      - KPI dashboard green on all thresholds
+
+  - skill_id: SKILL_RM_ROLLOUT_PLAN
+    role: ROLE_RM
+    description: Create phased rollout plan with monitoring checkpoints.
+    prerequisites: [Go/No-Go approved]
+    evidence_required: [Rollout plan, Monitoring dashboard spec, Rollback procedure]
+    artifacts_produced: [rollout_plan.md]
+    exit_criteria:
+      - Phased rollout stages defined with percentages
+      - Monitoring metrics defined for each stage
+      - Rollback procedure documented with triggers
+      - SDE and PE reviewed
+
+  - skill_id: SKILL_RM_RELEASE_NOTES
+    role: ROLE_RM
+    description: Generate user-facing release notes from changelog and PRD.
+    prerequisites: [Changelog available, Features documented]
+    evidence_required: [Release notes draft, Feature highlights]
+    artifacts_produced: [release_notes.md]
+    exit_criteria:
+      - All user-facing changes documented
+      - Known issues section included
+      - Language reviewed for clarity
+      - PM approved messaging
+
+# ROLE_DOC — Documentation Engineer (3 skills)
+documentation_skills:
+  - skill_id: SKILL_DOC_API_DOCS
+    role: ROLE_DOC
+    description: Generate API documentation from contracts and implementations.
+    prerequisites: [API contracts defined]
+    evidence_required: [API documentation]
+    artifacts_produced: [api_docs.md]
+    exit_criteria:
+      - All endpoints documented with request/response schemas
+      - Error codes documented
+      - SDE reviewed for accuracy
+
+  - skill_id: SKILL_DOC_RUNBOOK
+    role: ROLE_DOC
+    description: Create operational runbook for common tasks and incident response.
+    prerequisites: [System architecture available, Monitoring configured]
+    evidence_required: [Runbook document]
+    artifacts_produced: [runbook.md]
+    exit_criteria:
+      - Common operational tasks documented
+      - Incident response procedures defined
+      - SRE/PE reviewed
+
+  - skill_id: SKILL_DOC_ONBOARDING
+    role: ROLE_DOC
+    description: Create developer onboarding guide for new contributors.
+    prerequisites: [Codebase exists, Build system configured]
+    evidence_required: [Onboarding guide, Quick start instructions]
+    artifacts_produced: [onboarding.md]
+    exit_criteria:
+      - Setup instructions verified end-to-end
+      - Architecture overview included
+      - SDE reviewed for accuracy

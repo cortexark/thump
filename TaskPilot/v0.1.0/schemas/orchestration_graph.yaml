@@ -1,0 +1,131 @@
+# TaskPilot v0.1.0 — Orchestration Graph Schema
+# LangGraph-inspired state machine with checkpointing and durable execution
+
+graph:
+  name: TaskPilotOrchestrationGraph
+  version: "0.1.0"
+  description: >
+    State machine governing the orchestrator's workflow from assessment
+    through implementation, testing, and deployment. Supports checkpointing
+    at every state transition for durable execution.
+
+  # Core entities referenced by the graph
+  entities:
+    - Role        # Agent persona with skills and challenges
+    - Skill       # Executable capability with exit criteria
+    - Task        # Unit of work assigned to a role
+    - Artifact    # Produced output (documents, code, configs)
+    - Review      # Cross-role evaluation of an artifact
+    - Challenge   # Formal objection requiring evidence and resolution
+    - Defect      # Bug or quality issue with severity and status
+    - ChangeSet   # Group of related file changes
+    - TrainingEvent  # Learning update logged to JSONL
+    - EvaluationRun  # KPI measurement execution
+    - SimulationScenario  # Failure injection test
+    - RunLog      # Append-only execution log
+
+  # State definitions
+  states:
+    INIT:
+      description: "Initialize orchestrator, load active version, read known bugs"
+      checkpointable: true
+      next: [ASSESS]
+
+    ASSESS:
+      description: "Read bugs, history, current state; produce priority list"
+      checkpointable: true
+      skills_activated: []
+      artifacts_produced: [cycle_plan.md]
+      next: [RESEARCH]
+
+    RESEARCH:
+      description: "Search systems and papers; extract patterns"
+      checkpointable: true
+      skills_activated: []
+      artifacts_produced: [research_log.md]
+      next: [BUILD]
+
+    BUILD:
+      description: "Create versioned folder; build skills, policies, graph, sims"
+      checkpointable: true
+      skills_activated: [SKILL_SDE_SYSTEM_DESIGN, SKILL_SDE_IMPLEMENTATION]
+      artifacts_produced: [skills/*.yaml, policies/*.yaml, schemas/*.yaml]
+      next: [TEST]
+
+    TEST:
+      description: "Run simulation harness; compute KPIs; promote or reject"
+      checkpointable: true
+      skills_activated: [SKILL_QA_TEST_EXECUTION, SKILL_PE_LOAD_TEST]
+      artifacts_produced: [kpi_results.json, simulation_results/]
+      next: [PROMOTE, REJECT]
+      conditional_edges:
+        - condition: "overall_weighted_score(new) >= overall_weighted_score(baseline)"
+          target: PROMOTE
+        - condition: "overall_weighted_score(new) < overall_weighted_score(baseline)"
+          target: REJECT
+
+    PROMOTE:
+      description: "Update ACTIVE_VERSION; archive baseline"
+      checkpointable: true
+      next: [DOGFOOD_BASELINE]
+
+    REJECT:
+      description: "Log rejection; keep baseline; file improvements"
+      checkpointable: true
+      next: [DOGFOOD_BASELINE]
+
+    DOGFOOD_BASELINE:
+      description: "Read target app; document current state and gaps"
+      checkpointable: true
+      skills_activated: [SKILL_PM_REQ_ANALYSIS, SKILL_SDE_ARCHITECTURE_HYGIENE]
+      artifacts_produced: [app_baseline.md]
+      next: [DOGFOOD_IMPROVE]
+
+    DOGFOOD_IMPROVE:
+      description: "Activate all roles against app; identify improvements"
+      checkpointable: true
+      skills_activated: [All base role skills as applicable]
+      artifacts_produced: [improvement_proposals.md, market_strategy.md]
+      next: [DOGFOOD_IMPLEMENT]
+
+    DOGFOOD_IMPLEMENT:
+      description: "Feature branch; apply safe quick wins; local checks"
+      checkpointable: true
+      skills_activated: [SKILL_SDE_IMPLEMENTATION, SKILL_QA_TEST_EXECUTION]
+      next: [DOCUMENT]
+      human_in_loop_gate: true
+
+    DOCUMENT:
+      description: "Write all reports, metrics plans, and cross-repo docs"
+      checkpointable: true
+      artifacts_produced: [orchestrator_effectiveness.md, orchestrator_metrics_plan.md, ORCHESTRATOR_DRIVEN_IMPROVEMENTS.md]
+      next: [COMMIT]
+
+    COMMIT:
+      description: "Git commit both repos; push feature branches"
+      checkpointable: true
+      next: [PLAN_NEXT]
+
+    PLAN_NEXT:
+      description: "Write next cycle plan with priorities and hypotheses"
+      checkpointable: true
+      artifacts_produced: [next_cycle_plan.md]
+      next: [DONE]
+
+    DONE:
+      description: "Cycle complete"
+      terminal: true
+
+  # Checkpoint configuration
+  checkpointing:
+    strategy: "sync"  # Guaranteed checkpoint at every state transition
+    storage: "local_jsonl"
+    path: "orchestrator/run_events.jsonl"
+    fields:
+      - timestamp
+      - state
+      - duration_ms
+      - artifacts_produced
+      - skills_executed
+      - failures
+      - kpi_snapshot
