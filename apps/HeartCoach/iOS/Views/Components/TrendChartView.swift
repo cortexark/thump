@@ -122,7 +122,7 @@ struct TrendChartView: View {
         }
         .chartYScale(domain: yMin...yMax)
         .chartXAxis {
-            AxisMarks(values: .stride(by: .day, count: axisStride)) { value in
+            AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                 AxisGridLine()
                     .foregroundStyle(Color(.systemGray5))
                 AxisValueLabel(format: .dateTime.month(.abbreviated).day())
@@ -130,7 +130,7 @@ struct TrendChartView: View {
             }
         }
         .chartYAxis {
-            AxisMarks(position: .leading) { value in
+            AxisMarks(position: .leading) { _ in
                 AxisGridLine()
                     .foregroundStyle(Color(.systemGray5))
                 AxisValueLabel()
@@ -208,6 +208,7 @@ struct TrendChartView: View {
 private func mockDataPoints(count: Int, baseValue: Double, variance: Double) -> [(date: Date, value: Double)] {
     let calendar = Calendar.current
     return (0..<count).map { i in
+        // swiftlint:disable:next force_unwrapping
         let date = calendar.date(byAdding: .day, value: -count + i + 1, to: Date())!
         let jitter = Double.random(in: -variance...variance)
         let trend = Double(i) * 0.3 // slight upward trend

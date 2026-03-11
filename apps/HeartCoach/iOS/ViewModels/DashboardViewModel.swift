@@ -39,8 +39,8 @@ final class DashboardViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let healthKitService: HealthKitService
-    private let localStore: LocalStore
+    private var healthDataProvider: any HealthDataProviding
+    private var localStore: LocalStore
 
     // MARK: - Private Properties
 
@@ -58,25 +58,25 @@ final class DashboardViewModel: ObservableObject {
     ///   - healthKitService: The HealthKit service for fetching metrics.
     ///   - localStore: The local persistence store for history and profile.
     init(
-        healthKitService: HealthKitService = HealthKitService(),
+        healthKitService: any HealthDataProviding = HealthKitService(),
         localStore: LocalStore = LocalStore()
     ) {
-        self.healthKitService = healthKitService
+        self.healthDataProvider = healthKitService
         self.localStore = localStore
 
-        // Sync tier from local store
-        self.currentTier = localStore.tier
-
-        // Observe tier changes from the local store
-        localStore.$tier
-            .receive(on: RunLoop.main)
-            .sink { [weak self] newTier in
-                self?.currentTier = newTier
-            }
-            .store(in: &cancellables)
+        bindToLocalStore(localStore)
     }
 
     // MARK: - Public API
+
+    func bind(
+        healthDataProvider: any HealthDataProviding,
+        localStore: LocalStore
+    ) {
+        self.healthDataProvider = healthDataProvider
+        self.localStore = localStore
+        bindToLocalStore(localStore)
+    }
 
     /// Refreshes the dashboard by fetching today's snapshot, loading
     /// history, running the trend engine, and persisting the result.
@@ -89,19 +89,29 @@ final class DashboardViewModel: ObservableObject {
 
         do {
             // Ensure HealthKit authorization
-            if !healthKitService.isAuthorized {
-                try await healthKitService.requestAuthorization()
+            if !healthDataProvider.isAuthorized {
+                try await healthDataProvider.requestAuthorization()
             }
 
             // Fetch today's snapshot from HealthKit
-            let snapshot = try await healthKitService.fetchTodaySnapshot()
+            let snapshot = try await healthDataProvider.fetchTodaySnapshot()
             todaySnapshot = snapshot
 
             // Fetch historical snapshots from HealthKit
-            let history = try await healthKitService.fetchHistory(days: historyDays)
+            let history = try await healthDataProvider.fetchHistory(days: historyDays)
 
             // Load any persisted feedback for today
-            let feedback = localStore.loadLastFeedback()?.response
+            let feedbackPayload = localStore.loadLastFeedback()
+            let feedback: DailyFeedback?
+            if let feedbackPayload,
+               Calendar.current.isDate(
+                feedbackPayload.date,
+                inSameDayAs: snapshot.date
+               ) {
+                feedback = feedbackPayload.response
+            } else {
+                feedback = nil
+            }
 
             // Run the trend engine
             let engine = ConfigService.makeDefaultEngine()
@@ -188,5 +198,17 @@ final class DashboardViewModel: ObservableObject {
             localStore.profile.streakDays = 1
             localStore.saveProfile()
         }
+    }
+
+    private func bindToLocalStore(_ localStore: LocalStore) {
+        currentTier = localStore.tier
+        cancellables.removeAll()
+
+        localStore.$tier
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newTier in
+                self?.currentTier = newTier
+            }
+            .store(in: &cancellables)
     }
 }

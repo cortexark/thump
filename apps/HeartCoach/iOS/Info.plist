@@ -5,7 +5,7 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string>Thump reads your heart rate, HRV, recovery, VO2 max, steps, exercise, and sleep data to generate wellness insights and training suggestions.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Thump saves your wellness assessment results to Apple Health so you can track your progress over time.</string>
+	<string>Thump may request permission to write future wellness data to Apple Health if you enable that feature in a later release.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Thump</string>
 	<key>CFBundleShortVersionString</key>

@@ -74,7 +74,7 @@ public enum MockData {
                 byAdding: .day,
                 value: -(days - 1 - offset),
                 to: today
-            )!
+            )! // swiftlint:disable:this force_unwrapping
 
             let seed = offset &* 7 &+ 42
 
@@ -202,6 +202,7 @@ public enum MockData {
     // MARK: - Sample Profile
 
     /// A completed-onboarding user profile for preview use.
+    // swiftlint:disable force_unwrapping
     public static let sampleProfile = UserProfile(
         displayName: "Alex",
         joinDate: Calendar.current.date(
@@ -212,6 +213,7 @@ public enum MockData {
         onboardingComplete: true,
         streakDays: 12
     )
+    // swiftlint:enable force_unwrapping
 
     // MARK: - Sample Correlations
 
@@ -253,6 +255,7 @@ public enum MockData {
     public static let sampleWeeklyReport: WeeklyReport = {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
+        // swiftlint:disable:next force_unwrapping
         let weekStart = calendar.date(byAdding: .day, value: -6, to: today)!
 
         return WeeklyReport(

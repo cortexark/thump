@@ -18,9 +18,14 @@ import SwiftUI
 /// and Steps, while Pro+ users see the full metric suite and coaching nudges.
 struct DashboardView: View {
 
+    @EnvironmentObject private var connectivityService: ConnectivityService
+    @EnvironmentObject private var healthKitService: HealthKitService
+    @EnvironmentObject private var localStore: LocalStore
+
     // MARK: - View Model
 
     @StateObject private var viewModel = DashboardViewModel()
+    @State private var hasBoundDependencies = false
 
     // MARK: - Grid Layout
 
@@ -38,7 +43,18 @@ struct DashboardView: View {
                 .navigationTitle("Dashboard")
                 .navigationBarTitleDisplayMode(.large)
                 .task {
+                    if !hasBoundDependencies {
+                        viewModel.bind(
+                            healthDataProvider: healthKitService,
+                            localStore: localStore
+                        )
+                        hasBoundDependencies = true
+                    }
                     await viewModel.refresh()
+                }
+                .onChange(of: viewModel.assessment) { _, newAssessment in
+                    guard let newAssessment else { return }
+                    connectivityService.sendAssessment(newAssessment)
                 }
                 .refreshable {
                     await viewModel.refresh()

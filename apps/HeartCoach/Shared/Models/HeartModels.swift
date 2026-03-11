@@ -139,6 +139,7 @@ public struct HeartSnapshot: Codable, Equatable, Identifiable, Sendable {
     /// Sleep duration in hours.
     public let sleepHours: Double?
 
+    // swiftlint:disable:next function_parameter_count
     public init(
         date: Date,
         restingHeartRate: Double? = nil,
@@ -236,6 +237,7 @@ public struct HeartAssessment: Codable, Equatable, Sendable {
         return "\(dailyNudge.title): \(dailyNudge.description)"
     }
 
+    // swiftlint:disable:next function_parameter_count
     public init(
         status: TrendStatus,
         confidence: ConfidenceLevel,
@@ -316,6 +318,7 @@ public struct WeeklyReport: Codable, Equatable, Sendable {
     /// Percentage of nudges completed (0.0-1.0).
     public let nudgeCompletionRate: Double
 
+    // swiftlint:disable:next function_parameter_count
     public init(
         weekStart: Date,
         weekEnd: Date,

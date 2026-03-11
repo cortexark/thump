@@ -32,6 +32,7 @@ public struct AlertPolicy: Codable, Equatable, Sendable {
     /// Maximum alerts allowed per calendar day.
     public let maxAlertsPerDay: Int
 
+    // swiftlint:disable:next function_parameter_count
     public init(
         anomalyHigh: Double = 2.0,
         regressionSlope: Double = -0.3,
@@ -391,6 +392,7 @@ public struct HeartTrendEngine: Sendable {
     // MARK: - Explanation Builder
 
     /// Build a human-readable explanation string.
+    // swiftlint:disable:next function_parameter_count
     private func buildExplanation(
         status: TrendStatus,
         confidence: ConfidenceLevel,
@@ -424,8 +426,8 @@ public struct HeartTrendEngine: Sendable {
 
         if stress {
             parts.append(
-                "A pattern consistent with elevated physiological load was detected today. "
-                + "Consider prioritizing rest and recovery."
+                "A pattern consistent with elevated physiological load was detected today. " +
+                "Consider prioritizing rest and recovery."
             )
         }
 
@@ -440,13 +442,13 @@ public struct HeartTrendEngine: Sendable {
             parts.append("This assessment is based on comprehensive data.")
         case .medium:
             parts.append(
-                "This assessment uses partial data. "
-                + "More consistent wear will improve accuracy."
+                "This assessment uses partial data. " +
+                "More consistent wear will improve accuracy."
             )
         case .low:
             parts.append(
-                "Limited data is available. "
-                + "Wearing your watch consistently will help build a reliable baseline."
+                "Limited data is available. " +
+                "Wearing your watch consistently will help build a reliable baseline."
             )
         }
 

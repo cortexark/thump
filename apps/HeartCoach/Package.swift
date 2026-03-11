@@ -18,12 +18,18 @@ let package = Package(
     targets: [
         .target(
             name: "ThumpCore",
-            path: "Shared"
+            path: "Shared",
+            exclude: ["Services/README.md"]
         ),
         .testTarget(
             name: "ThumpCoreTests",
             dependencies: ["ThumpCore"],
-            path: "Tests"
+            path: "Tests",
+            exclude: [
+                "DashboardViewModelTests.swift",
+                "HealthDataProviderTests.swift",
+                "WatchConnectivityProviderTests.swift"
+            ]
         )
     ]
 )

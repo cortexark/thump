@@ -179,10 +179,10 @@ struct TrendsView: View {
     private var metricDisplayName: String {
         switch viewModel.selectedMetric {
         case .restingHR: return "Resting Heart Rate"
-        case .hrv:       return "Heart Rate Variability"
-        case .recovery:  return "Recovery Heart Rate"
-        case .vo2Max:    return "VO2 Max"
-        case .steps:     return "Daily Steps"
+        case .hrv: return "Heart Rate Variability"
+        case .recovery: return "Recovery Heart Rate"
+        case .vo2Max: return "VO2 Max"
+        case .steps: return "Daily Steps"
         }
     }
 
@@ -190,10 +190,10 @@ struct TrendsView: View {
     private var metricUnit: String {
         switch viewModel.selectedMetric {
         case .restingHR: return "bpm"
-        case .hrv:       return "ms"
-        case .recovery:  return "bpm"
-        case .vo2Max:    return "mL/kg/min"
-        case .steps:     return "steps"
+        case .hrv: return "ms"
+        case .recovery: return "bpm"
+        case .vo2Max: return "mL/kg/min"
+        case .steps: return "steps"
         }
     }
 
@@ -201,10 +201,10 @@ struct TrendsView: View {
     private var metricColor: Color {
         switch viewModel.selectedMetric {
         case .restingHR: return .red
-        case .hrv:       return .blue
-        case .recovery:  return .green
-        case .vo2Max:    return .purple
-        case .steps:     return .orange
+        case .hrv: return .blue
+        case .recovery: return .green
+        case .vo2Max: return .purple
+        case .steps: return .orange
         }
     }
 

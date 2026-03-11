@@ -14,6 +14,7 @@ final class NudgeGeneratorTests: XCTestCase {
 
     // MARK: - Properties
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     private var generator: NudgeGenerator!
 
     // MARK: - Lifecycle
@@ -44,7 +45,7 @@ final class NudgeGeneratorTests: XCTestCase {
 
         let stressCategories: Set<NudgeCategory> = [.breathe, .walk, .hydrate, .rest]
         XCTAssertTrue(stressCategories.contains(nudge.category),
-            "Stress context should produce a stress nudge, got: \(nudge.category)")
+                      "Stress context should produce a stress nudge, got: \(nudge.category)")
     }
 
     // MARK: - Test: Regression Context Nudge
@@ -63,7 +64,7 @@ final class NudgeGeneratorTests: XCTestCase {
 
         let validCategories: Set<NudgeCategory> = [.moderate, .rest, .walk, .hydrate]
         XCTAssertTrue(validCategories.contains(nudge.category),
-            "Regression context should produce a moderate/rest/walk nudge, got: \(nudge.category)")
+                      "Regression context should produce a moderate/rest/walk nudge, got: \(nudge.category)")
     }
 
     // MARK: - Test: Low Confidence Nudge
@@ -102,7 +103,7 @@ final class NudgeGeneratorTests: XCTestCase {
         // Positive context nudges celebrate or encourage continuation
         let positiveCategories: Set<NudgeCategory> = [.celebrate, .walk, .moderate, .hydrate]
         XCTAssertTrue(positiveCategories.contains(nudge.category),
-            "Improving context should produce a positive nudge, got: \(nudge.category)")
+                      "Improving context should produce a positive nudge, got: \(nudge.category)")
     }
 
     // MARK: - Test: Stress Overrides Regression
@@ -121,7 +122,7 @@ final class NudgeGeneratorTests: XCTestCase {
 
         let stressCategories: Set<NudgeCategory> = [.breathe, .walk, .hydrate, .rest]
         XCTAssertTrue(stressCategories.contains(nudge.category),
-            "Stress should override regression in nudge selection, got: \(nudge.category)")
+                      "Stress should override regression in nudge selection, got: \(nudge.category)")
     }
 
     // MARK: - Test: Nudge Structural Validity
@@ -149,11 +150,11 @@ final class NudgeGeneratorTests: XCTestCase {
             )
 
             XCTAssertFalse(nudge.title.isEmpty,
-                "Nudge title should not be empty for context: conf=\(confidence), stress=\(stress)")
+                           "Nudge title should not be empty for context: conf=\(confidence), stress=\(stress)")
             XCTAssertFalse(nudge.description.isEmpty,
-                "Nudge description should not be empty for context: conf=\(confidence), stress=\(stress)")
+                           "Nudge description should not be empty for context: conf=\(confidence), stress=\(stress)")
             XCTAssertFalse(nudge.icon.isEmpty,
-                "Nudge icon should not be empty for context: conf=\(confidence), stress=\(stress)")
+                           "Nudge icon should not be empty for context: conf=\(confidence), stress=\(stress)")
         }
     }
 
@@ -163,7 +164,7 @@ final class NudgeGeneratorTests: XCTestCase {
     func testNudgeCategoryIconMapping() {
         for category in NudgeCategory.allCases {
             XCTAssertFalse(category.icon.isEmpty,
-                "\(category) should have a non-empty icon name")
+                           "\(category) should have a non-empty icon name")
         }
     }
 
@@ -173,7 +174,7 @@ final class NudgeGeneratorTests: XCTestCase {
     func testNudgeCategoryTintColorMapping() {
         for category in NudgeCategory.allCases {
             XCTAssertFalse(category.tintColorName.isEmpty,
-                "\(category) should have a non-empty tint color name")
+                           "\(category) should have a non-empty tint color name")
         }
     }
 
@@ -212,7 +213,7 @@ final class NudgeGeneratorTests: XCTestCase {
 
         // At minimum, nudge should be generated (not crash) for extreme values
         XCTAssertFalse(nudge.title.isEmpty,
-            "Even extreme values should produce a valid nudge")
+                       "Even extreme values should produce a valid nudge")
     }
 }
 
@@ -243,9 +244,10 @@ extension NudgeGeneratorTests {
     private func makeHistory(days: Int) -> [HeartSnapshot] {
         let calendar = Calendar.current
         let today = Date()
-        return (0..<days).map { i in
-            let date = calendar.date(byAdding: .day, value: -(days - i), to: today)!
-            let variation = sin(Double(i) * 0.5) * 2.0
+        return (0..<days).map { dayOffset in
+            // swiftlint:disable:next force_unwrapping
+            let date = calendar.date(byAdding: .day, value: -(days - dayOffset), to: today)!
+            let variation = sin(Double(dayOffset) * 0.5) * 2.0
             return HeartSnapshot(
                 date: date,
                 restingHeartRate: 62.0 + variation,

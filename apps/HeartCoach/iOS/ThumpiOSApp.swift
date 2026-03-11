@@ -74,6 +74,8 @@ struct ThumpiOSApp: App {
     /// - Updates the current subscription status from StoreKit.
     /// - Syncs the subscription tier to the local store.
     private func performStartupTasks() async {
+        connectivityService.bind(localStore: localStore)
+
         // Start MetricKit crash reporting and performance monitoring
         MetricKitService.shared.start()
 

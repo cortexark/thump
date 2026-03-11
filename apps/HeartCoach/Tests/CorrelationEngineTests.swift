@@ -1,3 +1,4 @@
+// swiftlint:disable single_test_class
 // CorrelationEngineTests.swift
 // ThumpCoreTests
 //
@@ -14,6 +15,7 @@ final class CorrelationEngineTests: XCTestCase {
 
     // MARK: - Properties
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     private var engine: CorrelationEngine!
 
     // MARK: - Lifecycle
@@ -118,6 +120,7 @@ final class CorrelationEngineTests: XCTestCase {
 
         var history: [HeartSnapshot] = []
         for i in 0..<14 {
+            // swiftlint:disable:next force_unwrapping
             let date = calendar.date(byAdding: .day, value: -(14 - i), to: baseDate)!
             history.append(HeartSnapshot(
                 date: date,
@@ -132,8 +135,10 @@ final class CorrelationEngineTests: XCTestCase {
         XCTAssertNotNil(stepsResult, "Steps vs RHR correlation should exist")
         if let r = stepsResult {
             // Steps up, RHR down = negative correlation = beneficial
-            XCTAssertLessThan(r.correlationStrength, -0.8,
-                "Perfectly inverse linear relationship should yield strong negative r")
+            XCTAssertLessThan(
+                r.correlationStrength, -0.8,
+                "Perfectly inverse linear relationship should yield strong negative r"
+            )
         }
     }
 
@@ -146,6 +151,7 @@ final class CorrelationEngineTests: XCTestCase {
 
         var history: [HeartSnapshot] = []
         for i in 0..<14 {
+            // swiftlint:disable:next force_unwrapping
             let date = calendar.date(byAdding: .day, value: -(14 - i), to: baseDate)!
             let variation = sin(Double(i) * 0.7) * 3.0
             history.append(HeartSnapshot(
@@ -160,8 +166,10 @@ final class CorrelationEngineTests: XCTestCase {
 
         XCTAssertNotNil(stepsResult, "Steps vs RHR correlation should exist")
         if let r = stepsResult {
-            XCTAssertEqual(r.correlationStrength, 0.0, accuracy: 0.01,
-                "Constant steps should yield zero correlation with varying RHR")
+            XCTAssertEqual(
+                r.correlationStrength, 0.0, accuracy: 0.01,
+                "Constant steps should yield zero correlation with varying RHR"
+            )
         }
     }
 
@@ -174,6 +182,7 @@ final class CorrelationEngineTests: XCTestCase {
 
         var history: [HeartSnapshot] = []
         for i in 0..<14 {
+            // swiftlint:disable:next force_unwrapping
             let date = calendar.date(byAdding: .day, value: -(14 - i), to: baseDate)!
             // Only give steps to even days (7 out of 14)
             let steps: Double? = (i % 2 == 0) ? 8000.0 + Double(i) * 100 : nil
@@ -208,8 +217,10 @@ final class CorrelationEngineTests: XCTestCase {
 
         let results = engine.analyze(history: history)
         for result in results {
-            XCTAssertFalse(result.interpretation.isEmpty,
-                "\(result.factorName) interpretation should not be empty")
+            XCTAssertFalse(
+                result.interpretation.isEmpty,
+                "\(result.factorName) interpretation should not be empty"
+            )
         }
     }
 
@@ -231,8 +242,10 @@ final class CorrelationEngineTests: XCTestCase {
         let results = engine.analyze(history: history)
         let validLevels: Set<ConfidenceLevel> = [.high, .medium, .low]
         for result in results {
-            XCTAssertTrue(validLevels.contains(result.confidence),
-                "\(result.factorName) should have a valid confidence level")
+            XCTAssertTrue(
+                validLevels.contains(result.confidence),
+                "\(result.factorName) should have a valid confidence level"
+            )
         }
     }
 
@@ -263,6 +276,7 @@ final class CorrelationEngineTests: XCTestCase {
 extension CorrelationEngineTests {
 
     /// Creates an array of HeartSnapshots with deterministic pseudo-variation.
+    // swiftlint:disable:next function_parameter_count
     private func makeHistory(
         days: Int,
         steps: Double?,
@@ -277,6 +291,7 @@ extension CorrelationEngineTests {
         let today = Date()
 
         return (0..<days).map { i in
+            // swiftlint:disable:next force_unwrapping
             let date = calendar.date(byAdding: .day, value: -(days - i), to: today)!
             let variation = sin(Double(i) * 0.5) * 2.0
             return HeartSnapshot(

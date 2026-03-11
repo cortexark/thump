@@ -15,6 +15,7 @@ final class WatchFeedbackBridgeTests: XCTestCase {
 
     // MARK: - Properties
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     private var bridge: WatchFeedbackBridge!
 
     // MARK: - Lifecycle
@@ -33,7 +34,7 @@ final class WatchFeedbackBridgeTests: XCTestCase {
 
     /// Processing a single feedback should add it to pending.
     func testProcessSingleFeedback() {
-        let payload = makePayload(eventId: "evt-001", response: .good)
+        let payload = makePayload(eventId: "evt-001", response: .positive)
         bridge.processFeedback(payload)
 
         XCTAssertEqual(bridge.pendingFeedback.count, 1)
@@ -43,7 +44,7 @@ final class WatchFeedbackBridgeTests: XCTestCase {
     /// Processing multiple unique feedbacks should add all to pending.
     func testProcessMultipleUniqueFeedbacks() {
         for i in 1...5 {
-            bridge.processFeedback(makePayload(eventId: "evt-\(i)", response: .good))
+            bridge.processFeedback(makePayload(eventId: "evt-\(i)", response: .positive))
         }
         XCTAssertEqual(bridge.pendingFeedback.count, 5)
     }
@@ -52,18 +53,18 @@ final class WatchFeedbackBridgeTests: XCTestCase {
 
     /// Processing the same eventId twice should only add it once.
     func testDeduplicatesByEventId() {
-        let payload = makePayload(eventId: "evt-dup", response: .good)
+        let payload = makePayload(eventId: "evt-dup", response: .positive)
         bridge.processFeedback(payload)
         bridge.processFeedback(payload)
 
         XCTAssertEqual(bridge.pendingFeedback.count, 1,
-            "Duplicate eventId should be rejected")
+                       "Duplicate eventId should be rejected")
     }
 
     /// Different eventIds with same content should both be accepted.
     func testDifferentEventIdsAreNotDeduplicated() {
-        let payload1 = makePayload(eventId: "evt-a", response: .good)
-        let payload2 = makePayload(eventId: "evt-b", response: .good)
+        let payload1 = makePayload(eventId: "evt-a", response: .positive)
+        let payload2 = makePayload(eventId: "evt-b", response: .positive)
 
         bridge.processFeedback(payload1)
         bridge.processFeedback(payload2)
@@ -79,13 +80,13 @@ final class WatchFeedbackBridgeTests: XCTestCase {
             let date = Date().addingTimeInterval(TimeInterval(i * 60))
             bridge.processFeedback(makePayload(
                 eventId: "evt-\(i)",
-                response: .good,
+                response: .positive,
                 date: date
             ))
         }
 
         XCTAssertEqual(bridge.pendingFeedback.count, 50,
-            "Should prune to maxPendingCount of 50")
+                       "Should prune to maxPendingCount of 50")
 
         // Oldest 5 should have been pruned
         let eventIds = bridge.pendingFeedback.map(\.eventId)
@@ -101,9 +102,9 @@ final class WatchFeedbackBridgeTests: XCTestCase {
         let date2 = date1.addingTimeInterval(-3600) // 1 hour earlier
         let date3 = date1.addingTimeInterval(3600)  // 1 hour later
 
-        bridge.processFeedback(makePayload(eventId: "evt-now", response: .good, date: date1))
-        bridge.processFeedback(makePayload(eventId: "evt-past", response: .bad, date: date2))
-        bridge.processFeedback(makePayload(eventId: "evt-future", response: .neutral, date: date3))
+        bridge.processFeedback(makePayload(eventId: "evt-now", response: .positive, date: date1))
+        bridge.processFeedback(makePayload(eventId: "evt-past", response: .negative, date: date2))
+        bridge.processFeedback(makePayload(eventId: "evt-future", response: .skipped, date: date3))
 
         XCTAssertEqual(bridge.pendingFeedback.first?.eventId, "evt-past")
         XCTAssertEqual(bridge.pendingFeedback.last?.eventId, "evt-future")
@@ -116,10 +117,10 @@ final class WatchFeedbackBridgeTests: XCTestCase {
         let earlier = Date()
         let later = earlier.addingTimeInterval(3600)
 
-        bridge.processFeedback(makePayload(eventId: "evt-1", response: .bad, date: earlier))
-        bridge.processFeedback(makePayload(eventId: "evt-2", response: .good, date: later))
+        bridge.processFeedback(makePayload(eventId: "evt-1", response: .negative, date: earlier))
+        bridge.processFeedback(makePayload(eventId: "evt-2", response: .positive, date: later))
 
-        XCTAssertEqual(bridge.latestFeedback(), .good)
+        XCTAssertEqual(bridge.latestFeedback(), .positive)
     }
 
     /// latestFeedback should return nil when no pending feedback exists.
@@ -131,8 +132,8 @@ final class WatchFeedbackBridgeTests: XCTestCase {
 
     /// clearProcessed should remove all pending items.
     func testClearProcessedRemovesPending() {
-        bridge.processFeedback(makePayload(eventId: "evt-1", response: .good))
-        bridge.processFeedback(makePayload(eventId: "evt-2", response: .bad))
+        bridge.processFeedback(makePayload(eventId: "evt-1", response: .positive))
+        bridge.processFeedback(makePayload(eventId: "evt-2", response: .negative))
 
         bridge.clearProcessed()
 
@@ -141,21 +142,21 @@ final class WatchFeedbackBridgeTests: XCTestCase {
 
     /// clearProcessed should retain deduplication history.
     func testClearProcessedRetainsDedupHistory() {
-        let payload = makePayload(eventId: "evt-dedup", response: .good)
+        let payload = makePayload(eventId: "evt-dedup", response: .positive)
         bridge.processFeedback(payload)
         bridge.clearProcessed()
 
         // Re-processing same eventId should still be rejected
         bridge.processFeedback(payload)
         XCTAssertTrue(bridge.pendingFeedback.isEmpty,
-            "Dedup history should survive clearProcessed")
+                      "Dedup history should survive clearProcessed")
     }
 
     // MARK: - Reset All
 
     /// resetAll should clear both pending and dedup history.
     func testResetAllClearsEverything() {
-        let payload = makePayload(eventId: "evt-reset", response: .good)
+        let payload = makePayload(eventId: "evt-reset", response: .positive)
         bridge.processFeedback(payload)
         bridge.resetAll()
 
@@ -165,16 +166,16 @@ final class WatchFeedbackBridgeTests: XCTestCase {
         // Same eventId should now be accepted again
         bridge.processFeedback(payload)
         XCTAssertEqual(bridge.pendingFeedback.count, 1,
-            "After resetAll, previously seen eventIds should be accepted")
+                       "After resetAll, previously seen eventIds should be accepted")
     }
 
     // MARK: - Total Processed Count
 
     /// totalProcessedCount should track all unique eventIds ever seen.
     func testTotalProcessedCountTracksUnique() {
-        bridge.processFeedback(makePayload(eventId: "evt-1", response: .good))
-        bridge.processFeedback(makePayload(eventId: "evt-1", response: .good)) // dup
-        bridge.processFeedback(makePayload(eventId: "evt-2", response: .bad))
+        bridge.processFeedback(makePayload(eventId: "evt-1", response: .positive))
+        bridge.processFeedback(makePayload(eventId: "evt-1", response: .positive)) // dup
+        bridge.processFeedback(makePayload(eventId: "evt-2", response: .negative))
 
         XCTAssertEqual(bridge.totalProcessedCount, 2)
     }
@@ -186,7 +187,9 @@ final class WatchFeedbackServiceTests: XCTestCase {
 
     // MARK: - Properties
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     private var service: WatchFeedbackService!
+    // swiftlint:disable:next implicitly_unwrapped_optional
     private var testDefaults: UserDefaults!
 
     // MARK: - Lifecycle
@@ -194,6 +197,7 @@ final class WatchFeedbackServiceTests: XCTestCase {
     @MainActor
     override func setUp() {
         super.setUp()
+        // swiftlint:disable:next force_unwrapping
         testDefaults = UserDefaults(suiteName: "com.thump.test.watch.\(UUID().uuidString)")!
         service = WatchFeedbackService(defaults: testDefaults)
     }
@@ -209,26 +213,27 @@ final class WatchFeedbackServiceTests: XCTestCase {
     /// Saving feedback for today should be loadable.
     @MainActor
     func testSaveAndLoadFeedbackForToday() {
-        service.saveFeedback(.good, for: Date())
+        service.saveFeedback(.positive, for: Date())
         let loaded = service.loadFeedback(for: Date())
-        XCTAssertEqual(loaded, .good)
+        XCTAssertEqual(loaded, .positive)
     }
 
     /// Saving feedback for a past date should not affect todayFeedback.
     @MainActor
     func testSaveFeedbackForPastDateDoesNotAffectToday() {
+        // swiftlint:disable:next force_unwrapping
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-        service.saveFeedback(.bad, for: yesterday)
+        service.saveFeedback(.negative, for: yesterday)
         XCTAssertNil(service.todayFeedback,
-            "Saving for a past date should not update todayFeedback")
+                     "Saving for a past date should not update todayFeedback")
     }
 
     /// Saving feedback for today should update the published todayFeedback.
     @MainActor
     func testSaveFeedbackForTodayUpdatesPublished() {
         XCTAssertNil(service.todayFeedback, "Should start nil")
-        service.saveFeedback(.neutral, for: Date())
-        XCTAssertEqual(service.todayFeedback, .neutral)
+        service.saveFeedback(.skipped, for: Date())
+        XCTAssertEqual(service.todayFeedback, .skipped)
     }
 
     // MARK: - Has Feedback Today
@@ -242,7 +247,7 @@ final class WatchFeedbackServiceTests: XCTestCase {
     /// hasFeedbackToday should return true after saving feedback.
     @MainActor
     func testHasFeedbackTodayTrueAfterSave() {
-        service.saveFeedback(.good, for: Date())
+        service.saveFeedback(.positive, for: Date())
         XCTAssertTrue(service.hasFeedbackToday())
     }
 
@@ -252,21 +257,24 @@ final class WatchFeedbackServiceTests: XCTestCase {
     @MainActor
     func testFeedbackIsolatedByDate() {
         let today = Date()
+        // swiftlint:disable:next force_unwrapping
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+        // swiftlint:disable:next force_unwrapping
         let twoDaysAgo = Calendar.current.date(byAdding: .day, value: -2, to: today)!
 
-        service.saveFeedback(.good, for: today)
-        service.saveFeedback(.bad, for: yesterday)
-        service.saveFeedback(.neutral, for: twoDaysAgo)
+        service.saveFeedback(.positive, for: today)
+        service.saveFeedback(.negative, for: yesterday)
+        service.saveFeedback(.skipped, for: twoDaysAgo)
 
-        XCTAssertEqual(service.loadFeedback(for: today), .good)
-        XCTAssertEqual(service.loadFeedback(for: yesterday), .bad)
-        XCTAssertEqual(service.loadFeedback(for: twoDaysAgo), .neutral)
+        XCTAssertEqual(service.loadFeedback(for: today), .positive)
+        XCTAssertEqual(service.loadFeedback(for: yesterday), .negative)
+        XCTAssertEqual(service.loadFeedback(for: twoDaysAgo), .skipped)
     }
 
     /// Loading feedback for a date with no entry should return nil.
     @MainActor
     func testLoadFeedbackReturnsNilForMissingDate() {
+        // swiftlint:disable:next force_unwrapping
         let futureDate = Calendar.current.date(byAdding: .day, value: 30, to: Date())!
         XCTAssertNil(service.loadFeedback(for: futureDate))
     }
@@ -276,9 +284,9 @@ final class WatchFeedbackServiceTests: XCTestCase {
     /// Saving new feedback for the same date should overwrite.
     @MainActor
     func testOverwriteFeedbackForSameDate() {
-        service.saveFeedback(.good, for: Date())
-        service.saveFeedback(.bad, for: Date())
-        XCTAssertEqual(service.loadFeedback(for: Date()), .bad)
+        service.saveFeedback(.positive, for: Date())
+        service.saveFeedback(.negative, for: Date())
+        XCTAssertEqual(service.loadFeedback(for: Date()), .negative)
     }
 }
 
@@ -293,7 +301,8 @@ extension WatchFeedbackBridgeTests {
         WatchFeedbackPayload(
             eventId: eventId,
             date: date,
-            response: response
+            response: response,
+            source: "test"
         )
     }
 }

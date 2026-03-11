@@ -56,7 +56,10 @@ struct NudgeCardView: View {
                 Spacer()
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(nudge.title)\(nudge.durationMinutes != nil ? ", \(nudge.durationMinutes!) minutes" : "")")
+            .accessibilityLabel(
+                "\(nudge.title)"
+                    + "\(nudge.durationMinutes.map { ", \($0) minutes" } ?? "")"
+            )
 
             // Description
             Text(nudge.description)
@@ -102,7 +105,8 @@ struct NudgeCardView: View {
         nudge: DailyNudge(
             category: .walk,
             title: "Take a Gentle Walk",
-            description: "Your HRV is trending up. A 15-minute walk will reinforce the gains you have been making this week.",
+            description: "Your HRV is trending up. "
+                + "A 15-minute walk will reinforce the gains you have been making this week.",
             durationMinutes: 15,
             icon: "figure.walk"
         ),

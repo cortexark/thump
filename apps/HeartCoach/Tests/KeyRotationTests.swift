@@ -41,8 +41,10 @@ final class KeyRotationTests: XCTestCase {
         let newData = "after rotation".data(using: .utf8)!
         let encrypted = try CryptoService.encrypt(newData)
         let decrypted = try CryptoService.decrypt(encrypted)
-        XCTAssertEqual(decrypted, newData,
-            "Data encrypted after key rotation should decrypt with the new key")
+        XCTAssertEqual(
+            decrypted, newData,
+            "Data encrypted after key rotation should decrypt with the new key"
+        )
     }
 
     /// Data encrypted with the old key should NOT decrypt after key rotation.
@@ -55,7 +57,10 @@ final class KeyRotationTests: XCTestCase {
 
         // Verify it decrypts with the old key
         let decrypted = try CryptoService.decrypt(encryptedWithOldKey)
-        XCTAssertEqual(decrypted, data, "Sanity check: old-key data decrypts before rotation")
+        XCTAssertEqual(
+            decrypted, data,
+            "Sanity check: old-key data decrypts before rotation"
+        )
 
         // Rotate: delete old key → new key auto-generated on next encrypt
         try CryptoService.deleteKey()
@@ -100,8 +105,10 @@ final class KeyRotationTests: XCTestCase {
         // Step 5: Verify all records decrypt correctly with new key
         for (index, encrypted) in encryptedRecords.enumerated() {
             let decrypted = try CryptoService.decrypt(encrypted)
-            XCTAssertEqual(decrypted, records[index],
-                "Record \(index) should round-trip through key rotation")
+            XCTAssertEqual(
+                decrypted, records[index],
+                "Record \(index) should round-trip through key rotation"
+            )
         }
     }
 
@@ -115,8 +122,10 @@ final class KeyRotationTests: XCTestCase {
         for rotation in 1...3 {
             // Decrypt with current key
             let decrypted = try CryptoService.decrypt(currentEncrypted)
-            XCTAssertEqual(decrypted, original,
-                "Data should be readable before rotation \(rotation)")
+            XCTAssertEqual(
+                decrypted, original,
+                "Data should be readable before rotation \(rotation)"
+            )
 
             // Rotate key
             try CryptoService.deleteKey()
@@ -127,8 +136,10 @@ final class KeyRotationTests: XCTestCase {
 
         // Final verification
         let finalDecrypted = try CryptoService.decrypt(currentEncrypted)
-        XCTAssertEqual(finalDecrypted, original,
-            "Data should survive 3 sequential key rotations with proper re-encryption")
+        XCTAssertEqual(
+            finalDecrypted, original,
+            "Data should survive 3 sequential key rotations with proper re-encryption"
+        )
     }
 
     /// Verifies the record count is preserved during rotation
@@ -143,22 +154,28 @@ final class KeyRotationTests: XCTestCase {
 
         // Decrypt all
         let decryptedRecords = try encryptedRecords.map { try CryptoService.decrypt($0) }
-        XCTAssertEqual(decryptedRecords.count, recordCount,
-            "All records should decrypt before rotation")
+        XCTAssertEqual(
+            decryptedRecords.count, recordCount,
+            "All records should decrypt before rotation"
+        )
 
         // Rotate
         try CryptoService.deleteKey()
 
         // Re-encrypt all
         let reencryptedRecords = try decryptedRecords.map { try CryptoService.encrypt($0) }
-        XCTAssertEqual(reencryptedRecords.count, recordCount,
-            "Record count must be preserved after rotation")
+        XCTAssertEqual(
+            reencryptedRecords.count, recordCount,
+            "Record count must be preserved after rotation"
+        )
 
         // Verify all records
         for (index, encrypted) in reencryptedRecords.enumerated() {
             let decrypted = try CryptoService.decrypt(encrypted)
-            XCTAssertEqual(decrypted, records[index],
-                "Record \(index) content must be preserved after rotation")
+            XCTAssertEqual(
+                decrypted, records[index],
+                "Record \(index) content must be preserved after rotation"
+            )
         }
     }
 
@@ -171,7 +188,9 @@ final class KeyRotationTests: XCTestCase {
         try CryptoService.deleteKey()
 
         // Second delete — should not throw (errSecItemNotFound is acceptable)
-        XCTAssertNoThrow(try CryptoService.deleteKey(),
-            "Deleting a non-existent key should not throw")
+        XCTAssertNoThrow(
+            try CryptoService.deleteKey(),
+            "Deleting a non-existent key should not throw"
+        )
     }
 }

@@ -51,7 +51,6 @@ struct MetricTileView: View {
         self.isLocked = isLocked
     }
 
-
     // MARK: - Accessibility Helpers
 
     private var trendText: String {
@@ -179,11 +178,11 @@ extension MetricTileView {
         isLocked: Bool = false
     ) {
         self.label = label
-        if let v = optionalValue {
+        if let val = optionalValue {
             if decimals == 0 {
-                self.value = "\(Int(v))"
+                self.value = "\(Int(val))"
             } else {
-                self.value = String(format: "%.\(decimals)f", v)
+                self.value = String(format: "%.\(decimals)f", val)
             }
         } else {
             self.value = "--"

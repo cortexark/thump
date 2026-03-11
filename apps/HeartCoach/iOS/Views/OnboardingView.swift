@@ -120,7 +120,10 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text("Your Heart Training Buddy.\nTrack trends, get friendly nudges, and explore your fitness data over time.")
+            Text(
+                "Your Heart Training Buddy.\nTrack trends, "
+                    + "get friendly nudges, and explore your fitness data over time."
+            )
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.9))
                 .multilineTextAlignment(.center)
@@ -155,7 +158,11 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text("Thump reads your heart rate, HRV, recovery, activity, and sleep data from Apple Health to generate personalized insights for your training.")
+            Text(
+                "Thump reads your heart rate, HRV, recovery, activity, "
+                    + "and sleep data from Apple Health to generate "
+                    + "personalized insights for your training."
+            )
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.9))
                 .multilineTextAlignment(.center)
@@ -189,7 +196,6 @@ struct OnboardingView: View {
         .padding(.horizontal, 24)
     }
 
-
     // MARK: - Page 3: Health Disclaimer
 
     private var disclaimerPage: some View {
@@ -207,7 +213,13 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text("Thump is your heart training buddy — not a medical device. It does not diagnose, treat, cure, or prevent any disease. Always consult a qualified healthcare professional before making changes to your health routine. For medical emergencies, call 911.")
+            Text(
+                "Thump is your heart training buddy — not a medical device. "
+                    + "It does not diagnose, treat, cure, or prevent any disease. "
+                    + "Always consult a qualified healthcare professional before "
+                    + "making changes to your health routine. "
+                    + "For medical emergencies, call 911."
+            )
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.9))
                 .multilineTextAlignment(.center)

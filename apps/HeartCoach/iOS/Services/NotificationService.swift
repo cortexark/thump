@@ -28,12 +28,8 @@ final class NotificationService: ObservableObject {
     // MARK: - Private Properties
 
     private let center = UNUserNotificationCenter.current()
-
-    /// Default cooldown between anomaly alerts (in hours).
-    private let defaultCooldownHours: Double = 8.0
-
-    /// Default maximum anomaly alerts per calendar day.
-    private let defaultMaxAlertsPerDay: Int = 3
+    private let localStore: LocalStore
+    private let alertPolicy: AlertPolicy
 
     // MARK: - Notification Identifiers
 
@@ -46,7 +42,12 @@ final class NotificationService: ObservableObject {
 
     // MARK: - Initialization
 
-    init() {
+    init(
+        localStore: LocalStore = LocalStore(),
+        alertPolicy: AlertPolicy = ConfigService.defaultAlertPolicy
+    ) {
+        self.localStore = localStore
+        self.alertPolicy = alertPolicy
         Task {
             await checkCurrentAuthorization()
         }
@@ -80,7 +81,12 @@ final class NotificationService: ObservableObject {
     ///
     /// - Parameter assessment: The `HeartAssessment` that triggered the alert.
     func scheduleAnomalyAlert(assessment: HeartAssessment) {
-        var meta = loadAlertMeta()
+        guard ConfigService.enableAnomalyAlerts,
+              assessment.status == .needsAttention else {
+            return
+        }
+
+        var meta = localStore.alertMeta
 
         guard shouldAlert(meta: &meta) else {
             debugPrint("[NotificationService] Alert suppressed by budget policy.")
@@ -119,7 +125,8 @@ final class NotificationService: ObservableObject {
         // Update and persist meta
         meta.lastAlertAt = Date()
         meta.alertsToday += 1
-        saveAlertMeta(meta)
+        localStore.alertMeta = meta
+        localStore.saveAlertMeta()
     }
 
     // MARK: - Nudge Reminders
@@ -191,8 +198,8 @@ final class NotificationService: ObservableObject {
     /// Determines whether a new alert should be sent based on cooldown and daily limits.
     ///
     /// Checks two constraints:
-    /// 1. Cooldown: At least `defaultCooldownHours` must have elapsed since the last alert.
-    /// 2. Daily limit: No more than `defaultMaxAlertsPerDay` alerts per calendar day.
+    /// 1. Cooldown: At least `alertPolicy.cooldownHours` must have elapsed since the last alert.
+    /// 2. Daily limit: No more than `alertPolicy.maxAlertsPerDay` alerts per calendar day.
     ///
     /// Resets the daily counter when the day stamp changes.
     ///
@@ -209,14 +216,14 @@ final class NotificationService: ObservableObject {
         }
 
         // Check daily limit
-        guard meta.alertsToday < defaultMaxAlertsPerDay else {
+        guard meta.alertsToday < alertPolicy.maxAlertsPerDay else {
             return false
         }
 
         // Check cooldown period
         if let lastAlert = meta.lastAlertAt {
             let hoursSinceLastAlert = now.timeIntervalSince(lastAlert) / 3600.0
-            guard hoursSinceLastAlert >= defaultCooldownHours else {
+            guard hoursSinceLastAlert >= alertPolicy.cooldownHours else {
                 return false
             }
         }
@@ -271,7 +278,7 @@ final class NotificationService: ObservableObject {
         if assessment.regressionFlag {
             return "Heart Metric Trend Change"
         }
-        if assessment.anomalyScore >= 2.0 {
+        if assessment.anomalyScore >= alertPolicy.anomalyHigh {
             return "Heart Metric Anomaly Detected"
         }
         return "Thump Alert"
@@ -287,34 +294,14 @@ final class NotificationService: ObservableObject {
 
     /// Cached formatter for date stamp generation.
     private static let dayStampFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
     }()
 
     /// Generates a date stamp string (yyyy-MM-dd) for the given date.
     private func dayStamp(for date: Date) -> String {
         Self.dayStampFormatter.string(from: date)
-    }
-
-    // MARK: - AlertMeta Persistence
-
-    private let alertMetaKey = "com.thump.alertMeta"
-
-    /// Loads the persisted `AlertMeta` from UserDefaults.
-    private func loadAlertMeta() -> AlertMeta {
-        guard let data = UserDefaults.standard.data(forKey: alertMetaKey),
-              let meta = try? JSONDecoder().decode(AlertMeta.self, from: data) else {
-            return AlertMeta()
-        }
-        return meta
-    }
-
-    /// Persists the `AlertMeta` to UserDefaults.
-    private func saveAlertMeta(_ meta: AlertMeta) {
-        if let data = try? JSONEncoder().encode(meta) {
-            UserDefaults.standard.set(data, forKey: alertMetaKey)
-        }
     }
 }

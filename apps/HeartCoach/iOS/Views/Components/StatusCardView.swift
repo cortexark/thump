@@ -37,7 +37,6 @@ struct StatusCardView: View {
         }
     }
 
-
     // MARK: - Accessibility
 
     private var accessibilityDescription: String {
@@ -112,7 +111,8 @@ struct StatusCardView: View {
         status: .improving,
         confidence: .high,
         cardioScore: 78,
-        explanation: "Your resting heart rate has decreased over the past 7 days, and HRV is trending upward. Great progress."
+        explanation: "Your resting heart rate has decreased over the past 7 days, "
+            + "and HRV is trending upward. Great progress."
     )
     .padding()
 }

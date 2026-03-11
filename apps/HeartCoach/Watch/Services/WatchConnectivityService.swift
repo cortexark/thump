@@ -18,11 +18,8 @@ import Combine
 /// receives ``HeartAssessment`` updates from the phone, and sends
 /// ``WatchFeedbackPayload`` messages back.
 ///
-/// Payloads are serialised via `JSONEncoder` / `JSONDecoder` and embedded
-/// in the WatchConnectivity message dictionary as Base-64 encoded `Data`
-/// under the `"payload"` key. This avoids the fragile
-/// `[String: Any]`-to-model manual mapping that the previous
-/// implementation relied on.
+/// Payloads are serialized through ``ConnectivityMessageCodec`` so both
+/// platforms share one transport contract.
 @MainActor
 final class WatchConnectivityService: NSObject, ObservableObject {
 
@@ -45,18 +42,6 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     // MARK: - Private
 
     private var session: WCSession?
-
-    private let encoder: JSONEncoder = {
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        return enc
-    }()
-
-    private let decoder: JSONDecoder = {
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        return dec
-    }()
 
     // MARK: - Initialization
 
@@ -95,7 +80,10 @@ final class WatchConnectivityService: NSObject, ObservableObject {
             source: "watch"
         )
 
-        guard let message = encodeToMessage(payload, type: "feedback") else {
+        guard let message = ConnectivityMessageCodec.encode(
+            payload,
+            type: .feedback
+        ) else {
             return false
         }
 
@@ -115,8 +103,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     // MARK: - Outbound: Request Assessment
 
     /// Requests the latest assessment from the companion phone app.
-    /// The phone should respond by calling `transferUserInfo` with the
-    /// current ``HeartAssessment``.
+    /// The phone responds synchronously through `replyHandler`.
     func requestLatestAssessment() {
         guard let session = session else {
             connectionError = "Watch Connectivity is not available."
@@ -131,7 +118,9 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         // Clear any previous error on a new attempt.
         connectionError = nil
 
-        let request: [String: Any] = ["type": "requestAssessment"]
+        let request: [String: Any] = [
+            "type": ConnectivityMessageType.requestAssessment.rawValue
+        ]
         session.sendMessage(request, replyHandler: { [weak self] reply in
             self?.handleAssessmentReply(reply)
         }, errorHandler: { [weak self] error in
@@ -145,11 +134,21 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     // MARK: - Inbound Handling
 
     nonisolated private func handleAssessmentReply(_ reply: [String: Any]) {
+        if let type = reply["type"] as? String,
+           type == ConnectivityMessageType.error.rawValue {
+            let reason = (reply["reason"] as? String) ?? "Unable to load the latest assessment."
+            Task { @MainActor [weak self] in
+                self?.connectionError = reason
+            }
+            return
+        }
+
         guard let assessment = decodeAssessment(from: reply) else { return }
 
         Task { @MainActor [weak self] in
             self?.latestAssessment = assessment
             self?.lastSyncDate = Date()
+            self?.connectionError = nil
         }
     }
 
@@ -170,52 +169,17 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Coding Helpers
-
-    /// Encode a `Codable` value into a WatchConnectivity-compatible
-    /// `[String: Any]` message dictionary.
-    ///
-    /// The encoded JSON `Data` is stored as a Base-64 string under
-    /// the `"payload"` key so that the dictionary remains
-    /// property-list compliant (required by `transferUserInfo`).
-    private func encodeToMessage<T: Encodable>(
-        _ value: T,
-        type: String
-    ) -> [String: Any]? {
-        do {
-            let data = try encoder.encode(value)
-            let base64 = data.base64EncodedString()
-            return [
-                "type": type,
-                "payload": base64
-            ]
-        } catch {
-            debugPrint("[WatchConnectivity] Encode failed for \(T.self): \(error.localizedDescription)")
-            return nil
-        }
-    }
-
     /// Decode a ``HeartAssessment`` from a message dictionary.
     ///
     /// Supports two payload formats:
     /// 1. `"payload"` is a Base-64 encoded JSON string (preferred).
     /// 2. `"assessment"` is a Base-64 encoded JSON string (reply format).
     nonisolated private func decodeAssessment(from message: [String: Any]) -> HeartAssessment? {
-        let localDecoder = JSONDecoder()
-        localDecoder.dateDecodingStrategy = .iso8601
-        // Try "payload" key first (standard push format)
-        if let base64 = message["payload"] as? String,
-           let data = Data(base64Encoded: base64) {
-            return try? localDecoder.decode(HeartAssessment.self, from: data)
-        }
-
-        // Fall back to "assessment" key (reply format)
-        if let base64 = message["assessment"] as? String,
-           let data = Data(base64Encoded: base64) {
-            return try? localDecoder.decode(HeartAssessment.self, from: data)
-        }
-
-        return nil
+        ConnectivityMessageCodec.decode(
+            HeartAssessment.self,
+            from: message,
+            payloadKeys: ["payload", "assessment"]
+        )
     }
 }
 
@@ -257,7 +221,7 @@ extension WatchConnectivityService: WCSessionDelegate {
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
         handleIncomingMessage(message)
-        replyHandler(["status": "received"])
+        replyHandler(ConnectivityMessageCodec.acknowledgement())
     }
 
     /// Handles background `transferUserInfo` deliveries from the phone.
