@@ -56,15 +56,15 @@ struct MetricTileView: View {
     private var trendText: String {
         guard let trend else { return "" }
         switch trend {
-        case .up:   return "trending up"
-        case .down: return "trending down"
-        case .flat: return "no change"
+        case .up:   return "moving up lately"
+        case .down: return "easing down lately"
+        case .flat: return "holding steady"
         }
     }
 
     private var confidenceText: String {
         guard let confidence else { return "" }
-        return "confidence \(confidence.displayName)"
+        return "pattern strength \(confidence.displayName)"
     }
 
     private var accessibilityDescription: String {

@@ -64,7 +64,7 @@ final class CorrelationEngineTests: XCTestCase {
         let factorNames = Set(results.map(\.factorName))
         XCTAssertTrue(factorNames.contains("Daily Steps"))
         XCTAssertTrue(factorNames.contains("Walk Minutes"))
-        XCTAssertTrue(factorNames.contains("Workout Minutes"))
+        XCTAssertTrue(factorNames.contains("Activity Minutes"))
         XCTAssertTrue(factorNames.contains("Sleep Hours"))
     }
 

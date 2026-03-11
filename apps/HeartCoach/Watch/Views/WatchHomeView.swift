@@ -70,7 +70,7 @@ struct WatchHomeView: View {
                 .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Heart health status: \(statusLabel(for: assessment.status))")
+        .accessibilityLabel("Wellness status: \(statusLabel(for: assessment.status))")
     }
 
     // MARK: - Cardio Score
@@ -84,12 +84,12 @@ struct WatchHomeView: View {
                     .font(.system(size: 36, weight: .bold, design: .rounded))
                     .foregroundStyle(scoreColor(score))
 
-                Text("Cardio Score")
+                Text("Cardio Fitness")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Cardio score: \(Int(score)) out of 100")
+            .accessibilityLabel("Cardio fitness is around \(Int(score))")
         }
     }
 
@@ -124,8 +124,8 @@ struct WatchHomeView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Today's nudge: \(assessment.dailyNudge.title)")
-        .accessibilityHint("Double tap to view full coaching nudge")
+        .accessibilityLabel("Today's suggestion: \(assessment.dailyNudge.title)")
+        .accessibilityHint("Double tap to view the full suggestion")
     }
 
     // MARK: - Feedback Row
@@ -182,8 +182,8 @@ struct WatchHomeView: View {
         }
         .buttonStyle(.plain)
         .padding(.vertical, 4)
-        .accessibilityLabel("View detailed metrics")
-        .accessibilityHint("Double tap to see all health metrics")
+        .accessibilityLabel("View more details")
+        .accessibilityHint("Double tap to see all your wellness details")
     }
 
     // MARK: - Syncing Placeholder
@@ -239,9 +239,9 @@ struct WatchHomeView: View {
     /// Maps a `TrendStatus` to a short label.
     private func statusLabel(for status: TrendStatus) -> String {
         switch status {
-        case .improving:      return "Improving"
-        case .stable:         return "Stable"
-        case .needsAttention: return "Needs Attention"
+        case .improving:      return "Building Momentum"
+        case .stable:         return "Holding Steady"
+        case .needsAttention: return "Check In"
         }
     }
 

@@ -119,7 +119,16 @@ final class TrendsViewModel: ObservableObject {
                 try await healthKitService.requestAuthorization()
             }
 
-            let snapshots = try await healthKitService.fetchHistory(days: timeRange.rawValue)
+            let snapshots: [HeartSnapshot]
+            do {
+                snapshots = try await healthKitService.fetchHistory(days: timeRange.rawValue)
+            } catch {
+                #if targetEnvironment(simulator)
+                snapshots = MockData.mockHistory(days: timeRange.rawValue)
+                #else
+                snapshots = []
+                #endif
+            }
             history = snapshots
             isLoading = false
         } catch {
@@ -201,9 +210,9 @@ final class TrendsViewModel: ObservableObject {
 
         var label: String {
             switch self {
-            case .improving: return "Improving"
-            case .flat:      return "Stable"
-            case .worsening: return "Needs Attention"
+            case .improving: return "Building Momentum"
+            case .flat:      return "Holding Steady"
+            case .worsening: return "Worth Watching"
             }
         }
 

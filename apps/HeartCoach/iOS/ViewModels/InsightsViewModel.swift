@@ -73,7 +73,16 @@ final class InsightsViewModel: ObservableObject {
             }
 
             // Fetch 30 days of history for meaningful correlations
-            let history = try await healthKitService.fetchHistory(days: 30)
+            let history: [HeartSnapshot]
+            do {
+                history = try await healthKitService.fetchHistory(days: 30)
+            } catch {
+                #if targetEnvironment(simulator)
+                history = MockData.mockHistory(days: 30)
+                #else
+                history = []
+                #endif
+            }
 
             // Run correlation analysis
             let results = correlationEngine.analyze(history: history)

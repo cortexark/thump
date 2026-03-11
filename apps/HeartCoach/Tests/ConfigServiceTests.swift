@@ -78,43 +78,21 @@ final class ConfigServiceTests: XCTestCase {
         )
     }
 
-    // MARK: - Test: Free Tier Feature Gating
+    // MARK: - Test: All Tiers Can Access All Features (all features are free)
 
-    func testFreeTierCannotAccessFullMetrics() {
-        XCTAssertFalse(ConfigService.canAccessFullMetrics(tier: .free))
+    func testFreeTierCanAccessAllFeatures() {
+        XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .free))
+        XCTAssertTrue(ConfigService.canAccessNudges(tier: .free))
+        XCTAssertTrue(ConfigService.canAccessReports(tier: .free))
+        XCTAssertTrue(ConfigService.canAccessCorrelations(tier: .free))
     }
 
-    func testFreeTierCannotAccessNudges() {
-        XCTAssertFalse(ConfigService.canAccessNudges(tier: .free))
-    }
-
-    func testFreeTierCannotAccessReports() {
-        XCTAssertFalse(ConfigService.canAccessReports(tier: .free))
-    }
-
-    func testFreeTierCannotAccessCorrelations() {
-        XCTAssertFalse(ConfigService.canAccessCorrelations(tier: .free))
-    }
-
-    // MARK: - Test: Pro Tier Feature Gating
-
-    func testProTierCanAccessFullMetrics() {
+    func testProTierCanAccessAllFeatures() {
         XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .pro))
-    }
-
-    func testProTierCanAccessNudges() {
         XCTAssertTrue(ConfigService.canAccessNudges(tier: .pro))
-    }
-
-    func testProTierCannotAccessReports() {
-        XCTAssertFalse(ConfigService.canAccessReports(tier: .pro))
-    }
-
-    func testProTierCanAccessCorrelations() {
+        XCTAssertTrue(ConfigService.canAccessReports(tier: .pro))
         XCTAssertTrue(ConfigService.canAccessCorrelations(tier: .pro))
     }
-
-    // MARK: - Test: Coach Tier Feature Gating
 
     func testCoachTierCanAccessAllFeatures() {
         XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .coach))
@@ -122,8 +100,6 @@ final class ConfigServiceTests: XCTestCase {
         XCTAssertTrue(ConfigService.canAccessReports(tier: .coach))
         XCTAssertTrue(ConfigService.canAccessCorrelations(tier: .coach))
     }
-
-    // MARK: - Test: Family Tier Feature Gating
 
     func testFamilyTierCanAccessAllFeatures() {
         XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .family))

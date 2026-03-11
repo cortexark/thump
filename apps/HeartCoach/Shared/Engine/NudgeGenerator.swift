@@ -88,35 +88,35 @@ public struct NudgeGenerator: Sendable {
         [
             DailyNudge(
                 category: .breathe,
-                title: "Try a Breathing Reset",
-                description: "Your recent data suggests you might be under some extra stress. " +
-                    "A 5-minute box breathing session (4 seconds in, hold, out, hold) " +
-                    "can help you relax and unwind.",
+                title: "A Little Breathing Break",
+                description: "It looks like things might be a bit hectic lately. " +
+                    "You might enjoy a few minutes of box breathing " +
+                    "(4 seconds in, hold, out, hold) to help you unwind.",
                 durationMinutes: 5,
                 icon: "wind"
             ),
             DailyNudge(
                 category: .walk,
-                title: "Take a Gentle Stroll",
-                description: "A slow, easy walk in fresh air can help you " +
-                    "recover. Keep the pace conversational and enjoy the surroundings.",
+                title: "A Gentle Stroll Could Feel Great",
+                description: "A slow, easy walk in fresh air can be really refreshing. " +
+                    "No rush, no goals, just enjoy being outside for a bit.",
                 durationMinutes: 15,
                 icon: "figure.walk"
             ),
             DailyNudge(
                 category: .hydrate,
-                title: "Focus on Hydration Today",
-                description: "When things feel intense, staying well hydrated supports " +
-                    "recovery. Aim for a glass of water every hour.",
+                title: "How About Some Extra Water Today?",
+                description: "When things feel intense, a little extra hydration can go " +
+                    "a long way. Maybe keep a glass of water nearby as a gentle reminder.",
                 durationMinutes: nil,
                 icon: "drop.fill"
             ),
             DailyNudge(
                 category: .rest,
-                title: "Prioritize Rest Tonight",
-                description: "Your metrics suggest a lighter day may help. " +
-                    "Consider winding down 30 minutes earlier tonight and avoiding " +
-                    "screens before bed.",
+                title: "An Early Night Might Feel Nice",
+                description: "Your patterns hint that a lighter evening could do wonders. " +
+                    "Maybe try winding down a little earlier tonight and " +
+                    "skipping screens before bed.",
                 durationMinutes: nil,
                 icon: "bed.double.fill"
             )
@@ -135,35 +135,34 @@ public struct NudgeGenerator: Sendable {
         [
             DailyNudge(
                 category: .walk,
-                title: "Add a Post-Meal Walk",
-                description: "A 10-minute walk after your largest meal may help stabilize " +
-                    "your heart rate trend. Even a short walk makes a meaningful " +
-                    "difference over several days.",
+                title: "You Might Enjoy a Post-Meal Walk",
+                description: "A short walk after your biggest meal can feel really good. " +
+                    "Even ten minutes might make a nice difference over a few days.",
                 durationMinutes: 10,
                 icon: "figure.walk"
             ),
             DailyNudge(
                 category: .moderate,
-                title: "Include Moderate Activity",
-                description: "Your trend has been shifting gradually. " +
-                    "A moderate-intensity session like brisk walking or cycling " +
-                    "may help turn things around.",
+                title: "How About Some Movement Today?",
+                description: "Your trend has been shifting a little. " +
+                    "Something like a brisk walk or a bike ride " +
+                    "could be just the thing to mix it up.",
                 durationMinutes: 20,
                 icon: "gauge.with.dots.needle.33percent"
             ),
             DailyNudge(
                 category: .rest,
-                title: "Focus on Sleep Quality",
-                description: "Improving sleep consistency may positively influence your " +
-                    "heart rate trend. Try keeping a regular bedtime this week.",
+                title: "A Cozy Bedtime Routine",
+                description: "Keeping a regular bedtime can make a real difference in " +
+                    "how you feel. Maybe try settling in at the same time this week.",
                 durationMinutes: nil,
                 icon: "bed.double.fill"
             ),
             DailyNudge(
                 category: .hydrate,
-                title: "Stay Hydrated Through the Day",
-                description: "Consistent hydration is great for overall well-being. " +
-                    "Try keeping a water bottle visible as a reminder.",
+                title: "Keep That Water Bottle Handy",
+                description: "Staying hydrated throughout the day is one of those " +
+                    "simple things that really adds up. A visible water bottle helps!",
                 durationMinutes: nil,
                 icon: "drop.fill"
             )
@@ -183,28 +182,28 @@ public struct NudgeGenerator: Sendable {
         [
             DailyNudge(
                 category: .moderate,
-                title: "Build Your Data Baseline",
-                description: "Wearing your Apple Watch consistently helps build a solid " +
-                    "data baseline. Try wearing it during sleep tonight for richer " +
-                    "insights tomorrow.",
+                title: "We're Getting to Know You",
+                description: "The more you wear your Apple Watch, the better we can spot " +
+                    "your patterns. Try wearing it to sleep tonight and we'll have " +
+                    "more to share tomorrow!",
                 durationMinutes: nil,
                 icon: "applewatch"
             ),
             DailyNudge(
                 category: .walk,
-                title: "Start with a Short Walk",
-                description: "While we build your baseline, a 10-minute daily walk is a " +
-                    "great foundation. It also helps generate heart rate data we can " +
-                    "use for better insights.",
+                title: "A Quick Walk to Get Started",
+                description: "While we're learning your patterns, a 10-minute daily walk " +
+                    "is a wonderful starting point. It feels good and helps us " +
+                    "understand your rhythms better.",
                 durationMinutes: 10,
                 icon: "figure.walk"
             ),
             DailyNudge(
                 category: .moderate,
-                title: "Sync Your Watch Data",
-                description: "Make sure your Apple Watch is syncing health data to your " +
-                    "iPhone. Open the Health app and check that Heart and Activity " +
-                    "data sources are enabled.",
+                title: "Quick Sync Check",
+                description: "Make sure your Apple Watch is syncing with your " +
+                    "iPhone. Pop into the Health app and check that Heart and Activity " +
+                    "data sources are turned on.",
                 durationMinutes: nil,
                 icon: "arrow.triangle.2.circlepath"
             )
@@ -223,28 +222,28 @@ public struct NudgeGenerator: Sendable {
         [
             DailyNudge(
                 category: .rest,
-                title: "Dial It Back Today",
-                description: "Based on your feedback, today is a recovery day. " +
-                    "Focus on gentle movement and avoid pushing hard. " +
-                    "Tuning in to how you feel is a great habit.",
+                title: "Let's Take It Easy Today",
+                description: "Thanks for letting us know how you felt. " +
+                    "Today might be a nice day for gentle movement and just " +
+                    "listening to what your body needs.",
                 durationMinutes: nil,
                 icon: "bed.double.fill"
             ),
             DailyNudge(
                 category: .breathe,
-                title: "Recovery-Focused Breathing",
-                description: "When things feel off, slow breathing can help reset. " +
-                    "Try 4-7-8 breathing: inhale for 4 counts, hold for 7, " +
-                    "exhale for 8. Repeat 4 times.",
+                title: "Some Slow Breathing Might Help",
+                description: "When things feel off, slow breathing can be a nice reset. " +
+                    "You might enjoy 4-7-8 breathing: inhale for 4 counts, hold for 7, " +
+                    "exhale for 8. Even a few rounds can feel calming.",
                 durationMinutes: 5,
                 icon: "wind"
             ),
             DailyNudge(
                 category: .walk,
-                title: "A Lighter Walk Today",
-                description: "Yesterday's plan felt like too much. " +
-                    "Today, try just a 5-minute easy walk. " +
-                    "Small steps still count toward progress.",
+                title: "Just a Little Walk Today",
+                description: "Yesterday's suggestion might not have been the right fit. " +
+                    "How about just a 5-minute easy stroll? " +
+                    "Every little bit counts!",
                 durationMinutes: 5,
                 icon: "figure.walk"
             )
@@ -266,28 +265,28 @@ public struct NudgeGenerator: Sendable {
         [
             DailyNudge(
                 category: .celebrate,
-                title: "Great Progress This Week",
-                description: "Your metrics are looking strong. " +
-                    "Keep up what you have been doing. " +
-                    "Consistency is key to building great habits.",
+                title: "You're on a Roll!",
+                description: "Things are looking great lately. " +
+                    "Whatever you've been doing seems to be working really well. " +
+                    "Keep it up!",
                 durationMinutes: nil,
                 icon: "star.fill"
             ),
             DailyNudge(
                 category: .moderate,
-                title: "Ready for a Small Challenge",
-                description: "Your trend is positive, which means things are heading in a good direction. " +
-                    "Consider adding 5 extra minutes to your next workout or " +
-                    "picking up the pace slightly.",
+                title: "Feeling Up for a Little Extra?",
+                description: "Things are heading in a nice direction. " +
+                    "If you're feeling good, you might enjoy adding a few " +
+                    "extra minutes to your next workout.",
                 durationMinutes: 5,
                 icon: "flame.fill"
             ),
             DailyNudge(
                 category: .walk,
-                title: "Maintain Your Walking Habit",
-                description: "Your consistency is paying off. " +
-                    "A brisk 20-minute walk today keeps the momentum going. " +
-                    "Your data shows real consistency.",
+                title: "Keep That Walking Groove Going",
+                description: "Your consistency has been awesome. " +
+                    "A brisk walk today could keep the good vibes rolling. " +
+                    "You've built a great habit!",
                 durationMinutes: 20,
                 icon: "figure.walk"
             )
@@ -306,44 +305,44 @@ public struct NudgeGenerator: Sendable {
         [
             DailyNudge(
                 category: .walk,
-                title: "Brisk Walk Today",
-                description: "A 15-minute brisk walk is one of the simplest things you can do " +
-                    "for yourself. Aim for a pace where you can talk but not sing.",
+                title: "A Brisk Walk Could Feel Great",
+                description: "A 15-minute brisk walk is one of the nicest things you can do " +
+                    "for yourself. Find a pace that feels good and just enjoy it.",
                 durationMinutes: 15,
                 icon: "figure.walk"
             ),
             DailyNudge(
                 category: .moderate,
-                title: "Mix Up Your Activity",
-                description: "Variety keeps things interesting and your body guessing. " +
-                    "Try a different activity today, such as cycling, swimming, or " +
-                    "a fitness class.",
+                title: "Try Something Different Today",
+                description: "Mixing things up keeps it fun! " +
+                    "You might enjoy trying something different today, like cycling, " +
+                    "swimming, or a fitness class.",
                 durationMinutes: 20,
                 icon: "figure.mixed.cardio"
             ),
             DailyNudge(
                 category: .hydrate,
-                title: "Hydration Check-In",
-                description: "Good hydration supports overall well-being and helps your body " +
-                    "perform at its best. Consider keeping a water bottle handy today.",
+                title: "Quick Hydration Check-In",
+                description: "Staying hydrated is one of those little things that can make " +
+                    "a big difference in how you feel. How about keeping a water bottle nearby today?",
                 durationMinutes: nil,
                 icon: "drop.fill"
             ),
             DailyNudge(
                 category: .walk,
-                title: "Two Short Walks",
-                description: "Split your walking into two 10-minute sessions today. " +
+                title: "Two Little Walks",
+                description: "How about splitting your walk into two shorter ones? " +
                     "One in the morning and one after lunch. " +
-                    "This can be more sustainable than one long walk.",
+                    "Sometimes that feels easier and just as rewarding.",
                 durationMinutes: 20,
                 icon: "figure.walk"
             ),
             DailyNudge(
                 category: .seekGuidance,
-                title: "Check In With Your Trends",
-                description: "Take a moment to review your weekly trends in the app. " +
-                    "Understanding your patterns helps you make informed decisions " +
-                    "about your activity level.",
+                title: "Peek at Your Trends",
+                description: "Take a moment to browse your weekly trends in the app. " +
+                    "Spotting your own patterns can be really interesting " +
+                    "and help you find what works best for you.",
                 durationMinutes: nil,
                 icon: "chart.line.uptrend.xyaxis"
             )

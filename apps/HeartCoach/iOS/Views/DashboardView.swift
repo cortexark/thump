@@ -2,9 +2,9 @@
 // Thump iOS
 //
 // The primary dashboard screen. Presents a daily greeting, the heart health
-// status card, a two-column metric grid, a coaching nudge (for Pro+ tiers),
-// and a streak badge. Data is loaded asynchronously from the view model and
-// supports pull-to-refresh.
+// status card, a two-column metric grid, a coaching nudge, and a streak badge.
+// All features are free for all users. Data is loaded asynchronously from the
+// view model and supports pull-to-refresh.
 //
 // Platforms: iOS 17+
 
@@ -14,8 +14,7 @@ import SwiftUI
 
 /// Main dashboard displaying today's heart health assessment and metrics.
 ///
-/// Metrics are gated by subscription tier: free users see only Resting HR
-/// and Steps, while Pro+ users see the full metric suite and coaching nudges.
+/// All metrics and coaching nudges are available to all users.
 struct DashboardView: View {
 
     @EnvironmentObject private var connectivityService: ConnectivityService
@@ -150,7 +149,7 @@ struct DashboardView: View {
 
     private var metricsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Today's Metrics")
+            Text("How You're Doing Today")
                 .font(.headline)
                 .foregroundStyle(.primary)
 
@@ -165,19 +164,14 @@ struct DashboardView: View {
         }
     }
 
-    /// Whether a metric requiring Pro+ access should be locked.
-    private var isProLocked: Bool {
-        !viewModel.currentTier.canAccessFullMetrics
-    }
-
     private var restingHRTile: some View {
         MetricTileView(
-            label: "Resting HR",
+            label: "Resting Heart Rate",
             optionalValue: viewModel.todaySnapshot?.restingHeartRate,
             unit: "bpm",
             trend: nil,
             confidence: nil,
-            isLocked: false // Free tier has access
+            isLocked: false
         )
     }
 
@@ -188,7 +182,7 @@ struct DashboardView: View {
             unit: "ms",
             trend: nil,
             confidence: nil,
-            isLocked: isProLocked
+            isLocked: false
         )
     }
 
@@ -199,19 +193,19 @@ struct DashboardView: View {
             unit: "bpm",
             trend: nil,
             confidence: nil,
-            isLocked: isProLocked
+            isLocked: false
         )
     }
 
     private var vo2MaxTile: some View {
         MetricTileView(
-            label: "VO2 Max",
+            label: "Cardio Fitness",
             optionalValue: viewModel.todaySnapshot?.vo2Max,
             unit: "mL/kg/min",
             decimals: 1,
             trend: nil,
             confidence: nil,
-            isLocked: isProLocked
+            isLocked: false
         )
     }
 
@@ -222,7 +216,7 @@ struct DashboardView: View {
             unit: "steps",
             trend: nil,
             confidence: nil,
-            isLocked: false // Free tier has access
+            isLocked: false
         )
     }
 
@@ -234,7 +228,7 @@ struct DashboardView: View {
             decimals: 1,
             trend: nil,
             confidence: nil,
-            isLocked: isProLocked
+            isLocked: false
         )
     }
 
@@ -242,10 +236,9 @@ struct DashboardView: View {
 
     @ViewBuilder
     private var nudgeSection: some View {
-        if viewModel.currentTier.canAccessNudges,
-           let assessment = viewModel.assessment {
+        if let assessment = viewModel.assessment {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Today's Nudge")
+                Text("A Friendly Suggestion")
                     .font(.headline)
                     .foregroundStyle(.primary)
 
@@ -302,13 +295,13 @@ struct DashboardView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .controlSize(.large)
-            Text("Loading your health data...")
+            Text("Getting your wellness snapshot ready...")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Loading your health data")
+        .accessibilityLabel("Getting your wellness snapshot ready")
     }
 
     // MARK: - Error View
@@ -332,7 +325,7 @@ struct DashboardView: View {
                 Task { await viewModel.refresh() }
             }
             .buttonStyle(.borderedProminent)
-            .accessibilityHint("Double tap to reload your health data")
+            .accessibilityHint("Double tap to reload your wellness data")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

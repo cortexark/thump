@@ -140,7 +140,9 @@ struct TrendChartView: View {
         .chartPlotStyle { plotArea in
             plotArea
                 .background(Color.clear)
+                .clipped()
         }
+        .clipped()
     }
 
     // MARK: - Area Gradient

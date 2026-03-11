@@ -68,6 +68,8 @@ targets:
     sources:
       - path: Watch/
       - path: Shared/
+    resources:
+      - path: Watch/Assets.xcassets
     settings:
       base:
         INFOPLIST_FILE: Watch/Info.plist

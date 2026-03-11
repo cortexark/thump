@@ -26,9 +26,9 @@ public enum ConfidenceLevel: String, Codable, Equatable, Sendable, CaseIterable 
     /// User-facing display name.
     public var displayName: String {
         switch self {
-        case .high: return "High Confidence"
-        case .medium: return "Medium Confidence"
-        case .low: return "Low Confidence"
+        case .high: return "Strong Pattern"
+        case .medium: return "Emerging Pattern"
+        case .low: return "Early Signal"
         }
     }
 
@@ -273,16 +273,24 @@ public struct CorrelationResult: Codable, Equatable, Sendable {
     /// Confidence in the correlation result.
     public let confidence: ConfidenceLevel
 
+    /// Whether the correlation is moving in a beneficial direction for cardiovascular health.
+    ///
+    /// For example, a negative r between steps and RHR is beneficial (more steps → lower RHR),
+    /// whereas a negative r between sleep and HRV would not be.
+    public let isBeneficial: Bool
+
     public init(
         factorName: String,
         correlationStrength: Double,
         interpretation: String,
-        confidence: ConfidenceLevel
+        confidence: ConfidenceLevel,
+        isBeneficial: Bool = true
     ) {
         self.factorName = factorName
         self.correlationStrength = correlationStrength
         self.interpretation = interpretation
         self.confidence = confidence
+        self.isBeneficial = isBeneficial
     }
 }
 
@@ -472,65 +480,57 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
         switch self {
         case .free:
             return [
-                "Daily status card (Improving / Stable / Needs attention)",
-                "Basic trend view for RHR and steps",
+                "Daily wellness snapshot (Building Momentum / Holding Steady / Check In)",
+                "Basic trend view for resting heart rate and steps",
                 "Watch feedback capture"
             ]
         case .pro:
             return [
-                "Full metric dashboard (HRV, Recovery HR, VO2, zone load)",
-                "Personalized daily nudges with dosage",
-                "Regression and anomaly alerts",
-                "Stress pattern detection",
-                "Correlation cards (activity vs trend)",
-                "Confidence scoring on all outputs"
+                "Full wellness dashboard (HRV, Recovery, VO2, zone activity)",
+                "Personalized daily suggestions",
+                "Heads-up when patterns shift",
+                "Stress pattern awareness",
+                "Connection cards (activity vs. trends)",
+                "Pattern strength on all insights"
             ]
         case .coach:
             return [
                 "Everything in Pro",
-                "AI-guided weekly review and plan adjustments",
-                "Multi-week trend analysis and progress reports",
-                "Doctor-shareable PDF health reports",
-                "Priority anomaly alerting"
+                "Weekly wellness review and gentle plan tweaks",
+                "Multi-week trend exploration and progress snapshots",
+                "Shareable PDF wellness summaries",
+                "Priority pattern alerts"
             ]
         case .family:
             return [
                 "Everything in Coach for up to 5 members",
                 "Shared goals and accountability view",
-                "Caregiver mode for elderly family members"
+                "Caregiver mode for family members"
             ]
         }
     }
 
     /// Whether this tier grants access to full metric dashboards.
+    /// NOTE: All features are currently free for all users.
     public var canAccessFullMetrics: Bool {
-        switch self {
-        case .free: return false
-        case .pro, .coach, .family: return true
-        }
+        return true
     }
 
     /// Whether this tier grants access to personalized nudges.
+    /// NOTE: All features are currently free for all users.
     public var canAccessNudges: Bool {
-        switch self {
-        case .free: return false
-        case .pro, .coach, .family: return true
-        }
+        return true
     }
 
     /// Whether this tier grants access to weekly reports and trend analysis.
+    /// NOTE: All features are currently free for all users.
     public var canAccessReports: Bool {
-        switch self {
-        case .free, .pro: return false
-        case .coach, .family: return true
-        }
+        return true
     }
 
     /// Whether this tier grants access to activity-trend correlation analysis.
+    /// NOTE: All features are currently free for all users.
     public var canAccessCorrelations: Bool {
-        switch self {
-        case .free: return false
-        case .pro, .coach, .family: return true
-        }
+        return true
     }
 }

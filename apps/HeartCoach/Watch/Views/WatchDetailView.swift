@@ -75,7 +75,7 @@ struct WatchDetailView: View {
         if let score = assessment.cardioScore {
             metricRow(
                 icon: "heart.fill",
-                label: "Cardio Score",
+                label: "Cardio Fitness",
                 value: String(format: "%.0f", score),
                 color: scoreColor(score)
             )
@@ -83,7 +83,7 @@ struct WatchDetailView: View {
 
         metricRow(
             icon: "waveform.path.ecg",
-            label: "Anomaly",
+            label: "Unusual Activity",
             value: String(format: "%.1f", assessment.anomalyScore),
             color: anomalyColor(assessment.anomalyScore)
         )
@@ -104,7 +104,7 @@ struct WatchDetailView: View {
         if assessment.regressionFlag {
             flagRow(
                 icon: "chart.line.downtrend.xyaxis",
-                label: "Regression Detected",
+                label: "Pattern Worth Watching",
                 color: .orange
             )
         }
@@ -112,7 +112,7 @@ struct WatchDetailView: View {
         if assessment.stressFlag {
             flagRow(
                 icon: "bolt.heart.fill",
-                label: "Stress Pattern",
+                label: "Stress Pattern Noticed",
                 color: .red
             )
         }
@@ -121,7 +121,7 @@ struct WatchDetailView: View {
             HStack(spacing: 4) {
                 Image(systemName: "checkmark.circle")
                     .font(.caption2)
-                Text("No flags detected")
+                Text("Everything looks good")
                     .font(.caption2)
             }
             .foregroundStyle(.green)
@@ -232,9 +232,9 @@ struct WatchDetailView: View {
     /// Maps a `TrendStatus` to a short label.
     private func statusLabel(_ status: TrendStatus) -> String {
         switch status {
-        case .improving:      return "Improving"
-        case .stable:         return "Stable"
-        case .needsAttention: return "Attention"
+        case .improving:      return "Building Momentum"
+        case .stable:         return "Holding Steady"
+        case .needsAttention: return "Check In"
         }
     }
 

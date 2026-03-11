@@ -43,7 +43,7 @@ struct WatchFeedbackView: View {
     /// Main prompt and button layout.
     private var feedbackContent: some View {
         VStack(spacing: 12) {
-            Text("How did today's nudge feel?")
+            Text("How did today's suggestion feel?")
                 .font(.headline)
                 .multilineTextAlignment(.center)
                 .padding(.top, 8)

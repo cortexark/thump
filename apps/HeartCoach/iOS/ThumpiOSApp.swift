@@ -85,10 +85,17 @@ struct ThumpiOSApp: App {
 
         // Sync subscription tier to local store
         await MainActor.run {
+            #if targetEnvironment(simulator)
+            // Force Coach tier in the simulator for full feature access during development
+            subscriptionService.currentTier = .coach
+            localStore.tier = .coach
+            localStore.saveTier()
+            #else
             if subscriptionService.currentTier != localStore.tier {
                 localStore.tier = subscriptionService.currentTier
                 localStore.saveTier()
             }
+            #endif
         }
     }
 }

@@ -2,9 +2,8 @@
 // Thump iOS
 //
 // Displays weekly reports and activity-trend correlation insights.
-// Coach-tier users see a weekly summary report card; Pro+ users see
-// correlation cards showing how activity factors relate to heart metrics.
-// Free-tier users see a locked overlay prompting an upgrade.
+// All users see the weekly summary report card and correlation cards
+// showing how activity factors relate to heart metrics.
 //
 // Platforms: iOS 17+
 
@@ -14,22 +13,13 @@ import SwiftUI
 
 /// Insights screen presenting weekly reports and correlation analysis.
 ///
-/// Content is gated by subscription tier. Free users are shown a locked
-/// preview with a prompt to upgrade. Data is loaded asynchronously from
-/// `InsightsViewModel`.
+/// All content is available to all users. Data is loaded asynchronously
+/// from `InsightsViewModel`.
 struct InsightsView: View {
 
     // MARK: - View Model
 
     @StateObject private var viewModel = InsightsViewModel()
-
-    // MARK: - Environment
-
-    @EnvironmentObject var subscriptionService: SubscriptionService
-
-    // MARK: - State
-
-    @State private var showPaywall: Bool = false
 
     // MARK: - Body
 
@@ -40,9 +30,6 @@ struct InsightsView: View {
                 .navigationBarTitleDisplayMode(.large)
                 .task {
                     await viewModel.loadInsights()
-                }
-                .sheet(isPresented: $showPaywall) {
-                    PaywallView()
                 }
         }
     }
@@ -79,17 +66,7 @@ struct InsightsView: View {
         if let report = viewModel.weeklyReport {
             VStack(alignment: .leading, spacing: 12) {
                 sectionHeader(title: "Weekly Report", icon: "doc.text.fill")
-
-                if currentTier.canAccessReports {
-                    weeklyReportCard(report: report)
-                } else {
-                    lockedCard(
-                        title: "Weekly Report",
-                        description: "Unlock AI-guided weekly reviews, multi-week trend analysis, "
-                            + "and shareable health reports.",
-                        requiredTier: "Coach"
-                    )
-                }
+                weeklyReportCard(report: report)
             }
         }
     }
@@ -172,21 +149,12 @@ struct InsightsView: View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Activity Correlations", icon: "arrow.triangle.branch")
 
-            if currentTier.canAccessCorrelations {
-                if viewModel.correlations.isEmpty {
-                    emptyCorrelationsView
-                } else {
-                    ForEach(viewModel.correlations, id: \.factorName) { correlation in
-                        CorrelationCardView(correlation: correlation)
-                    }
-                }
+            if viewModel.correlations.isEmpty {
+                emptyCorrelationsView
             } else {
-                lockedCard(
-                    title: "Correlations",
-                    description: "Upgrade to Pro to see how your activity, sleep, "
-                        + "and exercise correlate with heart health trends.",
-                    requiredTier: "Pro"
-                )
+                ForEach(viewModel.correlations, id: \.factorName) { correlation in
+                    CorrelationCardView(correlation: correlation)
+                }
             }
         }
     }
@@ -214,48 +182,6 @@ struct InsightsView: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.secondarySystemGroupedBackground))
-        )
-    }
-
-    // MARK: - Locked Card
-
-    private func lockedCard(title: String, description: String, requiredTier: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.fill")
-                .font(.title)
-                .foregroundStyle(.secondary)
-
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-
-            Text(description)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
-
-            Button {
-                showPaywall = true
-            } label: {
-                Text("Upgrade to \(requiredTier)")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 24)
-                    .background(.pink, in: RoundedRectangle(cornerRadius: 12))
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color(.systemGray4), lineWidth: 1)
         )
     }
 
@@ -292,15 +218,15 @@ struct InsightsView: View {
         case .up:
             icon = "arrow.up.right"
             color = .green
-            label = "Improving"
+            label = "Building Momentum"
         case .flat:
             icon = "minus"
             color = .blue
-            label = "Stable"
+            label = "Holding Steady"
         case .down:
             icon = "arrow.down.right"
             color = .orange
-            label = "Declining"
+            label = "Worth Watching"
         }
 
         return HStack(spacing: 4) {
@@ -314,11 +240,6 @@ struct InsightsView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(color.opacity(0.12), in: Capsule())
-    }
-
-    /// The current subscription tier, sourced from the subscription service.
-    private var currentTier: SubscriptionTier {
-        subscriptionService.currentTier
     }
 
     // MARK: - Loading View
@@ -337,7 +258,6 @@ struct InsightsView: View {
 
 // MARK: - Preview
 
-#Preview("Insights - Pro Tier") {
+#Preview("Insights") {
     InsightsView()
-        .environmentObject(SubscriptionService.preview)
 }
