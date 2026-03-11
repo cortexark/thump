@@ -79,7 +79,8 @@ jobs:
           xcodegen generate
       - name: Install iOS Simulator Runtime
         run: |
-          xcodebuild -downloadPlatform iOS
+          # Try to download iOS platform; if it fails, use pre-installed simulators
+          xcodebuild -downloadPlatform iOS || echo "Download failed, using pre-installed simulators"
       - name: List Available Simulators
         run: |
           xcrun simctl list devices available | grep -i iphone | head -10
