@@ -1,0 +1,223 @@
+# TaskPilot v0.3.0 — Quality Assurance (ROLE_QA) Skills
+# Changes from v0.2.0:
+# - Added `depends_on` field to specify prerequisite skills
+# - Added `produces` field to list artifact outputs (matches artifacts_produced)
+
+skills:
+  - skill_id: SKILL_QA_TEST_PLAN
+    role: ROLE_QA
+    description: >
+      Create a comprehensive test plan covering unit, integration, and
+      E2E test strategies with risk-based prioritization.
+    prerequisites:
+      - PRD and system design available
+      - Acceptance criteria defined for all user stories
+    depends_on: []
+    produces:
+      - test_plan.md
+      - test_matrix.md
+    evidence_required:
+      - Test plan document with test matrix
+      - Risk-based priority for every test case
+      - Negative and boundary test cases
+    artifacts_produced:
+      - test_plan.md
+      - test_matrix.md
+    scoring_rubric:
+      coverage: "Test plan covers >= 80% of acceptance criteria"
+      risk_assessment: "Every test case has risk-based priority"
+      edge_cases: "At least 3 negative/boundary tests per feature"
+    anti_patterns:
+      - Only happy-path tests
+      - No risk prioritization
+      - Missing integration test strategy
+    test_hooks:
+      - Verify coverage of acceptance criteria
+      - Check negative test case count per feature
+    exit_criteria:
+      - Test plan covers >= 80% of acceptance criteria
+      - Risk-based priority assigned to every test case
+      - Flaky test baseline established (flake_rate < 5%)
+      - At least 3 negative/boundary test cases per feature
+      - Defect escape rate from previous cycle addressed
+
+  - skill_id: SKILL_QA_TEST_EXECUTION
+    role: ROLE_QA
+    description: >
+      Execute test plan, record results, identify defects, and produce
+      a test execution report with pass/fail summary.
+    prerequisites:
+      - SKILL_QA_TEST_PLAN exit criteria met
+      - Code under test is build-stable
+    depends_on:
+      - SKILL_QA_TEST_PLAN
+    produces:
+      - test_results.md
+      - defect_reports/
+    evidence_required:
+      - Test execution log with pass/fail for each case
+      - Defect reports for all failures
+      - Flake analysis for non-deterministic results
+    artifacts_produced:
+      - test_results.md
+      - defect_reports/
+    scoring_rubric:
+      completeness: "All planned test cases executed"
+      accuracy: "Defects properly categorized and reproducible"
+      timeliness: "Results available within SLA"
+    anti_patterns:
+      - Skipping low-priority tests without documentation
+      - Filing defects without reproduction steps
+      - Ignoring flaky tests
+    test_hooks:
+      - Verify all planned tests executed
+      - Check defects have reproduction steps
+    exit_criteria:
+      - All planned test cases executed and logged
+      - Every failure has a defect report with reproduction steps
+      - Flaky tests identified and tagged
+      - Pass rate documented
+      - No untriaged failures
+
+  - skill_id: SKILL_QA_COVERAGE_ANALYSIS
+    role: ROLE_QA
+    description: >
+      Analyze code coverage, identify coverage gaps, and recommend
+      additional tests to improve coverage thresholds.
+    prerequisites:
+      - Test suite exists and runs
+      - Coverage tooling configured
+    depends_on:
+      - SKILL_QA_TEST_PLAN
+    produces:
+      - coverage_report.md
+      - coverage_gaps.md
+    evidence_required:
+      - Coverage report with per-module breakdown
+      - Gap analysis highlighting under-tested modules
+      - Coverage improvement plan
+    artifacts_produced:
+      - coverage_report.md
+      - coverage_gaps.md
+    scoring_rubric:
+      granularity: "Per-module coverage breakdown"
+      actionability: "Gaps have specific test recommendations"
+      trend: "Comparison to previous cycle's coverage"
+    anti_patterns:
+      - Reporting only aggregate coverage
+      - No recommendations for gaps
+      - Targeting coverage number without considering risk
+    test_hooks:
+      - Verify per-module breakdown exists
+      - Check gaps have test recommendations
+    exit_criteria:
+      - Per-module coverage breakdown produced
+      - Under-tested modules identified (< 60% coverage)
+      - Specific test recommendations for each gap
+      - Overall coverage trend documented
+
+  - skill_id: SKILL_QA_REGRESSION_GUARD
+    role: ROLE_QA
+    description: >
+      Monitor for regressions across cycles by comparing test results,
+      coverage, and defect counts against baseline.
+    prerequisites:
+      - Previous cycle's test results available
+      - Current test results available
+    depends_on:
+      - SKILL_QA_TEST_EXECUTION
+    produces:
+      - regression_report.md
+    evidence_required:
+      - Regression comparison report
+      - New defects categorized as regression vs. new
+      - Trend analysis across cycles
+    artifacts_produced:
+      - regression_report.md
+    scoring_rubric:
+      detection: "All regressions identified and categorized"
+      impact: "Regression severity assessed"
+      trend: "Multi-cycle trend visible"
+    anti_patterns:
+      - Comparing only pass/fail counts without detail
+      - Not distinguishing regressions from new bugs
+      - No trend tracking
+    test_hooks:
+      - Verify regression categorization exists
+      - Check trend data spans multiple cycles
+    exit_criteria:
+      - All test result changes categorized (regression, new, fixed)
+      - Regression severity assessed for each item
+      - No P0 regressions unresolved
+      - Trend data updated for this cycle
+
+  - skill_id: SKILL_QA_DEFECT_MANAGEMENT
+    role: ROLE_QA
+    description: >
+      Manage defect lifecycle from filing through resolution verification.
+      Maintain defect database with severity, reproducibility, and status.
+    prerequisites:
+      - Defects identified from testing or dogfooding
+    depends_on:
+      - SKILL_QA_TEST_EXECUTION
+    produces:
+      - defect_database.md
+      - escape_analysis.md
+    evidence_required:
+      - Defect database with required fields
+      - Resolution verification for closed defects
+      - Defect escape analysis
+    artifacts_produced:
+      - defect_database.md
+      - escape_analysis.md
+    scoring_rubric:
+      completeness: "All defects have required fields filled"
+      verification: "Closed defects have verification evidence"
+      analysis: "Escape patterns identified and addressed"
+    anti_patterns:
+      - Closing defects without verification
+      - Missing reproduction steps
+      - No escape analysis
+    test_hooks:
+      - Verify closed defects have verification
+      - Check escape rate calculation
+    exit_criteria:
+      - All defects have severity, reproduction steps, and status
+      - Closed defects verified with evidence
+      - Defect escape rate calculated
+      - Escape patterns documented with prevention recommendations
+
+  - skill_id: SKILL_QA_CHALLENGE_ALL
+    role: ROLE_QA
+    description: >
+      Challenge any role on coverage holes, flaky tests, defect escapes,
+      or quality regressions. QA has authority to block releases.
+    prerequisites:
+      - Quality data available (test results, coverage, defects)
+    depends_on:
+      - SKILL_QA_COVERAGE_ANALYSIS
+      - SKILL_QA_REGRESSION_GUARD
+    produces:
+      - quality_challenge.md
+    evidence_required:
+      - Challenge document with evidence
+      - Quality gate assessment
+      - Recommended actions
+    artifacts_produced:
+      - quality_challenge.md
+    scoring_rubric:
+      evidence: "Every challenge backed by quality data"
+      impact: "Business impact of quality gaps assessed"
+      resolution: "Clear acceptance criteria for resolution"
+    anti_patterns:
+      - Blocking without evidence
+      - Accepting risk without documentation
+      - No resolution criteria
+    test_hooks:
+      - Verify challenges have quality data evidence
+      - Check resolution criteria are binary
+    exit_criteria:
+      - Every challenge backed by quality data
+      - Business impact assessed for each quality gap
+      - Resolution criteria are binary (pass/fail)
+      - Resolution accepted or escalated within SLA

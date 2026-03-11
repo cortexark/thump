@@ -1,0 +1,260 @@
+# TaskPilot v0.3.0 — Software Dev Engineer (ROLE_SDE) Skills
+# Changes from v0.2.0:
+# - Added `depends_on` field to specify prerequisite skills
+# - Added `produces` field to list artifact outputs (matches artifacts_produced)
+
+skills:
+  - skill_id: SKILL_SDE_SYSTEM_DESIGN
+    role: ROLE_SDE
+    description: >
+      Produce a system design document covering architecture, API contracts,
+      data models, and technology choices. Evaluate alternatives with trade-off analysis.
+    prerequisites:
+      - PRD approved by PM
+      - Requirements spec available
+    depends_on: []
+    produces:
+      - system_design.md
+      - api_contract.yaml
+    evidence_required:
+      - System design document with diagrams
+      - API contract with request/response schemas
+      - At least 2 alternatives evaluated
+    artifacts_produced:
+      - system_design.md
+      - api_contract.yaml
+    scoring_rubric:
+      coverage: "Design addresses all functional requirements from PM"
+      depth: "API contracts include error cases, auth, and versioning"
+      alternatives: "At least 2 alternatives evaluated with pros/cons"
+    anti_patterns:
+      - Single solution without alternatives
+      - Missing error handling in API contracts
+      - No data model documentation
+    test_hooks:
+      - Verify design covers all PRD requirements
+      - Check API contract has error response schemas
+    exit_criteria:
+      - Design doc covers all functional requirements from PM
+      - API contract defined with request/response schemas
+      - At least 2 alternatives evaluated with trade-off analysis
+      - PE reviewed for scalability, SEC reviewed for threats
+      - No unresolved challenges from other roles
+
+  - skill_id: SKILL_SDE_IMPLEMENTATION
+    role: ROLE_SDE
+    description: >
+      Implement features according to the approved system design. Produce
+      working code with inline documentation, error handling, and logging.
+    prerequisites:
+      - SKILL_SDE_SYSTEM_DESIGN exit criteria met
+      - Design reviewed and approved by PE and QA
+    depends_on:
+      - SKILL_SDE_SYSTEM_DESIGN
+    produces:
+      - Source code files (*.swift, *.py, etc.)
+      - impl_notes.md
+    evidence_required:
+      - Source code files implementing the design
+      - Inline documentation on complex logic
+      - Error handling for all failure modes
+    artifacts_produced:
+      - Source code files (*.swift, *.py, etc.)
+      - Implementation notes (impl_notes.md)
+    scoring_rubric:
+      correctness: "Implementation matches design spec"
+      robustness: "Error paths handled; no force-unwraps or crashes"
+      readability: "Code is self-documenting with strategic comments"
+    anti_patterns:
+      - Force-unwrapping optionals
+      - Silent error swallowing
+      - No logging on error paths
+      - Implementation diverging from design without updating design doc
+    test_hooks:
+      - Verify no force-unwraps in production code
+      - Check error paths have logging
+    exit_criteria:
+      - All features from design spec implemented
+      - Zero force-unwraps in production code
+      - Error handling on all failure paths with logging
+      - Code compiles with zero warnings
+      - Implementation notes document any design deviations
+
+  - skill_id: SKILL_SDE_CODE_REVIEW
+    role: ROLE_SDE
+    description: >
+      Review code changes for correctness, style, performance, and security.
+      Produce a structured review artifact with findings and recommendations.
+    prerequisites:
+      - Code changes ready for review
+      - Coding standards document available
+    depends_on:
+      - SKILL_SDE_IMPLEMENTATION
+    produces:
+      - code_review.md
+    evidence_required:
+      - Review document with categorized findings
+      - Each finding has severity and recommendation
+    artifacts_produced:
+      - code_review.md
+    scoring_rubric:
+      thoroughness: "All changed files reviewed"
+      categorization: "Findings tagged by type (bug, style, perf, security)"
+      actionability: "Every finding has a specific fix recommendation"
+    anti_patterns:
+      - Rubber-stamp approval without analysis
+      - Style-only feedback ignoring logic bugs
+      - No severity classification
+    test_hooks:
+      - Verify all changed files covered in review
+      - Check findings have severity ratings
+    exit_criteria:
+      - All changed files reviewed
+      - Every finding has severity (P0/P1/P2) and recommendation
+      - No unresolved P0 findings
+      - Review accepted by code author
+
+  - skill_id: SKILL_SDE_ARCHITECTURE_HYGIENE
+    role: ROLE_SDE
+    description: >
+      Evaluate codebase for architectural debt, modularization opportunities,
+      and protocol extraction. Produce tech debt inventory and improvement plan.
+    prerequisites:
+      - Existing codebase to evaluate
+    depends_on: []
+    produces:
+      - tech_debt_inventory.md
+      - adr_template.md
+    evidence_required:
+      - Tech debt inventory with severity ratings
+      - Modularization proposals with effort estimates
+      - ADR for significant architectural decisions
+    artifacts_produced:
+      - tech_debt_inventory.md
+      - adr_template.md
+    scoring_rubric:
+      coverage: "All major modules evaluated"
+      actionability: "Each debt item has estimated effort and priority"
+      impact: "Impact on maintainability, testability, and performance assessed"
+    anti_patterns:
+      - Listing debt without priority or effort
+      - Proposing rewrites without incremental alternatives
+      - Ignoring test impact of refactoring
+    test_hooks:
+      - Verify all major modules covered
+      - Check debt items have effort estimates
+    exit_criteria:
+      - All major modules evaluated for tech debt
+      - Each debt item has severity, effort estimate, and priority
+      - Modularization proposals include incremental migration paths
+      - PE and QA reviewed for performance and test impact
+
+  - skill_id: SKILL_SDE_CI_CD_DESIGN
+    role: ROLE_SDE
+    description: >
+      Design and implement CI/CD pipeline including lint, build, test,
+      and deploy stages with appropriate gates.
+    prerequisites:
+      - Build system configured
+      - Test suite exists
+    depends_on: []
+    produces:
+      - ci.yml
+      - pipeline_design.md
+    evidence_required:
+      - CI/CD configuration file
+      - Pipeline diagram showing gates
+      - Gate criteria documentation
+    artifacts_produced:
+      - ci.yml (or equivalent)
+      - pipeline_design.md
+    scoring_rubric:
+      coverage: "All quality gates present (lint, build, test)"
+      reliability: "Pipeline handles flaky tests and retries"
+      speed: "Parallelization where possible"
+    anti_patterns:
+      - No test gate in pipeline
+      - Sequential stages that could run in parallel
+      - No artifact caching
+    test_hooks:
+      - Verify lint, build, and test stages exist
+      - Check pipeline has caching configured
+    exit_criteria:
+      - Lint, build, and test stages all configured
+      - Pipeline runs on push and PR
+      - Test results uploaded as artifacts
+      - Pipeline succeeds on current codebase
+      - QA reviewed gate criteria
+
+  - skill_id: SKILL_SDE_TEST_SCAFFOLDING
+    role: ROLE_SDE
+    description: >
+      Create test infrastructure including test targets, mock objects,
+      test data factories, and test utilities.
+    prerequisites:
+      - Production code exists
+      - Test framework available
+    depends_on:
+      - SKILL_SDE_IMPLEMENTATION
+    produces:
+      - Test files (*.swift, *.py, etc.)
+      - Test utilities
+    evidence_required:
+      - Test target configuration
+      - Mock/stub implementations
+      - Test data factories
+    artifacts_produced:
+      - Test files (*.swift, *.py, etc.)
+      - Test utilities
+    scoring_rubric:
+      coverage: "Mocks cover all external dependencies"
+      reusability: "Test factories are parameterized and reusable"
+      isolation: "Tests do not depend on external services"
+    anti_patterns:
+      - Tests hitting real APIs
+      - Copy-pasted test setup across files
+      - No mock for network layer
+    test_hooks:
+      - Verify mocks exist for all external dependencies
+      - Check test factories are parameterized
+    exit_criteria:
+      - Test target configured and building
+      - Mocks exist for all external service dependencies
+      - Test data factories are parameterized
+      - At least one test passes using the new infrastructure
+      - QA reviewed mock coverage
+
+  - skill_id: SKILL_SDE_FEASIBILITY_CHALLENGE
+    role: ROLE_SDE
+    description: >
+      Challenge PM or UX proposals on technical feasibility, timeline risk,
+      or architectural debt impact. Produce a feasibility review artifact.
+    prerequisites:
+      - PM or UX proposal to review
+      - Knowledge of current architecture
+    depends_on:
+      - SKILL_SDE_SYSTEM_DESIGN
+    produces:
+      - feasibility_review.md
+    evidence_required:
+      - Feasibility review with technical analysis
+      - Effort estimates for challenged items
+      - Alternative approaches if infeasible
+    artifacts_produced:
+      - feasibility_review.md
+    scoring_rubric:
+      evidence: "Challenges backed by technical analysis, not opinion"
+      constructiveness: "Alternatives provided for infeasible items"
+      clarity: "Non-technical stakeholders can understand the concerns"
+    anti_patterns:
+      - Saying "can't be done" without analysis
+      - No alternative proposals
+      - Technical jargon without explanation
+    test_hooks:
+      - Verify challenged items have effort estimates
+      - Check alternatives exist for rejected proposals
+    exit_criteria:
+      - Every challenged item has technical analysis with evidence
+      - Effort estimates provided for all items
+      - Alternatives documented for infeasible items
+      - Resolution accepted by proposing role

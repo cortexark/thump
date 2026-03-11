@@ -1,26 +1,58 @@
 # Orchestrator-Driven Improvements — Thump (HeartCoach)
 
-## Latest Cycle: 2026-03-10 (Orchestrator v0.2.0)
+## Latest Cycle: 2026-03-10 (Orchestrator v0.3.0)
 
 ## Executive Summary
 
-Third orchestrator cycle. Orchestrator v0.2.0 was promoted (overall_weighted_score 0.82→0.91) with hardened SEC skills, completed extended role exit criteria, and a new JSONL-based long-term memory system. Dogfood drove 3 app improvements: HealthKit protocol extraction for testability, key rotation test suite, and mock health data provider with tests.
+Fourth orchestrator cycle. Orchestrator v0.3.0 was promoted (overall_weighted_score 0.91→0.96) with skill dependency validation, event bus schema, 2 new MAST scenarios (10/14 modes covered), DSPy-inspired role prompts, and fixed exit criteria gaps. Dogfood drove 3 app improvements: WatchConnectivity protocol extraction for testability, DashboardViewModel mock-based tests, and WatchConnectivity provider tests.
 
 ## Architecture Assessment (Current → Target)
 
 ### Current State (as of 2026-03-10)
-- 51 Swift files, ~11,500 lines across iOS, watchOS, and Shared layers
-- Test coverage: ~25% estimated (80+ tests across 9 test files)
+- 54 Swift files, ~12,000 lines across iOS, watchOS, and Shared layers
+- Test coverage: ~30% estimated (100+ tests across 12 test files)
 - CI: Configured with lint → build → test → coverage gates
 - SwiftLint: Configured with project-specific rules
 - HealthKit protocol abstraction extracted for testability
+- WatchConnectivity protocol abstraction extracted for testability
 - Key rotation test suite validates crypto lifecycle
+- Event bus infrastructure for orchestrator skill coordination
 
 ### Target State (Next Cycle)
-- Test coverage: ~35% with HealthKit mock-based integration tests
-- HeartTrendEngine performance benchmarks established
-- SwiftLint violations resolved
-- StoreKit sandbox testing configured
+- Test coverage: ~40% with StoreKit sandbox tests
+- SwiftLint violations resolved to < 10
+- UI snapshot tests for key views
+- Accessibility audit automation in CI
+
+---
+
+## Cycle 4 (2026-03-10) — P1 Improvements
+
+### Implemented This Cycle
+
+| # | Problem | Solution | Orchestrator Skill | Acceptance Criteria |
+|---|---------|----------|-------------------|-------------------|
+| 1 | WatchConnectivity untestable — concrete class with no protocol (P1 #7) | Extracted WatchConnectivityProviding protocol + MockWatchConnectivityProvider with call tracking, configurable behavior, simulation helpers | SKILL_SDE_TEST_SCAFFOLDING | Mock conforms to protocol; send feedback, request assessment, reachability all mockable; call counts tracked |
+| 2 | DashboardViewModel untested with mock data (P1 #4) | Added DashboardViewModelTests.swift with 9 test cases: mock provider auth flow, fetch operations, error handling, trend engine integration with mock data | SKILL_QA_TEST_PLAN + SKILL_SDE_TEST_SCAFFOLDING | MockHealthDataProvider contract tested; HeartTrendEngine produces assessment from mock data; anomaly detection validated |
+| 3 | No WatchConnectivity mock tests | Added WatchConnectivityProviderTests.swift with 10 test cases: initial state, send feedback success/failure, request assessment reachable/unreachable/error, simulation helpers, reset | SKILL_QA_TEST_PLAN | All mock behaviors tested; simulation helpers verified; call tracking reset works |
+
+### P1 — Next Cycle
+
+| # | Problem | Solution | Priority |
+|---|---------|----------|----------|
+| 4 | SwiftLint violations in existing code | Run lint against all files, fix errors, reduce warnings to < 10 | P1 |
+| 5 | No performance baselines | Add XCTest performance test cases for HeartTrendEngine | P1 |
+| 6 | No UI snapshot tests | Add ViewInspector or snapshot testing for key views | P1 |
+| 7 | StoreKit 2 testing in sandbox | Add StoreKit configuration file for testing | P1 |
+
+### P2 — Backlog
+
+| # | Problem | Solution | Priority |
+|---|---------|----------|----------|
+| 8 | No accessibility audit automation | Add automated WCAG checks in CI | P2 |
+| 9 | Notification scheduling tests | Add alert budget and scheduling tests | P2 |
+| 10 | LocalStore key rotation atomicity | Implement atomic re-encryption with rollback on interruption | P2 |
+| 11 | No integration test for phone↔watch sync | End-to-end WatchConnectivity flow test | P2 |
 
 ---
 
@@ -106,13 +138,13 @@ Third orchestrator cycle. Orchestrator v0.2.0 was promoted (overall_weighted_sco
 
 ---
 
-## All Code Changes — Cycle 3
+## All Code Changes — Cycle 4
 
 | File | Change | Orchestrator Skill |
 |------|--------|-------------------|
-| `iOS/Services/HealthDataProviding.swift` | NEW — HealthDataProviding protocol + MockHealthDataProvider with call tracking | SKILL_SDE_TEST_SCAFFOLDING |
-| `Tests/KeyRotationTests.swift` | NEW — 6 test cases for key rotation lifecycle (delete, old-key-fails, correct flow, multi-rotation, record count, idempotent) | SKILL_QA_TEST_PLAN + SKILL_SEC_DATA_HANDLING |
-| `Tests/HealthDataProviderTests.swift` | NEW — 6 test cases for mock health data provider contract | SKILL_SDE_TEST_SCAFFOLDING |
+| `Watch/Services/WatchConnectivityProviding.swift` | NEW — WatchConnectivityProviding protocol + MockWatchConnectivityProvider with call tracking and simulation helpers | SKILL_SDE_TEST_SCAFFOLDING |
+| `Tests/DashboardViewModelTests.swift` | NEW — 9 test cases for DashboardViewModel mock integration and HeartTrendEngine with mock data | SKILL_QA_TEST_PLAN + SKILL_SDE_TEST_SCAFFOLDING |
+| `Tests/WatchConnectivityProviderTests.swift` | NEW — 10 test cases for WatchConnectivity mock provider contract | SKILL_QA_TEST_PLAN |
 
 ---
 
@@ -120,8 +152,9 @@ Third orchestrator cycle. Orchestrator v0.2.0 was promoted (overall_weighted_sco
 
 ### Go/No-Go Checklist
 - [x] SDE: All new code compiles (protocol + mock + tests)
-- [x] QA: New test suites pass (18+ new assertions across 2 test files)
+- [x] QA: New test suites pass (19+ new assertions across 3 test files)
 - [x] QA: No regressions in existing test suites
+- [x] QA: DashboardViewModel and WatchConnectivity contracts validated
 - [x] SEC: Key rotation behavior validated via KeyRotationTests
 - [ ] UX: Manual UI review of all screens (requires device)
 - [ ] PE: Memory profile with large history (requires Instruments)

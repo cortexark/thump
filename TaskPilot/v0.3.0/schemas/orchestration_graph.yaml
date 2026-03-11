@@ -1,0 +1,280 @@
+# TaskPilot v0.3.0 — Orchestration Graph Schema
+# Changes from v0.2.0:
+#   - Added event_emission rules to each phase transition
+#   - Added dependency_validation step before Build phase
+#   - Updated version to 0.3.0
+
+graph:
+  name: TaskPilotOrchestrationGraph
+  version: "0.3.0"
+  description: >
+    State machine governing the orchestrator's workflow. v0.3.0 adds
+    event emission rules to all phase transitions and adds dependency validation
+    before BUILD to catch incomplete requirements early.
+
+  entities:
+    - Role
+    - Skill
+    - Task
+    - Artifact
+    - Review
+    - Challenge
+    - Defect
+    - ChangeSet
+    - TrainingEvent
+    - EvaluationRun
+    - SimulationScenario
+    - RunLog
+    - MemoryEvent
+    - OrchestratorEvent  # NEW in v0.3.0 (via event_bus.yaml)
+
+  states:
+    INIT:
+      description: "Initialize orchestrator, load active version, read known bugs"
+      checkpointable: true
+      next: [MEMORY_CONSULT]
+
+    MEMORY_CONSULT:
+      description: >
+        Query long-term memory (run_events.jsonl) for previous cycle results,
+        skill performance history, unresolved bugs, and adopted/rejected patterns.
+        Produces a memory_context artifact consumed by ASSESS.
+      checkpointable: true
+      memory_queries:
+        - previous_cycle_results
+        - skill_performance_history
+        - bug_trend
+        - research_history
+        - dogfood_findings
+      artifacts_produced: [memory_context.md]
+      event_emission:
+        - event_type: memory_consulted
+          description: "Emit when memory queries complete"
+      next: [ASSESS]
+
+    ASSESS:
+      description: >
+        Read bugs, history, current state, AND memory context.
+        Produce priority list (max 5 items).
+      checkpointable: true
+      inputs: [memory_context.md, TASKPILOT-KNOWN-BUGS-AND-IMPROVEMENTS.md, orchestrator_improvement_research.md]
+      skills_activated: []
+      artifacts_produced: [cycle_plan.md]
+      next: [RESEARCH]
+
+    RESEARCH:
+      description: "Search systems and papers; extract patterns"
+      checkpointable: true
+      skills_activated: []
+      artifacts_produced: [research_log.md]
+      next: [BUILD]
+
+    DEPENDENCY_VALIDATION:  # NEW in v0.3.0
+      description: >
+        Before entering BUILD, validate that all RESEARCH outputs are complete
+        and that no critical gaps exist in requirements or design patterns.
+        Detect missing acceptance criteria, incomplete scope, or architectural
+        risk before SDE begins implementation.
+      checkpointable: true
+      validation_rules:
+        - "cycle_plan exists and has >= 1 item"
+        - "research_log exists and has >= 1 findings"
+        - "No 'TODO' or 'TBD' placeholders in cycle_plan"
+        - "Effort estimates present for all planned features"
+        - "Risk assessment completed for high-complexity items"
+      artifacts_validated: [cycle_plan.md, research_log.md]
+      event_emission:
+        - event_type: dependency_validation_passed
+          condition: "all validation rules pass"
+        - event_type: gate_blocked
+          condition: "any validation rule fails"
+          blocking_phase_transition: "RESEARCH→BUILD"
+      next: [BUILD]
+
+    BUILD:
+      description: "Create versioned folder; build skills, policies, graph, sims"
+      checkpointable: true
+      skills_activated: [SKILL_SDE_SYSTEM_DESIGN, SKILL_SDE_IMPLEMENTATION]
+      artifacts_produced: [skills/*.yaml, policies/*.yaml, schemas/*.yaml]
+      event_emission:
+        - event_type: skill_started
+          trigger: "BUILD phase entered"
+          phase: BUILD
+      next: [TEST]
+
+    TEST:
+      description: "Run simulation harness; compute KPIs; promote or reject"
+      checkpointable: true
+      skills_activated: [SKILL_QA_TEST_EXECUTION, SKILL_PE_LOAD_TEST]
+      artifacts_produced: [kpi_results.json, simulation_results/]
+      memory_write: [KPI_MEASUREMENT, SKILL_EXEC]
+      event_emission:
+        - event_type: skill_started
+          trigger: "TEST phase entered"
+          phase: TEST
+      next: [PROMOTE, REJECT]
+      conditional_edges:
+        - condition: "overall_weighted_score(new) >= overall_weighted_score(baseline)"
+          target: PROMOTE
+          event_emission:
+            - event_type: gate_passed
+              from_phase: TEST
+              to_phase: PROMOTE
+        - condition: "overall_weighted_score(new) < overall_weighted_score(baseline)"
+          target: REJECT
+          event_emission:
+            - event_type: gate_blocked
+              from_phase: TEST
+              to_phase: REJECT
+              reason: "KPI regression detected"
+
+    PROMOTE:
+      description: "Update ACTIVE_VERSION; archive baseline"
+      checkpointable: true
+      event_emission:
+        - event_type: gate_passed
+          from_phase: TEST
+          to_phase: PROMOTE
+          reason: "KPI improvement validated"
+      next: [DOGFOOD_BASELINE]
+
+    REJECT:
+      description: "Log rejection; keep baseline; file improvements"
+      checkpointable: true
+      memory_write: [CYCLE_END]
+      event_emission:
+        - event_type: gate_blocked
+          from_phase: TEST
+          to_phase: REJECT
+          reason: "KPI regression or quality issues"
+      next: [DOGFOOD_BASELINE]
+
+    DOGFOOD_BASELINE:
+      description: "Read target app; document current state and gaps"
+      checkpointable: true
+      skills_activated: [SKILL_PM_REQ_ANALYSIS, SKILL_SDE_ARCHITECTURE_HYGIENE]
+      artifacts_produced: [app_baseline.md]
+      next: [DOGFOOD_IMPROVE]
+
+    DOGFOOD_IMPROVE:
+      description: "Activate all roles against app; identify improvements"
+      checkpointable: true
+      skills_activated: [All base role skills as applicable]
+      artifacts_produced: [improvement_proposals.md, market_strategy.md]
+      memory_write: [DOGFOOD_FINDING]
+      event_emission:
+        - event_type: skill_completed
+          trigger: "Improvement proposals generated"
+      next: [DOGFOOD_IMPLEMENT]
+
+    DOGFOOD_IMPLEMENT:
+      description: "Feature branch; apply safe quick wins; local checks"
+      checkpointable: true
+      skills_activated: [SKILL_SDE_IMPLEMENTATION, SKILL_QA_TEST_EXECUTION]
+      event_emission:
+        - event_type: skill_started
+          trigger: "DOGFOOD implementation begins"
+      next: [DOCUMENT]
+      human_in_loop_gate: true
+
+    DOCUMENT:
+      description: "Write all reports, metrics plans, and cross-repo docs"
+      checkpointable: true
+      artifacts_produced: [orchestrator_effectiveness.md, orchestrator_metrics_plan.md, ORCHESTRATOR_DRIVEN_IMPROVEMENTS.md]
+      next: [COMMIT]
+
+    COMMIT:
+      description: "Git commit both repos; push feature branches"
+      checkpointable: true
+      memory_write: [CYCLE_END]
+      event_emission:
+        - event_type: gate_passed
+          from_phase: DOCUMENT
+          to_phase: COMMIT
+          reason: "All deliverables documented and ready to commit"
+      next: [PLAN_NEXT]
+
+    PLAN_NEXT:
+      description: "Write next cycle plan with priorities and hypotheses"
+      checkpointable: true
+      artifacts_produced: [next_cycle_plan.md]
+      next: [DONE]
+
+    DONE:
+      description: "Cycle complete"
+      terminal: true
+
+  phase_transitions:
+    - from_phase: RESEARCH
+      to_phase: DEPENDENCY_VALIDATION
+      gate_name: "Dependency Validation Gate"
+      gate_conditions:
+        - "All research outputs complete"
+      event_emission:
+        - event_type: gate_passed
+          condition: "validation succeeds"
+        - event_type: gate_blocked
+          condition: "validation fails"
+
+    - from_phase: DEPENDENCY_VALIDATION
+      to_phase: BUILD
+      gate_name: "Build Entry Gate"
+      gate_conditions:
+        - "Dependency validation passed"
+        - "No critical requirements gaps"
+      event_emission:
+        - event_type: gate_passed
+          trigger: "Ready to BUILD"
+        - event_type: gate_blocked
+          trigger: "Requirements incomplete; cannot proceed to BUILD"
+
+    - from_phase: BUILD
+      to_phase: TEST
+      gate_name: "Build→Test Gate"
+      gate_conditions:
+        - "All exit criteria for BUILD phase passed"
+        - "No unresolved challenges"
+      event_emission:
+        - event_type: gate_passed
+          trigger: "BUILD complete; ready for TEST"
+
+    - from_phase: TEST
+      to_phase: PROMOTE
+      gate_name: "Promote Gate"
+      gate_conditions:
+        - "overall_weighted_score(new) >= overall_weighted_score(baseline)"
+        - "No critical defects"
+      event_emission:
+        - event_type: gate_passed
+          trigger: "KPI improvement validated; promoting version"
+
+    - from_phase: TEST
+      to_phase: REJECT
+      gate_name: "Reject Gate"
+      gate_conditions:
+        - "overall_weighted_score(new) < overall_weighted_score(baseline)"
+      event_emission:
+        - event_type: gate_blocked
+          trigger: "KPI regression detected; rejecting version"
+
+  checkpointing:
+    strategy: "sync"
+    storage: "local_jsonl"
+    path: "orchestrator/run_events.jsonl"
+    fields:
+      - timestamp
+      - state
+      - duration_ms
+      - artifacts_produced
+      - skills_executed
+      - failures
+      - kpi_snapshot
+      - memory_events_written
+
+  memory_store:
+    path: "orchestrator/run_events.jsonl"
+    format: "jsonl"
+    schema: "schemas/event_bus.yaml"
+    temporal_model: "bi_temporal"
+    query_at_states: [MEMORY_CONSULT, ASSESS]
+    write_at_states: [TEST, REJECT, DOGFOOD_IMPROVE, COMMIT]

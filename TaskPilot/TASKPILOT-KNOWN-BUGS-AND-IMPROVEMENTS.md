@@ -2,6 +2,20 @@
 
 ## Active Items
 
+### [BUG] BUG-005 — Simulation harness naive string matching
+**Severity:** P3
+**What happened:** The `_is_failure_detected()` function in the simulation harness uses naive string matching ("should detect" in expected_outcomes) to validate whether a seeded failure was correctly identified. This approach misses structured failure classifications and cannot distinguish between partial and complete detections.
+**Expected behavior:** Failure detection should validate outcome objects against the MAST failure taxonomy, with structured assertions for failure mode, severity, and remediation path.
+**Suggested fix:** Refactor _is_failure_detected() to use outcome object validation against FailureMode enum and outcome schema.
+**Found in phase:** PHASE 8 (DOCUMENT — v0.3.0 research)
+
+### [BUG] BUG-006 — No binary exit criteria validation
+**Severity:** P3
+**What happened:** Some skill exit criteria remain vague ("reviewed by X", "meets quality bar") instead of measurable, binary pass/fail assertions. The skill registration process accepts these without validation.
+**Expected behavior:** All skill exit criteria should be strictly measurable and binary. Ambiguous criteria should be rejected at registration time.
+**Suggested fix:** Add ExitCriteria validator that enforces binary, measurable format. Reject vague criteria with helpful error messages.
+**Found in phase:** PHASE 8 (DOCUMENT — v0.3.0 research)
+
 ### [IMPROVEMENT] 3 skills still have minor exit criteria gaps
 **Severity:** P2
 **What happened:** SKILL_PE_BATTERY_PROFILING needs watchOS-specific profiling criteria. SKILL_UX_COMPLICATION_DESIGN needs complication family-specific criteria. prompts/ folder is empty (no prompt templates created yet).
