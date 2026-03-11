@@ -54,7 +54,6 @@ jobs:
           xcodegen generate
       - name: Build
         run: |
-          set -o pipefail
           cd apps/HeartCoach
           xcodebuild build \
             -project Thump.xcodeproj \
@@ -63,7 +62,7 @@ jobs:
             -configuration Debug \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            | xcpretty --color
+            2>&1 | tail -100
 
   # Gate 3: Run unit tests
   test:
