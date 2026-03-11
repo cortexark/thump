@@ -22,10 +22,12 @@ struct SettingsView: View {
     // MARK: - State
 
     /// Whether anomaly alert notifications are enabled.
-    @State private var anomalyAlertsEnabled: Bool = true
+    @AppStorage("thump_anomaly_alerts_enabled")
+    private var anomalyAlertsEnabled: Bool = true
 
     /// Whether daily nudge reminder notifications are enabled.
-    @State private var nudgeRemindersEnabled: Bool = true
+    @AppStorage("thump_nudge_reminders_enabled")
+    private var nudgeRemindersEnabled: Bool = true
 
     /// Controls presentation of the paywall sheet.
     @State private var showPaywall: Bool = false

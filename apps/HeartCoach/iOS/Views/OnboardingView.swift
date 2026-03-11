@@ -41,6 +41,7 @@ struct OnboardingView: View {
 
     /// Tracks whether a HealthKit authorization request is in-flight.
     @State private var isRequestingHealthKit: Bool = false
+    @State private var healthKitErrorMessage: String?
 
     /// Tracks whether HealthKit access has been granted (or at least requested).
     @State private var healthKitGranted: Bool = false
@@ -182,6 +183,14 @@ struct OnboardingView: View {
                 }
                 .disabled(isRequestingHealthKit)
                 .opacity(isRequestingHealthKit ? 0.6 : 1.0)
+            }
+
+            if let errorMsg = healthKitErrorMessage {
+                Text(errorMsg)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
             }
 
             if healthKitGranted {
@@ -358,6 +367,8 @@ struct OnboardingView: View {
                 await MainActor.run {
                     isRequestingHealthKit = false
                     healthKitGranted = false
+                    healthKitErrorMessage = "Unable to access Health data. "
+                        + "Please enable it in Settings → Privacy → Health."
                 }
             }
         }

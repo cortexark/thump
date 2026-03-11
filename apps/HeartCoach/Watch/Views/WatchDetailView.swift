@@ -242,8 +242,8 @@ struct WatchDetailView: View {
     private func confidenceColor(_ confidence: ConfidenceLevel) -> Color {
         switch confidence {
         case .high:   return .green
-        case .medium: return .orange
-        case .low:    return .red
+        case .medium: return .yellow
+        case .low:    return .orange
         }
     }
 }

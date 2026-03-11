@@ -300,6 +300,7 @@ struct DashboardView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Getting your wellness snapshot ready")
     }
@@ -328,6 +329,7 @@ struct DashboardView: View {
             .accessibilityHint("Double tap to reload your wellness data")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
     }
 }
 
