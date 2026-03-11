@@ -54,6 +54,11 @@ final class HealthKitService: ObservableObject {
         self.healthStore = HKHealthStore()
     }
 
+    #if DEBUG
+    /// Preview instance for SwiftUI previews.
+    static var preview: HealthKitService { HealthKitService() }
+    #endif
+
     // MARK: - Authorization
 
     /// Requests read authorization for all required HealthKit data types.

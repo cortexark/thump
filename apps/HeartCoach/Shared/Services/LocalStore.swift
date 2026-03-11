@@ -90,6 +90,13 @@ public final class LocalStore: ObservableObject {
         ) ?? AlertMeta()
     }
 
+    #if DEBUG
+    /// Preview instance for SwiftUI previews, backed by an in-memory defaults suite.
+    public static var preview: LocalStore {
+        LocalStore(defaults: UserDefaults(suiteName: "preview") ?? .standard)
+    }
+    #endif
+
     // MARK: - User Profile
 
     /// Persist the current ``profile`` to disk.
