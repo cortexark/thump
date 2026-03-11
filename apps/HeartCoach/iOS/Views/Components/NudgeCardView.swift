@@ -105,8 +105,8 @@ struct NudgeCardView: View {
         nudge: DailyNudge(
             category: .walk,
             title: "Take a Gentle Walk",
-            description: "Your HRV is trending up. "
-                + "A 15-minute walk will reinforce the gains you have been making this week.",
+            description: "Your HRV has been looking nice lately. "
+                + "A 15-minute walk could keep that good momentum going.",
             durationMinutes: 15,
             icon: "figure.walk"
         ),

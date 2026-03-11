@@ -223,16 +223,16 @@ struct TrendsView: View {
                 headline: "Holding Steady",
                 detail: "Your \(metricName) has been consistent — barely any change "
                     + "between the start and end of this period. "
-                    + "Stability is a good sign of a healthy baseline.",
+                    + "That kind of consistency is a nice sign.",
                 icon: "arrow.right.circle.fill",
                 color: .blue
             )
         } else if improving {
             return TrendInsight(
-                headline: "Trending Better",
-                detail: "Your \(metricName) has improved by \(rangeDescription) "
-                    + "over this period. Keep up whatever you've been doing "
-                    + "— the trend is moving in the right direction.",
+                headline: "Looking Good",
+                detail: "Your \(metricName) has shifted nicely by \(rangeDescription) "
+                    + "over this period. Whatever you've been doing "
+                    + "seems to be working — keep it up!",
                 icon: "arrow.up.right.circle.fill",
                 color: .green
             )
@@ -250,7 +250,7 @@ struct TrendsView: View {
             return TrendInsight(
                 headline: "Holding Steady",
                 detail: "Your \(metricName) has been consistent over this "
-                    + "period. Stability is a good sign of a healthy baseline.",
+                    + "period. That kind of consistency is a nice sign.",
                 icon: "arrow.right.circle.fill",
                 color: .blue
             )
