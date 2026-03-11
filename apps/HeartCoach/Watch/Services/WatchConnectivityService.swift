@@ -162,6 +162,14 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         }
     }
 
+    // MARK: - Published Prompts
+
+    /// Breath prompt received from the phone (stress rising).
+    @Published var breathPrompt: DailyNudge?
+
+    /// Morning check-in prompt received from the phone.
+    @Published var checkInPromptMessage: String?
+
     nonisolated private func handleIncomingMessage(_ message: [String: Any]) {
         guard let type = message["type"] as? String else { return }
 
@@ -172,6 +180,29 @@ final class WatchConnectivityService: NSObject, ObservableObject {
                     self?.latestAssessment = assessment
                     self?.lastSyncDate = Date()
                 }
+            }
+
+        case "breathPrompt":
+            let title = (message["title"] as? String) ?? "Take a Breath"
+            let desc = (message["description"] as? String)
+                ?? "A quick breathing exercise might help you reset."
+            let duration = (message["durationMinutes"] as? Int) ?? 3
+            let nudge = DailyNudge(
+                category: .breathe,
+                title: title,
+                description: desc,
+                durationMinutes: duration,
+                icon: "wind"
+            )
+            Task { @MainActor [weak self] in
+                self?.breathPrompt = nudge
+            }
+
+        case "checkInPrompt":
+            let msg = (message["message"] as? String)
+                ?? "How are you feeling this morning?"
+            Task { @MainActor [weak self] in
+                self?.checkInPromptMessage = msg
             }
 
         default:

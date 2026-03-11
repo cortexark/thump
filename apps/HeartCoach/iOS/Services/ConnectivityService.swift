@@ -98,6 +98,68 @@ final class ConnectivityService: NSObject, ObservableObject {
         }
     }
 
+    // MARK: - Outbound: Breath Prompt
+
+    /// Sends a breathing exercise prompt to the Apple Watch.
+    ///
+    /// When stress is rising, this delivers a gentle "take a breath"
+    /// nudge directly to the watch via live messaging (or background
+    /// transfer if the watch isn't currently reachable).
+    ///
+    /// - Parameter nudge: The breathing nudge to send.
+    func sendBreathPrompt(_ nudge: DailyNudge) {
+        guard let session = session else {
+            debugPrint("[ConnectivityService] No active session for breath prompt.")
+            return
+        }
+
+        let message: [String: Any] = [
+            "type": "breathPrompt",
+            "title": nudge.title,
+            "description": nudge.description,
+            "durationMinutes": nudge.durationMinutes ?? 3,
+            "category": nudge.category.rawValue
+        ]
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                debugPrint(
+                    "[ConnectivityService] Breath prompt sendMessage failed: "
+                    + "\(error.localizedDescription)"
+                )
+                session.transferUserInfo(message)
+            }
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
+
+    // MARK: - Outbound: Check-In Request
+
+    /// Sends a morning check-in prompt to the Apple Watch.
+    ///
+    /// - Parameter message: The check-in question to display.
+    func sendCheckInPrompt(_ promptMessage: String) {
+        guard let session = session else { return }
+
+        let message: [String: Any] = [
+            "type": "checkInPrompt",
+            "message": promptMessage
+        ]
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                debugPrint(
+                    "[ConnectivityService] Check-in sendMessage failed: "
+                    + "\(error.localizedDescription)"
+                )
+                session.transferUserInfo(message)
+            }
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
+
     // MARK: - Inbound Handling
 
     /// Processes an incoming message dictionary from the watch.

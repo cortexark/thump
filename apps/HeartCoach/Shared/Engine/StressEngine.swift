@@ -188,6 +188,129 @@ public struct StressEngine: Sendable {
         return hrvValues.reduce(0, +) / Double(hrvValues.count)
     }
 
+    // MARK: - Hourly Stress Estimation
+
+    /// Estimate hourly stress scores for a single day using circadian
+    /// variation patterns applied to the daily HRV reading.
+    ///
+    /// Since HealthKit typically provides one HRV reading per day,
+    /// this applies known circadian HRV patterns to estimate hourly
+    /// variation: HRV is naturally lower during waking/active hours
+    /// and higher during sleep.
+    ///
+    /// - Parameters:
+    ///   - dailyHRV: The day's HRV (SDNN) in milliseconds.
+    ///   - baselineHRV: The user's rolling baseline HRV.
+    ///   - date: The calendar date for hour generation.
+    /// - Returns: Array of 24 ``HourlyStressPoint`` values (one per hour).
+    public func hourlyStressEstimates(
+        dailyHRV: Double,
+        baselineHRV: Double,
+        date: Date
+    ) -> [HourlyStressPoint] {
+        let calendar = Calendar.current
+
+        // Circadian HRV multipliers: night hours have higher HRV,
+        // afternoon/work hours have lower HRV
+        let circadianFactors: [Double] = [
+            1.15, 1.18, 1.20, 1.18, 1.12, 1.05, // 0-5 AM (sleep)
+            0.98, 0.95, 0.90, 0.88, 0.85, 0.87, // 6-11 AM (morning)
+            0.90, 0.85, 0.82, 0.84, 0.88, 0.92, // 12-5 PM (afternoon)
+            0.95, 0.98, 1.02, 1.05, 1.10, 1.12  // 6-11 PM (evening)
+        ]
+
+        return (0..<24).map { hour in
+            let adjustedHRV = dailyHRV * circadianFactors[hour]
+            let result = computeStress(
+                currentHRV: adjustedHRV,
+                baselineHRV: baselineHRV
+            )
+            let hourDate = calendar.date(
+                bySettingHour: hour, minute: 0, second: 0, of: date
+            ) ?? date
+
+            return HourlyStressPoint(
+                date: hourDate,
+                hour: hour,
+                score: result.score,
+                level: result.level
+            )
+        }
+    }
+
+    /// Generate hourly stress data for a full day from snapshot history.
+    ///
+    /// - Parameters:
+    ///   - snapshots: Full history of snapshots, ordered oldest-first.
+    ///   - date: The target date to generate hourly data for.
+    /// - Returns: Array of 24 hourly stress points, or empty if no data.
+    public func hourlyStressForDay(
+        snapshots: [HeartSnapshot],
+        date: Date
+    ) -> [HourlyStressPoint] {
+        let calendar = Calendar.current
+        let targetDay = calendar.startOfDay(for: date)
+
+        // Find the snapshot for this date
+        guard let snapshot = snapshots.first(where: {
+            calendar.isDate($0.date, inSameDayAs: targetDay)
+        }), let dailyHRV = snapshot.hrvSDNN else {
+            return []
+        }
+
+        // Compute baseline from preceding days
+        let preceding = snapshots.filter { $0.date < targetDay }
+        guard let baseline = computeBaseline(snapshots: preceding) else {
+            return []
+        }
+
+        return hourlyStressEstimates(
+            dailyHRV: dailyHRV,
+            baselineHRV: baseline,
+            date: targetDay
+        )
+    }
+
+    // MARK: - Trend Direction
+
+    /// Determine whether stress is rising, falling, or steady over
+    /// a set of data points.
+    ///
+    /// Uses simple linear regression on the scores to determine slope.
+    /// A slope > 2 points/day is rising, < -2 is falling, else steady.
+    ///
+    /// - Parameter points: Stress data points, ordered chronologically.
+    /// - Returns: The trend direction, or `.steady` if insufficient data.
+    public func trendDirection(
+        points: [StressDataPoint]
+    ) -> StressTrendDirection {
+        guard points.count >= 3 else { return .steady }
+
+        let count = Double(points.count)
+        let xValues = (0..<points.count).map { Double($0) }
+        let yValues = points.map(\.score)
+
+        let sumX = xValues.reduce(0, +)
+        let sumY = yValues.reduce(0, +)
+        let sumXY = zip(xValues, yValues).map(*).reduce(0, +)
+        let sumX2 = xValues.map { $0 * $0 }.reduce(0, +)
+
+        let denominator = count * sumX2 - sumX * sumX
+        guard denominator != 0 else { return .steady }
+
+        let slope = (count * sumXY - sumX * sumY) / denominator
+
+        // Slope threshold: ~0.5 points per day over the range
+        // is enough to indicate a meaningful trend shift
+        if slope > 0.5 {
+            return .rising
+        } else if slope < -0.5 {
+            return .falling
+        } else {
+            return .steady
+        }
+    }
+
     // MARK: - Friendly Descriptions
 
     /// Generate a friendly, non-clinical description of the stress result.

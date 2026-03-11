@@ -1,9 +1,10 @@
 // StressView.swift
 // Thump iOS
 //
-// Displays the HRV-based stress metric with a visual gauge, friendly
-// messaging, time range picker, trend chart, and summary statistics.
-// Uses the same card-based visual style as TrendsView.
+// Displays the HRV-based stress metric with a calendar-style heatmap,
+// trend summary, smart nudge actions, and day/week/month views.
+// Day view shows hourly boxes (green/red), week and month views
+// show daily boxes in a calendar grid.
 //
 // Platforms: iOS 17+
 
@@ -11,11 +12,14 @@ import SwiftUI
 
 // MARK: - StressView
 
-/// A dedicated view for the HRV-based stress feature.
+/// Calendar-style stress heatmap with day/week/month views.
 ///
-/// Shows the current stress level with a color-coded gauge, friendly
-/// language, and day/week/month trend charting powered by the
-/// ``StressEngine``.
+/// - **Day**: 24 hourly boxes colored by stress level
+/// - **Week**: 7 daily boxes with stress level colors
+/// - **Month**: Calendar grid with daily stress colors
+///
+/// Includes a trend summary ("stress is trending up/down") and
+/// smart nudge actions (breath prompt, journal, check-in).
 struct StressView: View {
 
     // MARK: - View Model
@@ -27,13 +31,15 @@ struct StressView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    currentStressCard
+                VStack(spacing: ThumpSpacing.md) {
+                    currentStressBanner
                     timeRangePicker
-                    trendChartCard
+                    heatmapCard
+                    trendSummaryCard
+                    smartActionCard
                     summaryStatsCard
                 }
-                .padding(16)
+                .padding(ThumpSpacing.md)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Stress")
@@ -44,86 +50,49 @@ struct StressView: View {
         }
     }
 
-    // MARK: - Current Stress Card
+    // MARK: - Current Stress Banner
 
-    private var currentStressCard: some View {
-        VStack(spacing: 16) {
+    private var currentStressBanner: some View {
+        HStack(spacing: ThumpSpacing.sm) {
             if let stress = viewModel.currentStress {
-                stressGauge(stress: stress)
+                // Color indicator dot
+                Circle()
+                    .fill(stressColor(for: stress.level))
+                    .frame(width: 12, height: 12)
 
-                Text(stress.level.friendlyMessage)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityLabel(
-                        "Current stress level: "
-                        + "\(stress.level.displayName)"
-                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stress.level.friendlyMessage)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
 
-                Text(stress.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityLabel(
-                        "Stress description: \(stress.description)"
-                    )
-            } else {
-                emptyStressState
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .accessibilityElement(children: .combine)
-    }
+                    Text("Score: \(Int(stress.score))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-    // MARK: - Stress Gauge
+                Spacer()
 
-    /// A color-coded circular gauge showing the current stress score.
-    private func stressGauge(stress: StressResult) -> some View {
-        ZStack {
-            // Background track
-            Circle()
-                .stroke(
-                    Color(.systemGray5),
-                    style: StrokeStyle(lineWidth: 12, lineCap: .round)
-                )
-                .frame(width: 120, height: 120)
-
-            // Filled arc representing score
-            Circle()
-                .trim(from: 0, to: stress.score / 100.0)
-                .stroke(
-                    stressColor(for: stress.level),
-                    style: StrokeStyle(lineWidth: 12, lineCap: .round)
-                )
-                .frame(width: 120, height: 120)
-                .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.8), value: stress.score)
-
-            // Center content
-            VStack(spacing: 4) {
                 Image(systemName: stress.level.icon)
                     .font(.title2)
                     .foregroundStyle(stressColor(for: stress.level))
+            } else {
+                Image(systemName: "heart.text.square")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
 
-                Text("\(Int(stress.score))")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .fontDesign(.rounded)
-                    .foregroundStyle(.primary)
+                Text("Waiting for stress data…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
             }
         }
-        .accessibilityLabel(
-            "Stress score \(Int(stress.score)) out of 100, "
-            + "\(stress.level.displayName)"
+        .padding(ThumpSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: ThumpRadius.md)
+                .fill(Color(.secondarySystemGroupedBackground))
         )
-        .accessibilityAddTraits(.isImage)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Time Range Picker
@@ -135,43 +104,449 @@ struct StressView: View {
             Text("Month").tag(TimeRange.month)
         }
         .pickerStyle(.segmented)
-        .accessibilityLabel("Stress trend time range")
+        .accessibilityLabel("Stress heatmap time range")
     }
 
-    // MARK: - Trend Chart Card
+    // MARK: - Heatmap Card
 
-    private var trendChartCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Stress Trend")
+    private var heatmapCard: some View {
+        VStack(alignment: .leading, spacing: ThumpSpacing.sm) {
+            Text(heatmapTitle)
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            if viewModel.chartDataPoints.isEmpty {
-                emptyChartState
-            } else {
-                TrendChartView(
-                    dataPoints: viewModel.chartDataPoints,
-                    metricLabel: "Stress",
-                    color: trendChartColor
-                )
-                .frame(height: 240)
-                .accessibilityLabel(
-                    "Stress trend chart showing "
-                    + "\(viewModel.chartDataPoints.count) data points"
-                )
+            switch viewModel.selectedRange {
+            case .day:
+                dayHeatmap
+            case .week:
+                weekHeatmap
+            case .month:
+                monthHeatmap
             }
+
+            // Legend
+            heatmapLegend
         }
-        .padding(16)
+        .padding(ThumpSpacing.md)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: ThumpRadius.md)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
+    }
+
+    private var heatmapTitle: String {
+        switch viewModel.selectedRange {
+        case .day: return "Today — Hourly Stress"
+        case .week: return "This Week"
+        case .month: return "This Month"
+        }
+    }
+
+    // MARK: - Day Heatmap (24 hourly boxes)
+
+    private var dayHeatmap: some View {
+        VStack(alignment: .leading, spacing: ThumpSpacing.xxs) {
+            if viewModel.hourlyPoints.isEmpty {
+                emptyHeatmapState
+            } else {
+                // 4 rows × 6 columns grid
+                ForEach(0..<4, id: \.self) { row in
+                    HStack(spacing: ThumpSpacing.xxs) {
+                        ForEach(0..<6, id: \.self) { col in
+                            let hour = row * 6 + col
+                            hourlyCell(hour: hour)
+                        }
+                    }
+                }
+            }
+        }
+        .accessibilityLabel("Hourly stress heatmap for today")
+    }
+
+    private func hourlyCell(hour: Int) -> some View {
+        let point = viewModel.hourlyPoints.first { $0.hour == hour }
+        let color = point.map { stressColor(for: $0.level) }
+            ?? Color(.systemGray5)
+        let score = point.map { Int($0.score) } ?? 0
+        let hourLabel = formatHour(hour)
+
+        return VStack(spacing: 2) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(color.opacity(point != nil ? 0.8 : 0.3))
+                .frame(height: 36)
+                .overlay(
+                    Text(point != nil ? "\(score)" : "")
+                        .font(.system(size: 10, weight: .medium,
+                                      design: .rounded))
+                        .foregroundStyle(.white)
+                )
+
+            Text(hourLabel)
+                .font(.system(size: 8))
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel(
+            "\(hourLabel): "
+            + (point != nil
+               ? "stress \(score), \(point!.level.displayName)"
+               : "no data")
+        )
+    }
+
+    // MARK: - Week Heatmap (7 daily boxes)
+
+    private var weekHeatmap: some View {
+        VStack(alignment: .leading, spacing: ThumpSpacing.xs) {
+            if viewModel.trendPoints.isEmpty {
+                emptyHeatmapState
+            } else {
+                HStack(spacing: ThumpSpacing.xxs) {
+                    ForEach(viewModel.weekDayPoints, id: \.date) { point in
+                        dailyCell(point: point)
+                    }
+                }
+
+                // Show hourly breakdown for selected day if available
+                if let selected = viewModel.selectedDayForDetail,
+                   !viewModel.selectedDayHourlyPoints.isEmpty {
+                    VStack(alignment: .leading, spacing: ThumpSpacing.xxs) {
+                        Text(formatDayHeader(selected))
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
+
+                        // Mini hourly grid for the selected day
+                        LazyVGrid(
+                            columns: Array(
+                                repeating: GridItem(.flexible(), spacing: 2),
+                                count: 8
+                            ),
+                            spacing: 2
+                        ) {
+                            ForEach(
+                                viewModel.selectedDayHourlyPoints,
+                                id: \.hour
+                            ) { hp in
+                                miniHourCell(point: hp)
+                            }
+                        }
+                    }
+                    .padding(.top, ThumpSpacing.xxs)
+                }
+            }
+        }
+        .accessibilityLabel("Weekly stress heatmap")
+    }
+
+    private func dailyCell(point: StressDataPoint) -> some View {
+        let isSelected = viewModel.selectedDayForDetail != nil
+            && Calendar.current.isDate(
+                point.date,
+                inSameDayAs: viewModel.selectedDayForDetail!
+            )
+
+        return VStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(stressColor(for: point.level).opacity(0.8))
+                .frame(height: 50)
+                .overlay(
+                    VStack(spacing: 2) {
+                        Text("\(Int(point.score))")
+                            .font(.system(size: 14, weight: .bold,
+                                          design: .rounded))
+                            .foregroundStyle(.white)
+
+                        Image(systemName: point.level.icon)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(
+                            isSelected ? Color.primary : Color.clear,
+                            lineWidth: 2
+                        )
+                )
+
+            Text(formatWeekday(point.date))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.selectDay(point.date)
+            }
+        }
+        .accessibilityLabel(
+            "\(formatWeekday(point.date)): "
+            + "stress \(Int(point.score)), \(point.level.displayName)"
+        )
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private func miniHourCell(point: HourlyStressPoint) -> some View {
+        VStack(spacing: 1) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(stressColor(for: point.level).opacity(0.7))
+                .frame(height: 20)
+
+            Text(formatHour(point.hour))
+                .font(.system(size: 6))
+                .foregroundStyle(.quaternary)
+        }
+    }
+
+    // MARK: - Month Heatmap (calendar grid)
+
+    private var monthHeatmap: some View {
+        VStack(alignment: .leading, spacing: ThumpSpacing.xxs) {
+            if viewModel.trendPoints.isEmpty {
+                emptyHeatmapState
+            } else {
+                // Day of week headers
+                HStack(spacing: 2) {
+                    ForEach(
+                        ["S", "M", "T", "W", "T", "F", "S"],
+                        id: \.self
+                    ) { day in
+                        Text(day)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+
+                // Calendar grid
+                let weeks = viewModel.monthCalendarWeeks
+                ForEach(0..<weeks.count, id: \.self) { weekIdx in
+                    HStack(spacing: 2) {
+                        ForEach(0..<7, id: \.self) { dayIdx in
+                            if let point = weeks[weekIdx][dayIdx] {
+                                monthDayCell(point: point)
+                            } else {
+                                Color.clear
+                                    .frame(height: 32)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .accessibilityLabel("Monthly stress calendar heatmap")
+    }
+
+    private func monthDayCell(point: StressDataPoint) -> some View {
+        let calendar = Calendar.current
+        let day = calendar.component(.day, from: point.date)
+        let isToday = calendar.isDateInToday(point.date)
+
+        return VStack(spacing: 1) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(stressColor(for: point.level).opacity(0.75))
+                .frame(height: 28)
+                .overlay(
+                    Text("\(day)")
+                        .font(.system(size: 10, weight: isToday ? .bold : .regular,
+                                      design: .rounded))
+                        .foregroundStyle(.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(
+                            isToday ? Color.primary : Color.clear,
+                            lineWidth: 1.5
+                        )
+                )
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel(
+            "Day \(day): stress \(Int(point.score)), "
+            + "\(point.level.displayName)"
+        )
+    }
+
+    // MARK: - Heatmap Legend
+
+    private var heatmapLegend: some View {
+        HStack(spacing: ThumpSpacing.md) {
+            legendItem(color: ThumpColors.relaxed, label: "Relaxed")
+            legendItem(color: ThumpColors.balanced, label: "Balanced")
+            legendItem(color: ThumpColors.elevated, label: "Elevated")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, ThumpSpacing.xxs)
+    }
+
+    private func legendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color.opacity(0.8))
+                .frame(width: 12, height: 12)
+
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Trend Summary Card
+
+    private var trendSummaryCard: some View {
+        VStack(alignment: .leading, spacing: ThumpSpacing.xs) {
+            HStack(spacing: ThumpSpacing.xs) {
+                Image(systemName: viewModel.trendDirection.icon)
+                    .font(.title3)
+                    .foregroundStyle(trendDirectionColor)
+
+                Text(viewModel.trendDirection.displayText)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+            }
+
+            if let insight = viewModel.trendInsight {
+                Text(insight)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(ThumpSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: ThumpRadius.md)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    private var trendDirectionColor: Color {
+        switch viewModel.trendDirection {
+        case .rising: return ThumpColors.elevated
+        case .falling: return ThumpColors.relaxed
+        case .steady: return ThumpColors.balanced
+        }
+    }
+
+    // MARK: - Smart Action Card
+
+    @ViewBuilder
+    private var smartActionCard: some View {
+        switch viewModel.smartAction {
+        case .journalPrompt(let prompt):
+            actionCard(
+                icon: prompt.icon,
+                iconColor: .purple,
+                title: "Journal Time",
+                message: prompt.question,
+                detail: prompt.context,
+                buttonLabel: "Start Writing",
+                buttonIcon: "pencil"
+            )
+
+        case .breatheOnWatch(let nudge):
+            actionCard(
+                icon: "wind",
+                iconColor: ThumpColors.elevated,
+                title: nudge.title,
+                message: nudge.description,
+                detail: nil,
+                buttonLabel: "Open on Watch",
+                buttonIcon: "applewatch"
+            )
+
+        case .morningCheckIn(let message):
+            actionCard(
+                icon: "sun.max.fill",
+                iconColor: .yellow,
+                title: "Morning Check-In",
+                message: message,
+                detail: nil,
+                buttonLabel: "Share How You Feel",
+                buttonIcon: "hand.wave.fill"
+            )
+
+        case .bedtimeWindDown(let nudge):
+            actionCard(
+                icon: "moon.fill",
+                iconColor: .indigo,
+                title: nudge.title,
+                message: nudge.description,
+                detail: nil,
+                buttonLabel: "Got It",
+                buttonIcon: "checkmark"
+            )
+
+        case .standardNudge:
+            EmptyView()
+        }
+    }
+
+    private func actionCard(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        message: String,
+        detail: String?,
+        buttonLabel: String,
+        buttonIcon: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: ThumpSpacing.sm) {
+            HStack(spacing: ThumpSpacing.xs) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(iconColor)
+
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+            }
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let detail = detail {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button {
+                // Action handled by view model
+                viewModel.handleSmartAction()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: buttonIcon)
+                        .font(.caption)
+                    Text(buttonLabel)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, ThumpSpacing.xs)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(iconColor)
+        }
+        .padding(ThumpSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: ThumpRadius.md)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Summary Stats Card
 
     private var summaryStatsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: ThumpSpacing.sm) {
             Text("Summary")
                 .font(.headline)
                 .foregroundStyle(.primary)
@@ -205,18 +580,17 @@ struct StressView: View {
                     }
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(summaryAccessibilityLabel)
             } else {
-                Text("Not enough data for summary statistics yet.")
+                Text("Not enough data for summary yet.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, ThumpSpacing.xs)
             }
         }
-        .padding(16)
+        .padding(ThumpSpacing.md)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: ThumpRadius.md)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
     }
@@ -246,32 +620,9 @@ struct StressView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var emptyStressState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "heart.text.square")
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
-
-            Text("No Stress Data Yet")
-                .font(.headline)
-                .foregroundStyle(.primary)
-
-            Text(
-                "Wear your Apple Watch regularly to collect "
-                + "HRV data. Your stress insights will appear "
-                + "here once we have enough readings."
-            )
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("No stress data available yet")
-    }
-
-    private var emptyChartState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "chart.line.downtrend.xyaxis")
+    private var emptyHeatmapState: some View {
+        VStack(spacing: ThumpSpacing.xs) {
+            Image(systemName: "calendar.badge.clock")
                 .font(.title2)
                 .foregroundStyle(.secondary)
 
@@ -279,58 +630,43 @@ struct StressView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .frame(height: 200)
+        .frame(height: 120)
         .frame(maxWidth: .infinity)
-        .accessibilityLabel("Insufficient data for stress trend chart")
+        .accessibilityLabel("Insufficient data for stress heatmap")
     }
 
     // MARK: - Helpers
 
-    /// Returns the accent color for the current stress level.
     private func stressColor(for level: StressLevel) -> Color {
         switch level {
-        case .relaxed: return .green
-        case .balanced: return .orange
-        case .elevated: return .red
+        case .relaxed: return ThumpColors.relaxed
+        case .balanced: return ThumpColors.balanced
+        case .elevated: return ThumpColors.elevated
         }
     }
 
-    /// The color used for the trend chart line, based on average stress.
-    private var trendChartColor: Color {
-        guard let avg = viewModel.averageStress else { return .blue }
-        let level = StressLevel.from(score: avg)
-        return stressColor(for: level)
+    private func formatHour(_ hour: Int) -> String {
+        let period = hour >= 12 ? "p" : "a"
+        let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+        return "\(displayHour)\(period)"
     }
 
-    /// Formats a date for display in summary stats.
+    private func formatWeekday(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date)
+    }
+
+    private func formatDayHeader(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter.string(from: date)
+    }
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE, MMM d"
         return formatter.string(from: date)
-    }
-
-    /// Accessibility label for the full summary section.
-    private var summaryAccessibilityLabel: String {
-        var parts: [String] = []
-        if let avg = viewModel.averageStress {
-            let level = StressLevel.from(score: avg)
-            parts.append(
-                "Average stress score \(Int(avg)), \(level.displayName)"
-            )
-        }
-        if let relaxed = viewModel.mostRelaxedDay {
-            parts.append(
-                "Most relaxed day: \(formatDate(relaxed.date)) "
-                + "with score \(Int(relaxed.score))"
-            )
-        }
-        if let elevated = viewModel.mostElevatedDay {
-            parts.append(
-                "Highest stress day: \(formatDate(elevated.date)) "
-                + "with score \(Int(elevated.score))"
-            )
-        }
-        return parts.joined(separator: ". ")
     }
 }
 
@@ -338,14 +674,4 @@ struct StressView: View {
 
 #Preview("Stress View") {
     StressView()
-}
-
-#Preview("Stress Gauge - Relaxed") {
-    let stress = StressResult(
-        score: 22,
-        level: .relaxed,
-        description: "You seem pretty relaxed right now"
-    )
-    StressView()
-        .onAppear {}
 }

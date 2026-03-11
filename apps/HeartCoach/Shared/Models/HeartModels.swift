@@ -451,6 +451,147 @@ public struct StressDataPoint: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+// MARK: - Hourly Stress Point
+
+/// A single hourly stress reading for heatmap visualization.
+public struct HourlyStressPoint: Codable, Equatable, Identifiable, Sendable {
+    /// Unique identifier combining date and hour.
+    public var id: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-HH"
+        return formatter.string(from: date)
+    }
+
+    /// The date and hour this point represents.
+    public let date: Date
+
+    /// Hour of day (0-23).
+    public let hour: Int
+
+    /// Stress score on a 0-100 scale.
+    public let score: Double
+
+    /// Categorical stress level for this point.
+    public let level: StressLevel
+
+    public init(date: Date, hour: Int, score: Double, level: StressLevel) {
+        self.date = date
+        self.hour = hour
+        self.score = score
+        self.level = level
+    }
+}
+
+// MARK: - Stress Trend Direction
+
+/// Direction of stress trend over a time period.
+public enum StressTrendDirection: String, Codable, Equatable, Sendable {
+    case rising
+    case falling
+    case steady
+
+    /// Friendly display text for the trend direction.
+    public var displayText: String {
+        switch self {
+        case .rising: return "Stress has been climbing lately"
+        case .falling: return "Your stress seems to be easing"
+        case .steady: return "Stress has been holding steady"
+        }
+    }
+
+    /// SF Symbol icon for trend direction.
+    public var icon: String {
+        switch self {
+        case .rising: return "arrow.up.right"
+        case .falling: return "arrow.down.right"
+        case .steady: return "arrow.right"
+        }
+    }
+}
+
+// MARK: - Sleep Pattern
+
+/// Learned sleep pattern for a day of the week.
+public struct SleepPattern: Codable, Equatable, Sendable {
+    /// Day of week (1 = Sunday, 7 = Saturday).
+    public let dayOfWeek: Int
+
+    /// Typical bedtime hour (0-23).
+    public var typicalBedtimeHour: Int
+
+    /// Typical wake hour (0-23).
+    public var typicalWakeHour: Int
+
+    /// Number of observations used to compute this pattern.
+    public var observationCount: Int
+
+    /// Whether this is a weekend day (Saturday or Sunday).
+    public var isWeekend: Bool {
+        dayOfWeek == 1 || dayOfWeek == 7
+    }
+
+    public init(
+        dayOfWeek: Int,
+        typicalBedtimeHour: Int = 22,
+        typicalWakeHour: Int = 7,
+        observationCount: Int = 0
+    ) {
+        self.dayOfWeek = dayOfWeek
+        self.typicalBedtimeHour = typicalBedtimeHour
+        self.typicalWakeHour = typicalWakeHour
+        self.observationCount = observationCount
+    }
+}
+
+// MARK: - Journal Prompt
+
+/// A prompt for the user to journal about their day.
+public struct JournalPrompt: Codable, Equatable, Sendable {
+    /// The prompt question.
+    public let question: String
+
+    /// Context about why this prompt was triggered.
+    public let context: String
+
+    /// SF Symbol icon.
+    public let icon: String
+
+    /// The date this prompt was generated.
+    public let date: Date
+
+    public init(
+        question: String,
+        context: String,
+        icon: String = "book.fill",
+        date: Date = Date()
+    ) {
+        self.question = question
+        self.context = context
+        self.icon = icon
+        self.date = date
+    }
+}
+
+// MARK: - Check-In Response
+
+/// User response to a morning check-in.
+public struct CheckInResponse: Codable, Equatable, Sendable {
+    /// The date of the check-in.
+    public let date: Date
+
+    /// How the user is feeling (1-5 scale).
+    public let feelingScore: Int
+
+    /// Optional text note.
+    public let note: String?
+
+    public init(date: Date, feelingScore: Int, note: String? = nil) {
+        self.date = date
+        self.feelingScore = feelingScore
+        self.note = note
+    }
+}
+
 // MARK: - Stored Snapshot
 
 /// Persistence wrapper pairing a snapshot with its optional assessment.
