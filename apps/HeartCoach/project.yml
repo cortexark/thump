@@ -95,6 +95,7 @@ targets:
       - target: Thump
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: "YES"
         PRODUCT_BUNDLE_IDENTIFIER: com.thump.tests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Thump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thump"
         BUNDLE_LOADER: "$(TEST_HOST)"

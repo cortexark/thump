@@ -79,27 +79,31 @@ jobs:
           xcodegen generate
       - name: Install iOS Simulator Runtime
         run: |
-          # Try to download iOS platform; if it fails, use pre-installed simulators
-          xcodebuild -downloadPlatform iOS || echo "Download failed, using pre-installed simulators"
-      - name: List Available Simulators
+          # Download iOS simulator runtime (required on macos-15 runners)
+          xcodebuild -downloadPlatform iOS
+        timeout-minutes: 15
+      - name: Boot Simulator
         run: |
+          # List and boot first available iPhone
           xcrun simctl list devices available | grep -i iphone | head -10
+          DEVICE=$(xcrun simctl list devices available | grep "iPhone" | head -1 | sed 's/.*(\([A-F0-9-]*\)).*/\1/')
+          echo "DEVICE_ID=$DEVICE" >> "$GITHUB_ENV"
+          echo "Booting simulator: $DEVICE"
+          xcrun simctl boot "$DEVICE" || true
       - name: Run Tests
         run: |
           set -o pipefail
           cd apps/HeartCoach
-          # Find first available iPhone simulator
-          DEVICE=$(xcrun simctl list devices available | grep "iPhone" | head -1 | sed 's/.*(\(.*\)).*/\1/' | tr -d ' ')
-          echo "Using simulator device: $DEVICE"
+          echo "Using simulator device: $DEVICE_ID"
           xcodebuild test \
             -project Thump.xcodeproj \
             -scheme Thump \
-            -destination "platform=iOS Simulator,id=$DEVICE" \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            | xcpretty --color --test
+            2>&1 | tail -200
       - name: Extract Code Coverage
         if: success()
         run: |

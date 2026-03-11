@@ -5,7 +5,7 @@
 // with 30 days of deterministic HeartSnapshot data each.
 
 import Foundation
-@testable import HeartCoach
+@testable import Thump
 
 // MARK: - Mock User Profile
 

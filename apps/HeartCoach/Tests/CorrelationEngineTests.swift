@@ -6,7 +6,7 @@
 // Platforms: iOS 17+, watchOS 10+, macOS 14+
 
 import XCTest
-@testable import ThumpCore
+@testable import Thump
 
 // MARK: - CorrelationEngineTests
 

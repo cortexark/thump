@@ -7,7 +7,7 @@
 // Platforms: iOS 17+, watchOS 10+, macOS 14+
 
 import XCTest
-@testable import ThumpCore
+@testable import Thump
 
 // MARK: - Mock User Profile
 
@@ -23,21 +23,21 @@ enum MockUserArchetype: String, CaseIterable {
     case sparseData
 }
 
-/// A mock user profile with pre-configured snapshot history.
-struct MockUserProfile {
+/// A mock user profile with pre-configured snapshot history for pipeline tests.
+struct PipelineMockProfile {
     let archetype: MockUserArchetype
     let history: [HeartSnapshot]
     let current: HeartSnapshot
 }
 
 /// Generates mock user profiles for pipeline testing.
-struct MockProfileGenerator {
+struct PipelineProfileGenerator {
 
     private let calendar = Calendar.current
 
     // MARK: - Public API
 
-    func profile(for archetype: MockUserArchetype) -> MockUserProfile {
+    func profile(for archetype: MockUserArchetype) -> PipelineMockProfile {
         switch archetype {
         case .eliteAthlete:
             return eliteAthleteProfile()
@@ -60,22 +60,22 @@ struct MockProfileGenerator {
 
     // MARK: - Archetype Profiles
 
-    private func eliteAthleteProfile() -> MockUserProfile {
+    private func eliteAthleteProfile() -> PipelineMockProfile {
         let days = 21
         let history = (0..<days).map { i -> HeartSnapshot in
             let date = dateOffset(-(days - i))
             let variation = sin(Double(i) * 0.4) * 1.5
             return HeartSnapshot(
                 date: date,
-                restingHeartRate: 48.0 + variation,
-                hrvSDNN: 85.0 - variation,
+                restingHeartRate: 48.0 - variation * 0.5,
+                hrvSDNN: 85.0 + variation,
                 recoveryHR1m: 45.0 + variation,
                 recoveryHR2m: 55.0 + variation,
-                vo2Max: 55.0 + variation *0.5,
-                steps: 15000 + variation *1000,
-                walkMinutes: 60.0 + variation *5,
-                workoutMinutes: 90.0 + variation *5,
-                sleepHours: 8.0 + variation *0.2
+                vo2Max: 55.0 + variation * 0.5,
+                steps: 15000 + variation * 1000,
+                walkMinutes: 60.0 + variation * 5,
+                workoutMinutes: 90.0 + variation * 5,
+                sleepHours: 8.0 + variation * 0.2
             )
         }
         let current = HeartSnapshot(
@@ -90,14 +90,14 @@ struct MockProfileGenerator {
             workoutMinutes: 95,
             sleepHours: 8.2
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .eliteAthlete,
             history: history,
             current: current
         )
     }
 
-    private func sedentaryWorkerProfile() -> MockUserProfile {
+    private func sedentaryWorkerProfile() -> PipelineMockProfile {
         let days = 21
         let history = (0..<days).map { i -> HeartSnapshot in
             let date = dateOffset(-(days - i))
@@ -106,13 +106,13 @@ struct MockProfileGenerator {
                 date: date,
                 restingHeartRate: 75.0 + variation,
                 hrvSDNN: 30.0 + variation,
-                recoveryHR1m: 15.0 + variation *0.5,
-                recoveryHR2m: 25.0 + variation *0.5,
-                vo2Max: 28.0 + variation *0.3,
-                steps: 3000 + variation *200,
+                recoveryHR1m: 15.0 + variation * 0.5,
+                recoveryHR2m: 25.0 + variation * 0.5,
+                vo2Max: 28.0 + variation * 0.3,
+                steps: 3000 + variation * 200,
                 walkMinutes: 10.0 + variation,
-                workoutMinutes: 5.0 + abs(v),
-                sleepHours: 6.0 + variation *0.2
+                workoutMinutes: 5.0 + abs(variation),
+                sleepHours: 6.0 + variation * 0.2
             )
         }
         let current = HeartSnapshot(
@@ -127,14 +127,14 @@ struct MockProfileGenerator {
             workoutMinutes: 0,
             sleepHours: 5.8
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .sedentaryWorker,
             history: history,
             current: current
         )
     }
 
-    private func overtrainerProfile() -> MockUserProfile {
+    private func overtrainerProfile() -> PipelineMockProfile {
         let days = 21
         // Simulate worsening metrics over time (RHR rising, HRV dropping)
         let history = (0..<days).map { i -> HeartSnapshot in
@@ -148,8 +148,8 @@ struct MockProfileGenerator {
                 recoveryHR1m: 40.0 - trend * 0.8,
                 recoveryHR2m: 50.0 - trend * 0.6,
                 vo2Max: 48.0 - trend * 0.3,
-                steps: 20000 + variation *500,
-                walkMinutes: 40.0 + variation *3,
+                steps: 20000 + variation * 500,
+                walkMinutes: 40.0 + variation * 3,
                 workoutMinutes: 120.0 + trend * 2,
                 sleepHours: 6.5 - trend * 0.1
             )
@@ -166,14 +166,14 @@ struct MockProfileGenerator {
             workoutMinutes: 140,
             sleepHours: 5.5
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .overtrainer,
             history: history,
             current: current
         )
     }
 
-    private func recoveringUserProfile() -> MockUserProfile {
+    private func recoveringUserProfile() -> PipelineMockProfile {
         let days = 21
         // First half: poor metrics; second half: improving
         let history = (0..<days).map { i -> HeartSnapshot in
@@ -207,14 +207,14 @@ struct MockProfileGenerator {
             workoutMinutes: 35,
             sleepHours: 7.5
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .recoveringUser,
             history: history,
             current: current
         )
     }
 
-    private func improvingBeginnerProfile() -> MockUserProfile {
+    private func improvingBeginnerProfile() -> PipelineMockProfile {
         let days = 21
         let history = (0..<days).map { i -> HeartSnapshot in
             let date = dateOffset(-(days - i))
@@ -227,10 +227,10 @@ struct MockProfileGenerator {
                 recoveryHR1m: 18.0 + progress * 10.0 + variation,
                 recoveryHR2m: 28.0 + progress * 8.0 + variation,
                 vo2Max: 30.0 + progress * 5.0,
-                steps: 4000 + progress * 5000 + variation *300,
-                walkMinutes: 10.0 + progress * 20 + variation *2,
+                steps: 4000 + progress * 5000 + variation * 300,
+                walkMinutes: 10.0 + progress * 20 + variation * 2,
                 workoutMinutes: 5.0 + progress * 25,
-                sleepHours: 6.5 + progress * 1.0 + variation *0.1
+                sleepHours: 6.5 + progress * 1.0 + variation * 0.1
             )
         }
         let current = HeartSnapshot(
@@ -245,14 +245,14 @@ struct MockProfileGenerator {
             workoutMinutes: 30,
             sleepHours: 7.5
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .improvingBeginner,
             history: history,
             current: current
         )
     }
 
-    private func stressedProfessionalProfile() -> MockUserProfile {
+    private func stressedProfessionalProfile() -> PipelineMockProfile {
         let days = 21
         let history = (0..<days).map { i -> HeartSnapshot in
             let date = dateOffset(-(days - i))
@@ -264,10 +264,10 @@ struct MockProfileGenerator {
                 recoveryHR1m: 30.0 + variation,
                 recoveryHR2m: 42.0 + variation,
                 vo2Max: 38.0,
-                steps: 6000 + variation *300,
-                walkMinutes: 20.0 + variation *2,
-                workoutMinutes: 20.0 + variation *2,
-                sleepHours: 6.5 + variation *0.2
+                steps: 6000 + variation * 300,
+                walkMinutes: 20.0 + variation * 2,
+                workoutMinutes: 20.0 + variation * 2,
+                sleepHours: 6.5 + variation * 0.2
             )
         }
         // Current day: classic stress pattern
@@ -283,14 +283,14 @@ struct MockProfileGenerator {
             workoutMinutes: 0,
             sleepHours: 4.5
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .stressedProfessional,
             history: history,
             current: current
         )
     }
 
-    private func sleepDeprivedProfile() -> MockUserProfile {
+    private func sleepDeprivedProfile() -> PipelineMockProfile {
         let days = 21
         let history = (0..<days).map { i -> HeartSnapshot in
             let date = dateOffset(-(days - i))
@@ -302,10 +302,10 @@ struct MockProfileGenerator {
                 recoveryHR1m: 28.0 + variation,
                 recoveryHR2m: 40.0 + variation,
                 vo2Max: 36.0,
-                steps: 7000 + variation *400,
-                walkMinutes: 25.0 + variation *2,
-                workoutMinutes: 15.0 + variation *2,
-                sleepHours: 4.5 + variation *0.3
+                steps: 7000 + variation * 400,
+                walkMinutes: 25.0 + variation * 2,
+                workoutMinutes: 15.0 + variation * 2,
+                sleepHours: 4.5 + variation * 0.3
             )
         }
         // Current: elevated RHR, depressed HRV, poor recovery from sleep dep
@@ -321,14 +321,14 @@ struct MockProfileGenerator {
             workoutMinutes: 0,
             sleepHours: 3.5
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .sleepDeprived,
             history: history,
             current: current
         )
     }
 
-    private func sparseDataProfile() -> MockUserProfile {
+    private func sparseDataProfile() -> PipelineMockProfile {
         let days = 5
         let history = (0..<days).map { i -> HeartSnapshot in
             let date = dateOffset(-(days - i))
@@ -354,7 +354,7 @@ struct MockProfileGenerator {
             recoveryHR2m: nil,
             vo2Max: nil
         )
-        return MockUserProfile(
+        return PipelineMockProfile(
             archetype: .sparseData,
             history: history,
             current: current
@@ -379,7 +379,7 @@ final class PipelineValidationTests: XCTestCase {
     private var correlationEngine: CorrelationEngine!
     private var nudgeGenerator: NudgeGenerator!
     // swiftlint:enable implicitly_unwrapped_optional
-    private let profileGenerator = MockProfileGenerator()
+    private let profileGenerator = PipelineProfileGenerator()
 
     // MARK: - Lifecycle
 

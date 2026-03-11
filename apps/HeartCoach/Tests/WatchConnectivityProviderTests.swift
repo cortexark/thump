@@ -2,7 +2,9 @@
 // ThumpTests
 //
 // Contract tests for the watch-side mock connectivity provider.
+// Disabled on iOS — MockWatchConnectivityProvider is watchOS-only.
 
+#if os(watchOS)
 import XCTest
 @testable import Thump
 
@@ -99,3 +101,4 @@ final class WatchConnectivityProviderTests: XCTestCase {
         )
     }
 }
+#endif
