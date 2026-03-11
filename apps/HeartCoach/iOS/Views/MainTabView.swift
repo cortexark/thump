@@ -29,6 +29,7 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             dashboardTab
             trendsTab
+            stressTab
             insightsTab
             settingsTab
         }
@@ -53,12 +54,20 @@ struct MainTabView: View {
             .tag(1)
     }
 
+    private var stressTab: some View {
+        StressView()
+            .tabItem {
+                Label("Stress", systemImage: "flame.fill")
+            }
+            .tag(2)
+    }
+
     private var insightsTab: some View {
         InsightsView()
             .tabItem {
                 Label("Insights", systemImage: "lightbulb.fill")
             }
-            .tag(2)
+            .tag(3)
     }
 
     private var settingsTab: some View {
@@ -66,7 +75,7 @@ struct MainTabView: View {
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
-            .tag(3)
+            .tag(4)
     }
 }
 

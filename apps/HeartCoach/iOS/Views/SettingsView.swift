@@ -187,7 +187,7 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Label("Your Heart Training Buddy", systemImage: "heart.circle")
+            Label("Your heart's daily story", systemImage: "heart.circle")
                 .foregroundStyle(.secondary)
                 .font(.subheadline)
 
@@ -214,33 +214,87 @@ struct SettingsView: View {
 
     private var disclaimerSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "heart.text.square")
-                        .font(.body)
-                        .foregroundStyle(.orange)
+            // Health disclaimer
+            disclaimerRow(
+                icon: "heart.text.square",
+                iconColor: .orange,
+                title: "Not a Medical Device",
+                body: "Thump is a wellness companion, not a medical "
+                    + "device. It is not intended to diagnose, treat, "
+                    + "cure, or prevent any disease or health condition."
+            )
 
-                    Text("Health Disclaimer")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
-                }
+            // Data accuracy
+            disclaimerRow(
+                icon: "waveform.path.ecg",
+                iconColor: .pink,
+                title: "Data Accuracy",
+                body: "Wellness insights are based on data from Apple "
+                    + "Watch sensors, which may vary in accuracy. "
+                    + "Numbers shown are estimates, not exact readings."
+            )
 
-                Text(
-                    "Thump is not a medical device and is not intended to "
-                        + "diagnose, treat, cure, or prevent any disease or "
-                        + "health condition. The insights provided are for "
-                        + "informational and wellness purposes only. Always "
-                        + "consult a qualified healthcare professional before "
-                        + "making any changes to your health routine or if you "
-                        + "have concerns about your heart health."
-                )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.vertical, 4)
+            // Professional advice
+            disclaimerRow(
+                icon: "stethoscope",
+                iconColor: .blue,
+                title: "Consult a Professional",
+                body: "Always consult a qualified healthcare "
+                    + "professional before making changes to your "
+                    + "health routine or if you have concerns."
+            )
+
+            // Emergency
+            disclaimerRow(
+                icon: "phone.fill",
+                iconColor: .red,
+                title: "Emergencies",
+                body: "If you are experiencing a medical emergency, "
+                    + "call 911 or your local emergency number "
+                    + "immediately. Thump is not an emergency service."
+            )
+
+            // Privacy
+            disclaimerRow(
+                icon: "lock.shield.fill",
+                iconColor: .green,
+                title: "Your Data Stays on Your Device",
+                body: "All health data is processed on your iPhone "
+                    + "and Apple Watch. No health data is sent to any "
+                    + "server. We collect anonymous usage analytics to "
+                    + "improve the app experience."
+            )
+        } header: {
+            Text("Important Information")
         }
+    }
+
+    /// Reusable disclaimer row with icon, title, and body text.
+    private func disclaimerRow(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        body: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundStyle(iconColor)
+
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+            }
+
+            Text(body)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Privacy Policy Sheet

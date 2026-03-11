@@ -341,6 +341,116 @@ public struct WeeklyReport: Codable, Equatable, Sendable {
     }
 }
 
+// MARK: - Stress Level
+
+/// Friendly stress level categories derived from HRV-based stress scoring.
+///
+/// Each level maps to a 0-100 score range and carries a friendly,
+/// non-clinical display name suitable for the Thump voice.
+public enum StressLevel: String, Codable, Equatable, Sendable, CaseIterable {
+    case relaxed
+    case balanced
+    case elevated
+
+    /// User-facing display name using friendly, non-medical language.
+    public var displayName: String {
+        switch self {
+        case .relaxed: return "Feeling Relaxed"
+        case .balanced: return "Finding Balance"
+        case .elevated: return "Running Hot"
+        }
+    }
+
+    /// SF Symbol icon for this stress level.
+    public var icon: String {
+        switch self {
+        case .relaxed: return "leaf.fill"
+        case .balanced: return "circle.grid.cross.fill"
+        case .elevated: return "flame.fill"
+        }
+    }
+
+    /// Named color for SwiftUI tinting.
+    public var colorName: String {
+        switch self {
+        case .relaxed: return "stressRelaxed"
+        case .balanced: return "stressBalanced"
+        case .elevated: return "stressElevated"
+        }
+    }
+
+    /// Friendly description of the current state.
+    public var friendlyMessage: String {
+        switch self {
+        case .relaxed:
+            return "You seem pretty relaxed right now"
+        case .balanced:
+            return "Things look balanced"
+        case .elevated:
+            return "You might be running a bit hot"
+        }
+    }
+
+    /// Creates a stress level from a 0-100 score.
+    ///
+    /// - Parameter score: Stress score in the 0-100 range.
+    /// - Returns: The corresponding stress level category.
+    public static func from(score: Double) -> StressLevel {
+        let clamped = max(0, min(100, score))
+        if clamped <= 33 {
+            return .relaxed
+        } else if clamped <= 66 {
+            return .balanced
+        } else {
+            return .elevated
+        }
+    }
+}
+
+// MARK: - Stress Result
+
+/// The output of a single stress computation, pairing a numeric score
+/// with its categorical level and a friendly description.
+public struct StressResult: Codable, Equatable, Sendable {
+    /// Stress score on a 0-100 scale (lower is more relaxed).
+    public let score: Double
+
+    /// Categorical stress level derived from the score.
+    public let level: StressLevel
+
+    /// Friendly, non-clinical description of the result.
+    public let description: String
+
+    public init(score: Double, level: StressLevel, description: String) {
+        self.score = score
+        self.level = level
+        self.description = description
+    }
+}
+
+// MARK: - Stress Data Point
+
+/// A single data point in a stress trend time series.
+public struct StressDataPoint: Codable, Equatable, Identifiable, Sendable {
+    /// Unique identifier derived from the date.
+    public var id: Date { date }
+
+    /// The date this data point represents.
+    public let date: Date
+
+    /// Stress score on a 0-100 scale.
+    public let score: Double
+
+    /// Categorical stress level for this point.
+    public let level: StressLevel
+
+    public init(date: Date, score: Double, level: StressLevel) {
+        self.date = date
+        self.score = score
+        self.level = level
+    }
+}
+
 // MARK: - Stored Snapshot
 
 /// Persistence wrapper pairing a snapshot with its optional assessment.

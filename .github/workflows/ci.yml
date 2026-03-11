@@ -41,7 +41,7 @@ jobs:
       matrix:
         include:
           - scheme: Thump
-            destination: "platform=iOS Simulator,name=iPhone 16 Pro,OS=latest"
+            destination: "generic/platform=iOS Simulator"
           - scheme: ThumpWatch
             destination: "generic/platform=watchOS Simulator"
     steps:
@@ -78,14 +78,23 @@ jobs:
         run: |
           cd apps/HeartCoach
           xcodegen generate
+      - name: Install iOS Simulator Runtime
+        run: |
+          xcodebuild -downloadPlatform iOS
+      - name: List Available Simulators
+        run: |
+          xcrun simctl list devices available | grep -i iphone | head -10
       - name: Run Tests
         run: |
           set -o pipefail
           cd apps/HeartCoach
+          # Find first available iPhone simulator
+          DEVICE=$(xcrun simctl list devices available | grep "iPhone" | head -1 | sed 's/.*(\(.*\)).*/\1/' | tr -d ' ')
+          echo "Using simulator device: $DEVICE"
           xcodebuild test \
             -project Thump.xcodeproj \
             -scheme Thump \
-            -destination "platform=iOS Simulator,name=iPhone 16 Pro,OS=latest" \
+            -destination "platform=iOS Simulator,id=$DEVICE" \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGN_IDENTITY="" \
