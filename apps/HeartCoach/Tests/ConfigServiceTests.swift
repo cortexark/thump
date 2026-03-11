@@ -16,8 +16,11 @@ final class ConfigServiceTests: XCTestCase {
 
     func testDefaultLookbackWindowIsPositive() {
         XCTAssertGreaterThan(ConfigService.defaultLookbackWindow, 0)
-        XCTAssertEqual(ConfigService.defaultLookbackWindow, 21,
-            "Default lookback should be 21 days (3 weeks)")
+        XCTAssertEqual(
+            ConfigService.defaultLookbackWindow,
+            21,
+            "Default lookback should be 21 days (3 weeks)"
+        )
     }
 
     func testDefaultRegressionWindowIsPositive() {
@@ -51,20 +54,28 @@ final class ConfigServiceTests: XCTestCase {
 
     func testMinimumSyncIntervalIsReasonable() {
         XCTAssertGreaterThanOrEqual(
-            ConfigService.minimumSyncIntervalSeconds, 60,
+            ConfigService.minimumSyncIntervalSeconds,
+            60,
             "Sync interval should be at least 60 seconds for battery"
         )
         XCTAssertLessThanOrEqual(
-            ConfigService.minimumSyncIntervalSeconds, 3600,
+            ConfigService.minimumSyncIntervalSeconds,
+            3600,
             "Sync interval should be at most 1 hour for freshness"
         )
     }
 
     func testMaxStoredSnapshotsIsReasonable() {
-        XCTAssertGreaterThanOrEqual(ConfigService.maxStoredSnapshots, 30,
-            "Should store at least 30 days of data")
-        XCTAssertLessThanOrEqual(ConfigService.maxStoredSnapshots, 730,
-            "Should not store more than 2 years of data")
+        XCTAssertGreaterThanOrEqual(
+            ConfigService.maxStoredSnapshots,
+            30,
+            "Should store at least 30 days of data"
+        )
+        XCTAssertLessThanOrEqual(
+            ConfigService.maxStoredSnapshots,
+            730,
+            "Should not store more than 2 years of data"
+        )
     }
 
     // MARK: - Test: Free Tier Feature Gating
@@ -146,16 +157,22 @@ final class ConfigServiceTests: XCTestCase {
     func testEveryTierHasAtLeastOneFeature() {
         for tier in SubscriptionTier.allCases {
             let features = ConfigService.availableFeatures(for: tier)
-            XCTAssertGreaterThan(features.count, 0,
-                "\(tier) should have at least one feature listed")
+            XCTAssertGreaterThan(
+                features.count,
+                0,
+                "\(tier) should have at least one feature listed"
+            )
         }
     }
 
     func testHigherTiersHaveMoreFeatures() {
         let freeFeatures = ConfigService.availableFeatures(for: .free)
         let proFeatures = ConfigService.availableFeatures(for: .pro)
-        XCTAssertGreaterThan(proFeatures.count, freeFeatures.count,
-            "Pro should have more features than Free")
+        XCTAssertGreaterThan(
+            proFeatures.count,
+            freeFeatures.count,
+            "Pro should have more features than Free"
+        )
     }
 
     // MARK: - Test: Engine Factory
@@ -166,8 +183,11 @@ final class ConfigServiceTests: XCTestCase {
         let history: [HeartSnapshot] = []
         let snapshot = HeartSnapshot(date: Date(), restingHeartRate: 62)
         let confidence = engine.confidenceLevel(current: snapshot, history: history)
-        XCTAssertEqual(confidence, .low,
-            "Empty history should yield low confidence from default engine")
+        XCTAssertEqual(
+            confidence,
+            .low,
+            "Empty history should yield low confidence from default engine"
+        )
     }
 
     // MARK: - Test: Subscription Tier Properties
@@ -186,8 +206,11 @@ final class ConfigServiceTests: XCTestCase {
 
     func testAnnualPriceIsLessThanTwelveTimesMonthly() {
         for tier in SubscriptionTier.allCases where tier.monthlyPrice > 0 {
-            XCTAssertLessThan(tier.annualPrice, tier.monthlyPrice * 12,
-                "\(tier) annual should be cheaper than 12 months")
+            XCTAssertLessThan(
+                tier.annualPrice,
+                tier.monthlyPrice * 12,
+                "\(tier) annual should be cheaper than 12 months"
+            )
         }
     }
 }
