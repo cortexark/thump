@@ -15,14 +15,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DEVELOPER_DIR: /Applications/Xcode_15.4.app/Contents/Developer
+  DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
   XCODEGEN_VERSION: "2.38.0"
 
 jobs:
   # Gate 1: Swift lint and format check
   lint:
     name: SwiftLint
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Install SwiftLint
@@ -35,15 +35,15 @@ jobs:
   # Gate 2: Build iOS and watchOS targets
   build:
     name: Build (${{ matrix.scheme }})
-    runs-on: macos-14
+    runs-on: macos-15
     needs: lint
     strategy:
       matrix:
         include:
           - scheme: Thump
-            destination: "platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5"
+            destination: "platform=iOS Simulator,name=iPhone 16 Pro,OS=18.2"
           - scheme: ThumpWatch
-            destination: "platform=watchOS Simulator,name=Apple Watch Series 9 (45mm),OS=10.5"
+            destination: "platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.2"
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -54,6 +54,7 @@ jobs:
           xcodegen generate
       - name: Build
         run: |
+          set -o pipefail
           cd apps/HeartCoach
           xcodebuild build \
             -project Thump.xcodeproj \
@@ -67,7 +68,7 @@ jobs:
   # Gate 3: Run unit tests
   test:
     name: Unit Tests
-    runs-on: macos-14
+    runs-on: macos-15
     needs: build
     steps:
       - uses: actions/checkout@v4
@@ -79,11 +80,13 @@ jobs:
           xcodegen generate
       - name: Run Tests
         run: |
+          set -o pipefail
           cd apps/HeartCoach
           xcodebuild test \
             -project Thump.xcodeproj \
             -scheme Thump \
-            -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5" \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro,OS=18.2" \
+            -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
@@ -93,9 +96,8 @@ jobs:
         run: |
           cd apps/HeartCoach
           xcrun xccov view --report --json TestResults.xcresult > coverage_report.json
-          # Print summary to CI log
-          echo "## Code Coverage Summary" >> $GITHUB_STEP_SUMMARY
-          xcrun xccov view --report TestResults.xcresult | head -30 >> $GITHUB_STEP_SUMMARY
+          echo "## Code Coverage Summary" >> "$GITHUB_STEP_SUMMARY"
+          xcrun xccov view --report TestResults.xcresult | head -30 >> "$GITHUB_STEP_SUMMARY"
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
