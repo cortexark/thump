@@ -14,6 +14,31 @@ import XCTest
 
 final class DatasetValidationTests: XCTestCase {
 
+    private enum StressDatasetLabel: String {
+        case baseline
+        case stressed
+    }
+
+    private struct SWELLObservation {
+        let subjectID: String
+        let label: StressDatasetLabel
+        let hr: Double
+        let sdnn: Double
+    }
+
+    private struct StressSubjectBaseline {
+        let hrMean: Double
+        let hrvMean: Double
+        let hrvSD: Double?
+        let baselineHRVs: [Double]
+    }
+
+    private struct ScoredStressObservation {
+        let subjectID: String
+        let label: StressDatasetLabel
+        let score: Double
+    }
+
     // MARK: - Paths
 
     /// Root directory for validation CSV files.
@@ -79,58 +104,110 @@ final class DatasetValidationTests: XCTestCase {
         let rows = try loadCSV(named: "swell_hrv.csv")
         let engine = StressEngine()
 
-        var stressScores: [Double] = []
-        var baselineScores: [Double] = []
+        let parsedRows = rows.compactMap(parseSWELLObservation)
+        XCTAssertFalse(parsedRows.isEmpty, "No usable SWELL-HRV rows found")
 
-        for row in rows {
-            guard let hrStr = row["meanHR"] ?? row["HR"],
-                  let sdnnStr = row["SDNN"] ?? row["sdnn"],
-                  let hr = Double(hrStr),
-                  let sdnn = Double(sdnnStr),
-                  let condition = row["condition"] ?? row["label"]
-            else { continue }
+        let observationsBySubject = Dictionary(grouping: parsedRows, by: \.subjectID)
+        var subjectBaselines: [String: StressSubjectBaseline] = [:]
 
-            // Use SDNN as both current and baseline for stress computation
-            let result = engine.computeStress(
-                currentHRV: sdnn,
-                baselineHRV: sdnn * 1.1, // assume baseline is slightly higher
-                currentRHR: hr
+        for (subjectID, subjectRows) in observationsBySubject {
+            let baselineRows = subjectRows.filter { $0.label == .baseline }
+            let hrValues = baselineRows.map(\.hr)
+            let hrvValues = baselineRows.map(\.sdnn)
+
+            guard !hrValues.isEmpty, !hrvValues.isEmpty else { continue }
+
+            subjectBaselines[subjectID] = StressSubjectBaseline(
+                hrMean: hrValues.reduce(0, +) / Double(hrValues.count),
+                hrvMean: hrvValues.reduce(0, +) / Double(hrvValues.count),
+                hrvSD: hrvValues.count >= 2 ? sqrt(variance(hrvValues)) : nil,
+                baselineHRVs: hrvValues
             )
-
-            let isStress = condition.lowercased().contains("stress")
-                || condition.lowercased().contains("time")
-                || condition.lowercased().contains("interrupt")
-
-            if isStress {
-                stressScores.append(result.score)
-            } else {
-                baselineScores.append(result.score)
-            }
         }
 
-        // Must have data in both groups
-        XCTAssertFalse(stressScores.isEmpty, "No stress-labeled rows found")
-        XCTAssertFalse(baselineScores.isEmpty, "No baseline-labeled rows found")
+        XCTAssertFalse(subjectBaselines.isEmpty, "Could not derive any per-subject baselines from no-stress rows")
+
+        var scoredRows: [ScoredStressObservation] = []
+        var skippedSubjects = Set<String>()
+
+        for row in parsedRows {
+            guard let baseline = subjectBaselines[row.subjectID] else {
+                skippedSubjects.insert(row.subjectID)
+                continue
+            }
+
+            let result = engine.computeStress(
+                currentHRV: row.sdnn,
+                baselineHRV: baseline.hrvMean,
+                baselineHRVSD: baseline.hrvSD,
+                currentRHR: row.hr,
+                baselineRHR: baseline.hrMean,
+                recentHRVs: baseline.baselineHRVs.count >= 3 ? baseline.baselineHRVs : nil
+            )
+
+            scoredRows.append(
+                ScoredStressObservation(
+                    subjectID: row.subjectID,
+                    label: row.label,
+                    score: result.score
+                )
+            )
+        }
+
+        let stressScores = scoredRows
+            .filter { $0.label == .stressed }
+            .map(\.score)
+        let baselineScores = scoredRows
+            .filter { $0.label == .baseline }
+            .map(\.score)
+
+        XCTAssertFalse(stressScores.isEmpty, "No stressed rows were scored from SWELL-HRV")
+        XCTAssertFalse(baselineScores.isEmpty, "No baseline rows were scored from SWELL-HRV")
 
         let stressMean = stressScores.reduce(0, +) / Double(stressScores.count)
         let baselineMean = baselineScores.reduce(0, +) / Double(baselineScores.count)
+        let pooledSD = sqrt((variance(stressScores) + variance(baselineScores)) / 2.0)
+        let cohensD = pooledSD > 0 ? (stressMean - baselineMean) / pooledSD : 0.0
+        let auc = computeAUC(
+            positives: stressScores,
+            negatives: baselineScores
+        )
+        let confusion = confusionMatrix(
+            observations: scoredRows,
+            threshold: 50.0
+        )
+
+        let baselineCount = scoredRows.filter { $0.label == .baseline }.count
+        let stressedCount = scoredRows.filter { $0.label == .stressed }.count
+        let subjectCount = Set(scoredRows.map(\.subjectID)).count
 
         print("=== SWELL-HRV StressEngine Validation ===")
-        print("Stress group: n=\(stressScores.count), mean=\(String(format: "%.1f", stressMean))")
-        print("Baseline group: n=\(baselineScores.count), mean=\(String(format: "%.1f", baselineMean))")
-
-        // Effect size (Cohen's d)
-        let pooledSD = sqrt(
-            (variance(stressScores) + variance(baselineScores)) / 2.0
-        )
-        let cohensD = pooledSD > 0 ? (stressMean - baselineMean) / pooledSD : 0
+        print("Subjects scored: \(subjectCount)")
+        print("Skipped subjects without baseline: \(skippedSubjects.count)")
+        print("Baseline rows: n=\(baselineCount), mean=\(String(format: "%.1f", baselineMean))")
+        print("Stressed rows: n=\(stressedCount), mean=\(String(format: "%.1f", stressMean))")
         print("Cohen's d = \(String(format: "%.2f", cohensD))")
+        print("AUC-ROC = \(String(format: "%.3f", auc))")
+        print(
+            "Confusion @50: TP=\(confusion.tp) FP=\(confusion.fp) "
+                + "TN=\(confusion.tn) FN=\(confusion.fn)"
+        )
 
-        // Stress scores should be meaningfully higher than baseline
-        XCTAssertGreaterThan(stressMean, baselineMean,
-            "Stress group should score higher than baseline")
-        XCTAssertGreaterThan(cohensD, 0.5,
-            "Effect size should be at least medium (d > 0.5)")
+        XCTAssertGreaterThan(
+            stressMean,
+            baselineMean,
+            "Stressed rows should score higher than baseline rows"
+        )
+        XCTAssertGreaterThan(
+            cohensD,
+            0.5,
+            "Effect size should be at least medium (d > 0.5)"
+        )
+        XCTAssertGreaterThan(
+            auc,
+            0.70,
+            "AUC-ROC should exceed 0.70 for stressed vs baseline SWELL rows"
+        )
     }
 
     // MARK: - 2. Fitbit Tracker → HeartTrendEngine
@@ -411,6 +488,129 @@ final class DatasetValidationTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    private func parseSWELLObservation(_ row: [String: String]) -> SWELLObservation? {
+        guard let subjectID = firstNonEmptyValue(
+            in: row,
+            keys: [
+                "subject",
+                "Subject",
+                "subject_id",
+                "Subject_ID",
+                "participant",
+                "Participant",
+                "id",
+                "ID",
+            ]
+        ),
+        let labelRaw = firstNonEmptyValue(
+            in: row,
+            keys: ["condition", "Condition", "label", "Label"]
+        ),
+        let label = normalizeStressLabel(labelRaw),
+        let hrStr = firstNonEmptyValue(
+            in: row,
+            keys: ["meanHR", "MeanHR", "mean_hr", "HR", "hr"]
+        ),
+        let sdnnStr = firstNonEmptyValue(
+            in: row,
+            keys: ["SDNN", "sdnn", "Sdnn", "SDRR", "sdrr"]
+        ),
+        let hr = Double(hrStr),
+        let sdnn = Double(sdnnStr),
+        hr > 0,
+        sdnn > 0
+        else { return nil }
+
+        return SWELLObservation(
+            subjectID: subjectID,
+            label: label,
+            hr: hr,
+            sdnn: sdnn
+        )
+    }
+
+    private func firstNonEmptyValue(
+        in row: [String: String],
+        keys: [String]
+    ) -> String? {
+        for key in keys {
+            if let value = row[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !value.isEmpty {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private func normalizeStressLabel(_ raw: String) -> StressDatasetLabel? {
+        let normalized = raw
+            .lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+
+        switch normalized {
+        case "n", "nostress", "no stress", "baseline", "rest":
+            return .baseline
+        case "t", "i", "stress", "time pressure", "interruption":
+            return .stressed
+        default:
+            if normalized.contains("no stress") || normalized.contains("baseline") {
+                return .baseline
+            }
+            if normalized.contains("time") || normalized.contains("interrupt") || normalized.contains("stress") {
+                return .stressed
+            }
+            return nil
+        }
+    }
+
+    private func computeAUC(
+        positives: [Double],
+        negatives: [Double]
+    ) -> Double {
+        guard !positives.isEmpty, !negatives.isEmpty else { return 0 }
+
+        var favorablePairs = 0.0
+        let totalPairs = Double(positives.count * negatives.count)
+
+        for positive in positives {
+            for negative in negatives {
+                if positive > negative {
+                    favorablePairs += 1.0
+                } else if positive == negative {
+                    favorablePairs += 0.5
+                }
+            }
+        }
+
+        return favorablePairs / totalPairs
+    }
+
+    private func confusionMatrix(
+        observations: [ScoredStressObservation],
+        threshold: Double
+    ) -> (tp: Int, fp: Int, tn: Int, fn: Int) {
+        var tp = 0
+        var fp = 0
+        var tn = 0
+        var fn = 0
+
+        for observation in observations {
+            let predictedStress = observation.score >= threshold
+            let actualStress = observation.label == .stressed
+
+            switch (predictedStress, actualStress) {
+            case (true, true): tp += 1
+            case (true, false): fp += 1
+            case (false, false): tn += 1
+            case (false, true): fn += 1
+            }
+        }
+
+        return (tp, fp, tn, fn)
+    }
 
     private func variance(_ values: [Double]) -> Double {
         guard values.count > 1 else { return 0 }

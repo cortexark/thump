@@ -14,3 +14,5 @@ Place downloaded CSV files here. Tests skip gracefully if files are missing.
 - NTNU BioAge validation uses hardcoded reference tables (no CSV needed)
 - CSV files are gitignored to avoid redistributing third-party data
 - See `../FREE_DATASETS.md` for full dataset descriptions and validation plans
+- Extended validation is run through Xcode, not the default SwiftPM target:
+  - `xcodebuild test -project apps/HeartCoach/Thump.xcodeproj -scheme Thump -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ThumpCoreTests/StressEngineTimeSeriesTests -only-testing:ThumpCoreTests/DatasetValidationTests`

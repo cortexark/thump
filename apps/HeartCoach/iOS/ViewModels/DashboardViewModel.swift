@@ -467,7 +467,8 @@ final class DashboardViewModel: ObservableObject {
             consecutiveAlert: assessment?.consecutiveAlert
         )
         if let result = readinessResult {
-            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressScore.map { String(format: \"%.1f\", $0) } ?? \"nil\")")
+            let stressDesc = stressScore.map { String(format: "%.1f", $0) } ?? "nil"
+            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressDesc)")
         }
     }
 
