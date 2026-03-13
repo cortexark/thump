@@ -1,8 +1,8 @@
 // ThumpWatchApp.swift
 // Thump Watch
 //
-// Watch app entry point. Initializes connectivity and view model services,
-// then presents the main watch home view.
+// Watch app entry point. Opens directly into the swipeable insight flow —
+// the 5-screen story experience is the primary interaction.
 // Platforms: watchOS 10+
 
 import SwiftUI
@@ -11,9 +11,9 @@ import SwiftUI
 
 /// The main entry point for the Thump watchOS application.
 ///
-/// Instantiates the `WatchConnectivityService` for phone communication
-/// and the `WatchViewModel` for UI state management, injecting both
-/// into the SwiftUI environment for all child views.
+/// Opens directly into `WatchInsightFlowView` — the swipeable story
+/// cards are the primary watch experience. WatchHomeView is accessible
+/// via navigation from the insight flow if needed.
 @main
 struct ThumpWatchApp: App {
 
@@ -29,7 +29,7 @@ struct ThumpWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            WatchHomeView()
+            WatchInsightFlowView()
                 .environmentObject(connectivityService)
                 .environmentObject(viewModel)
                 .onAppear {

@@ -48,6 +48,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     override init() {
         super.init()
         activateSessionIfSupported()
+        injectSimulatorMockDataIfNeeded()
     }
 
     // MARK: - Session Activation
@@ -59,6 +60,47 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         wcSession.delegate = self
         wcSession.activate()
         self.session = wcSession
+    }
+
+    // MARK: - Preview / Test Helpers
+
+    /// Directly sets the latest assessment — used by SwiftUI previews and tests
+    /// that cannot wait for the async simulator injection task.
+    func simulateAssessmentForPreview(_ assessment: HeartAssessment) {
+        latestAssessment = assessment
+        lastSyncDate = Date()
+        isPhoneReachable = true
+    }
+
+    // MARK: - Simulator Mock Data
+
+    /// Injects realistic mock assessment data when running in the iOS/watchOS Simulator.
+    ///
+    /// The Simulator cannot establish a real WCSession between paired simulators,
+    /// so `session.isReachable` is always false and `sendMessage` never delivers.
+    /// This method seeds `latestAssessment` and `isPhoneReachable` directly so
+    /// the watch UI renders with real-looking data during development.
+    private func injectSimulatorMockDataIfNeeded() {
+        #if targetEnvironment(simulator)
+        Task { @MainActor [weak self] in
+            // Brief delay so the view hierarchy is set up before data arrives.
+            try? await Task.sleep(for: .seconds(0.5))
+            guard let self else { return }
+            self.isPhoneReachable = true
+            let history = MockData.mockHistory(days: 21)
+            let engine = ConfigService.makeDefaultEngine()
+            let assessment = engine.assess(
+                history: history,
+                current: MockData.mockTodaySnapshot,
+                feedback: nil
+            )
+            self.latestAssessment = assessment
+            self.lastSyncDate = Date()
+
+            // Seed a mock action plan so watch UI has content in the Simulator.
+            self.latestActionPlan = WatchActionPlan.mock
+        }
+        #endif
     }
 
     // MARK: - Outbound: Send Feedback
@@ -170,6 +212,10 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     /// Morning check-in prompt received from the phone.
     @Published var checkInPromptMessage: String?
 
+    /// The most recent action plan received from the phone.
+    /// Contains daily improvement items + weekly and monthly buddy summaries.
+    @Published private(set) var latestActionPlan: WatchActionPlan?
+
     nonisolated private func handleIncomingMessage(_ message: [String: Any]) {
         guard let type = message["type"] as? String else { return }
 
@@ -205,6 +251,13 @@ final class WatchConnectivityService: NSObject, ObservableObject {
                 self?.checkInPromptMessage = msg
             }
 
+        case "actionPlan":
+            if let plan = ConnectivityMessageCodec.decode(WatchActionPlan.self, from: message) {
+                Task { @MainActor [weak self] in
+                    self?.latestActionPlan = plan
+                }
+            }
+
         default:
             debugPrint("[WatchConnectivity] Unknown message type: \(type)")
         }
@@ -238,12 +291,30 @@ extension WatchConnectivityService: WCSessionDelegate {
         }
         if let error = error {
             debugPrint("[WatchConnectivity] Activation failed: \(error.localizedDescription)")
+            return
+        }
+        guard activationState == .activated else { return }
+        // Auto-request the latest assessment shortly after activation so
+        // the watch never sits on the "Syncing..." placeholder on first open.
+        // A brief delay lets WCSession settle its reachability state.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1.5))
+            guard let self, self.latestAssessment == nil else { return }
+            self.requestLatestAssessment()
         }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor [weak self] in
-            self?.isPhoneReachable = session.isReachable
+            guard let self else { return }
+            self.isPhoneReachable = session.isReachable
+            // Auto-retry when the phone becomes reachable and we still
+            // have no assessment (e.g., watch opened away from iPhone,
+            // then iPhone came back into range).
+            if session.isReachable && self.latestAssessment == nil {
+                self.connectionError = nil
+                self.requestLatestAssessment()
+            }
         }
     }
 

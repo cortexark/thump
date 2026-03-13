@@ -1,16 +1,26 @@
 // WatchHomeView.swift
 // Thump Watch
 //
-// Main watch face presenting a compact status summary, cardio score,
-// current nudge, quick feedback buttons, and navigation to detail views.
+// Hero-first watch face:
+//   • Screen 1 (home): Cardio score dominates — that IS the goal
+//   • Buddy icon sits below, face reflects current statew
+//   • Single tap on buddy navigates to today's improvement plan
+//   • All crowding eliminated — one number, one character, one action
+//
+// Buddy face logic:
+//   idle        → nudging (ready to go)
+//   tapped Start → active (pushing face, effort motion)
+//   goal done   → conquering (flag raised, huge grin)
+//   stress high → stressed
+//   needs rest  → tired
+//   score ≥ 70  → thriving
+//
 // Platforms: watchOS 10+
 
 import SwiftUI
 
 // MARK: - Watch Home View
 
-/// The primary watch interface showing the current heart health assessment
-/// at a glance with quick actions for feedback and deeper exploration.
 struct WatchHomeView: View {
 
     // MARK: - Environment
@@ -18,239 +28,301 @@ struct WatchHomeView: View {
     @EnvironmentObject var connectivityService: WatchConnectivityService
     @EnvironmentObject var viewModel: WatchViewModel
 
+    // MARK: - State
+
+    @State private var showBreathOverlay = false
+    @State private var appearAnimation = false
+    @State private var activityInProgress = false
+    @State private var pulseScore = false
+
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
-            if let assessment = viewModel.latestAssessment {
-                assessmentContent(assessment)
-            } else {
-                syncingPlaceholder
-            }
-        }
-    }
-
-    // MARK: - Assessment Content
-
-    /// Main content displayed when an assessment is available.
-    @ViewBuilder
-    private func assessmentContent(_ assessment: HeartAssessment) -> some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                statusIndicator(assessment)
-                cardioScoreDisplay(assessment)
-                nudgeRow(assessment)
-                feedbackRow
-                detailLink
-            }
-            .padding(.horizontal, 4)
-        }
-        .navigationTitle("Thump")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    // MARK: - Status Indicator
-
-    /// Colored circle with SF Symbol indicating the current trend status.
-    @ViewBuilder
-    private func statusIndicator(_ assessment: HeartAssessment) -> some View {
-        VStack(spacing: 4) {
             ZStack {
-                Circle()
-                    .fill(statusColor(for: assessment.status))
-                    .frame(width: 44, height: 44)
+                if let assessment = viewModel.latestAssessment {
+                    heroScreen(assessment)
+                } else {
+                    syncingPlaceholder
+                }
 
-                Image(systemName: statusIcon(for: assessment.status))
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
+                if showBreathOverlay, let prompt = connectivityService.breathPrompt {
+                    breathOverlay(prompt)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                        .zIndex(10)
+                }
             }
-
-            Text(statusLabel(for: assessment.status))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Wellness status: \(statusLabel(for: assessment.status))")
-    }
-
-    // MARK: - Cardio Score
-
-    /// Large numeric display of the composite cardio fitness score.
-    @ViewBuilder
-    private func cardioScoreDisplay(_ assessment: HeartAssessment) -> some View {
-        if let score = assessment.cardioScore {
-            VStack(spacing: 2) {
-                Text("\(Int(score))")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(scoreColor(score))
-
-                Text("Cardio Fitness")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+        .onChange(of: connectivityService.breathPrompt) { _, newPrompt in
+            if newPrompt != nil {
+                withAnimation(.spring(duration: 0.5)) { showBreathOverlay = true }
             }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Cardio fitness is around \(Int(score))")
         }
     }
 
-    // MARK: - Nudge Row
+    // MARK: - Hero Screen
 
-    /// Tappable nudge summary that navigates to the full nudge view.
     @ViewBuilder
-    private func nudgeRow(_ assessment: HeartAssessment) -> some View {
-        NavigationLink(destination: WatchNudgeView()) {
+    private func heroScreen(_ assessment: HeartAssessment) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 2)
+
+            // ── Cardio Score: the entire goal in one number ──
+            cardioScoreHero(assessment)
+                .opacity(appearAnimation ? 1 : 0)
+                .scaleEffect(appearAnimation ? 1 : 0.85)
+
+            Spacer(minLength: 6)
+
+            // ── Buddy: emotional mirror + primary nav anchor ──
+            NavigationLink(destination: WatchInsightFlowView()) {
+                buddyWithLabel(assessment)
+            }
+            .buttonStyle(.plain)
+            .opacity(appearAnimation ? 1 : 0)
+            .offset(y: appearAnimation ? 0 : 6)
+
+            Spacer(minLength: 6)
+
+            // ── Single action if nudge not complete ──
+            if !viewModel.nudgeCompleted {
+                nudgePill(assessment.dailyNudge)
+                    .opacity(appearAnimation ? 1 : 0)
+            }
+
+            Spacer(minLength: 2)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            withAnimation(.spring(duration: 0.6, bounce: 0.2).delay(0.08)) {
+                appearAnimation = true
+            }
+            // Pulse score number once on appear
+            withAnimation(.easeInOut(duration: 0.3).delay(0.5)) { pulseScore = true }
+            withAnimation(.easeInOut(duration: 0.3).delay(0.85)) { pulseScore = false }
+        }
+    }
+
+    // MARK: - Cardio Score Hero
+
+    @ViewBuilder
+    private func cardioScoreHero(_ assessment: HeartAssessment) -> some View {
+        VStack(spacing: 3) {
+            if let score = assessment.cardioScore {
+                VStack(spacing: 1) {
+                    Text("\(Int(score))")
+                        .font(.system(size: 48, weight: .heavy, design: .rounded))
+                        .foregroundStyle(scoreColor(score))
+                        .scaleEffect(pulseScore ? 1.05 : 1.0)
+                        .contentTransition(.numericText())
+
+                    // Plain-English meaning of the number — so user knows what to do
+                    Text(scoreMeaning(score))
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 12)
+                }
+            } else {
+                VStack(spacing: 2) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.secondary)
+                    Text("Syncing...")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 70)
+            }
+        }
+    }
+
+    /// Tells the user exactly what their score means and what action moves it.
+    private func scoreMeaning(_ score: Double) -> String {
+        switch score {
+        case 85...:   return "Excellent. You're building real momentum."
+        case 70..<85: return "Strong. Daily movement keeps it climbing."
+        case 55..<70: return "Good base. One workout bumps this up."
+        case 40..<55: return "Average. Walk today — it adds up fast."
+        case 25..<40: return "Below avg. Short walks make a real dent."
+        default:      return "Let's build from here. Start small."
+        }
+    }
+
+    // MARK: - Buddy With Label
+
+    private func buddyWithLabel(_ assessment: HeartAssessment) -> some View {
+        let mood = BuddyMood.from(
+            assessment: assessment,
+            nudgeCompleted: viewModel.nudgeCompleted,
+            feedbackType: viewModel.submittedFeedbackType,
+            activityInProgress: activityInProgress
+        )
+
+        return VStack(spacing: 2) {
+            ThumpBuddy(mood: mood, size: 46, showAura: false)
+
+            // Tap hint — only shown when goal pending
+            if !viewModel.nudgeCompleted {
+                HStack(spacing: 3) {
+                    Text("Tap for plan")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.tertiary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 7))
+                        .foregroundStyle(.quaternary)
+                }
+            } else {
+                // Conquering label
+                HStack(spacing: 3) {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text("Goal Conquered!")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(Color(hex: 0xEAB308))
+            }
+        }
+        .accessibilityLabel(
+            viewModel.nudgeCompleted
+                ? "Goal complete! Great work."
+                : "Thump buddy, tap to see your improvement plan"
+        )
+    }
+
+    // MARK: - Nudge Pill
+
+    /// Single compact nudge chip — category icon + title + START tap.
+    private func nudgePill(_ nudge: DailyNudge) -> some View {
+        Button {
+            withAnimation(.spring(duration: 0.35, bounce: 0.3)) {
+                activityInProgress = true
+            }
+            // After a moment, treat it as done (real app would track workout)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                withAnimation(.spring(duration: 0.4)) {
+                    viewModel.markNudgeComplete()
+                    viewModel.submitFeedback(.positive)
+                    activityInProgress = false
+                }
+            }
+        } label: {
             HStack(spacing: 8) {
-                Image(systemName: assessment.dailyNudge.icon)
-                    .font(.body)
-                    .foregroundStyle(Color(assessment.dailyNudge.category.tintColorName))
-
-                Text(assessment.dailyNudge.title)
-                    .font(.caption)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .foregroundStyle(.primary)
+                HStack(spacing: 5) {
+                    Image(systemName: nudge.icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color(nudge.category.tintColorName))
+                    Text(nudgeShortLabel(nudge))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
 
                 Spacer(minLength: 0)
 
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                Text("START")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color(nudge.category.tintColorName))
+                    )
             }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 14)
                     .fill(.ultraThinMaterial)
             )
+            .padding(.horizontal, 8)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Today's suggestion: \(assessment.dailyNudge.title)")
-        .accessibilityHint("Double tap to view the full suggestion")
+        .accessibilityLabel("Start \(nudge.title)")
     }
 
-    // MARK: - Feedback Row
+    // MARK: - Breath Overlay
 
-    /// Quick thumbs up / thumbs down feedback buttons.
-    private var feedbackRow: some View {
-        HStack(spacing: 16) {
-            Button {
-                viewModel.submitFeedback(.positive)
-            } label: {
-                Image(systemName: viewModel.submittedFeedbackType == .positive ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    .font(.title3)
-                    .foregroundStyle(.green)
+    @ViewBuilder
+    private func breathOverlay(_ nudge: DailyNudge) -> some View {
+        ZStack {
+            Color.black.opacity(0.85).ignoresSafeArea()
+            BreathBuddyOverlay(nudge: nudge) {
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showBreathOverlay = false
+                    connectivityService.breathPrompt = nil
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(viewModel.feedbackSubmitted)
-            .accessibilityLabel("Thumbs up")
-            .accessibilityHint(
-                viewModel.feedbackSubmitted
-                    ? "Feedback already submitted"
-                    : "Double tap to rate this assessment positively"
-            )
-
-            Button {
-                viewModel.submitFeedback(.negative)
-            } label: {
-                Image(
-                    systemName: viewModel.submittedFeedbackType == .negative
-                        ? "hand.thumbsdown.fill" : "hand.thumbsdown"
-                )
-                    .font(.title3)
-                    .foregroundStyle(.orange)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.feedbackSubmitted)
-            .accessibilityLabel("Thumbs down")
-            .accessibilityHint(
-                viewModel.feedbackSubmitted
-                    ? "Feedback already submitted"
-                    : "Double tap to rate this assessment negatively"
-            )
         }
-        .padding(.vertical, 4)
-    }
-
-    // MARK: - Detail Link
-
-    /// Navigation link to the detailed metrics view.
-    private var detailLink: some View {
-        NavigationLink(destination: WatchDetailView()) {
-            Label("View Details", systemImage: "chart.bar.fill")
-                .font(.caption)
-                .foregroundStyle(.blue)
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 4)
-        .accessibilityLabel("View more details")
-        .accessibilityHint("Double tap to see all your wellness details")
     }
 
     // MARK: - Syncing Placeholder
 
-    /// Displayed when no assessment has been received from the phone yet.
     private var syncingPlaceholder: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-                .controlSize(.large)
+        VStack(spacing: 10) {
+            ThumpBuddy(mood: .tired, size: 52).opacity(0.7)
 
-            Text("Syncing...")
-                .font(.headline)
+            switch viewModel.syncState {
+            case .waiting, .syncing:
+                Text("Waking up...")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                Text("Syncing with iPhone")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
 
-            Text("Waiting for data from iPhone")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            case .phoneUnreachable:
+                Text("Can't find iPhone")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                Text("Open Thump nearby")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
 
-            Button {
-                viewModel.sync()
-            } label: {
-                Label("Retry", systemImage: "arrow.clockwise")
-                    .font(.caption)
+            case .failed(let reason):
+                Text("Oops!")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                Text(reason)
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center).lineLimit(3)
+
+            case .ready:
+                EmptyView()
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.blue)
-            .accessibilityLabel("Retry sync")
-            .accessibilityHint("Double tap to retry syncing with iPhone")
+
+            if viewModel.syncState != .ready {
+                Button {
+                    viewModel.sync()
+                } label: {
+                    Label("Retry", systemImage: "arrow.clockwise").font(.system(size: 11))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue).controlSize(.small)
+            }
         }
         .padding()
     }
 
     // MARK: - Helpers
 
-    /// Maps a `TrendStatus` to a display color.
-    private func statusColor(for status: TrendStatus) -> Color {
-        switch status {
-        case .improving:      return .green
-        case .stable:         return .blue
-        case .needsAttention: return .orange
+    private func nudgeShortLabel(_ nudge: DailyNudge) -> String {
+        if let dur = nudge.durationMinutes {
+            switch nudge.category {
+            case .walk:    return "Walk \(dur) min"
+            case .breathe: return "Breathe \(dur) min"
+            case .moderate:return "Move \(dur) min"
+            case .rest:    return "Rest up"
+            case .hydrate: return "Hydrate"
+            case .sunlight:return "Get outside"
+            default:       return nudge.title.components(separatedBy: " ").prefix(2).joined(separator: " ")
+            }
         }
+        return nudge.title.components(separatedBy: " ").prefix(3).joined(separator: " ")
     }
 
-    /// Maps a `TrendStatus` to an SF Symbol icon name.
-    private func statusIcon(for status: TrendStatus) -> String {
-        switch status {
-        case .improving:      return "arrow.up.heart.fill"
-        case .stable:         return "heart.fill"
-        case .needsAttention: return "exclamationmark.heart.fill"
-        }
-    }
-
-    /// Maps a `TrendStatus` to a short label.
-    private func statusLabel(for status: TrendStatus) -> String {
-        switch status {
-        case .improving:      return "Building Momentum"
-        case .stable:         return "Holding Steady"
-        case .needsAttention: return "Check In"
-        }
-    }
-
-    /// Maps a cardio score to a color.
     private func scoreColor(_ score: Double) -> Color {
         switch score {
-        case 70...:   return .green
-        case 40..<70: return .orange
-        default:      return .red
+        case 70...:   return Color(hex: 0x22C55E)
+        case 40..<70: return Color(hex: 0xF59E0B)
+        default:      return Color(hex: 0xEF4444)
         }
     }
 }
@@ -258,7 +330,20 @@ struct WatchHomeView: View {
 // MARK: - Preview
 
 #Preview {
-    WatchHomeView()
-        .environmentObject(WatchConnectivityService())
-        .environmentObject(WatchViewModel())
+    let connectivityService = WatchConnectivityService()
+    let viewModel = WatchViewModel()
+    let history = MockData.mockHistory(days: 21)
+    let engine = ConfigService.makeDefaultEngine()
+    let assessment = engine.assess(
+        history: history,
+        current: MockData.mockTodaySnapshot,
+        feedback: nil
+    )
+    viewModel.bind(to: connectivityService)
+    Task { @MainActor in
+        connectivityService.simulateAssessmentForPreview(assessment)
+    }
+    return WatchHomeView()
+        .environmentObject(connectivityService)
+        .environmentObject(viewModel)
 }

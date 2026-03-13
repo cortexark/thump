@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Thump Watch reads your heart rate data to show real-time wellness status and capture your feedback.</string>
+	<string>Thump reads your heart rate, HRV, recovery, VO2 max, steps, exercise, and sleep data to show wellness insights and fitness suggestions.</string>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>

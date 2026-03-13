@@ -84,7 +84,7 @@ struct WatchDetailView: View {
         metricRow(
             icon: "waveform.path.ecg",
             label: "Unusual Activity",
-            value: String(format: "%.1f", assessment.anomalyScore),
+            value: anomalyLabel(assessment.anomalyScore),
             color: anomalyColor(assessment.anomalyScore)
         )
 
@@ -187,13 +187,15 @@ struct WatchDetailView: View {
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
 
-            Text("No Data Available")
+            Text("Waiting for Data")
                 .font(.headline)
 
             Text("Sync with your iPhone to view detailed metrics.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
         .navigationTitle("Details")
@@ -208,6 +210,16 @@ struct WatchDetailView: View {
         case 70...:   return .green
         case 40..<70: return .orange
         default:      return .red
+        }
+    }
+
+    /// Maps an anomaly score to a human-readable label.
+    private func anomalyLabel(_ score: Double) -> String {
+        let percentage = score * 100
+        switch percentage {
+        case ..<30:  return "Normal"
+        case 30..<60: return "Slightly Unusual"
+        default:      return "Worth Checking"
         }
     }
 

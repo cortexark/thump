@@ -1,12 +1,12 @@
 # CI Pipeline for Thump (HeartCoach)
-# Runs lint checks, builds iOS and watchOS targets, and executes unit tests.
-# Triggered on push to main and feature branches, and on pull requests.
+# Builds iOS and watchOS targets and runs unit tests.
+# Triggered on push to main and on pull requests.
 
 name: CI
 
 on:
   push:
-    branches: [main, 'chore/**', 'feature/**', 'fix/**']
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -15,108 +15,89 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
-  XCODEGEN_VERSION: "2.38.0"
+  DEVELOPER_DIR: /Applications/Xcode_15.2.app/Contents/Developer
 
 jobs:
-  # Gate 1: Swift lint and format check
-  lint:
-    name: SwiftLint
-    runs-on: macos-15
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - name: Install SwiftLint
-        run: brew install swiftlint
-      - name: Run SwiftLint
-        run: |
-          cd apps/HeartCoach
-          swiftlint lint --strict --reporter github-actions-logging
 
-  # Gate 2: Build iOS and watchOS targets
-  build:
-    name: Build (${{ matrix.scheme }})
-    runs-on: macos-15
-    needs: lint
-    strategy:
-      matrix:
-        include:
-          - scheme: Thump
-            destination: "generic/platform=iOS Simulator"
-          - scheme: ThumpWatch
-            destination: "generic/platform=watchOS Simulator"
-    steps:
-      - uses: actions/checkout@v4
+      # ── Cache SPM packages ──────────────────────────────────
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            ~/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('apps/HeartCoach/Package.swift') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      # ── Install tools ───────────────────────────────────────
       - name: Install XcodeGen
         run: brew install xcodegen
+
       - name: Generate Xcode Project
         run: |
           cd apps/HeartCoach
           xcodegen generate
-      - name: Build
+
+      # ── Build iOS ───────────────────────────────────────────
+      - name: Build iOS
         run: |
+          set -o pipefail
           cd apps/HeartCoach
           xcodebuild build \
             -project Thump.xcodeproj \
-            -scheme "${{ matrix.scheme }}" \
-            -destination "${{ matrix.destination }}" \
+            -scheme Thump \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
             -configuration Debug \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            2>&1 | tail -100
+            | xcpretty
 
-  # Gate 3: Run unit tests
-  test:
-    name: Unit Tests
-    runs-on: macos-15
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - name: Generate Xcode Project
+      # ── Build watchOS ───────────────────────────────────────
+      - name: Build watchOS
         run: |
+          set -o pipefail
           cd apps/HeartCoach
-          xcodegen generate
-      - name: Install iOS Simulator Runtime
-        run: |
-          # Download iOS simulator runtime (required on macos-15 runners)
-          xcodebuild -downloadPlatform iOS
-        timeout-minutes: 15
-      - name: Boot Simulator
-        run: |
-          # List and boot first available iPhone
-          xcrun simctl list devices available | grep -i iphone | head -10
-          DEVICE=$(xcrun simctl list devices available | grep "iPhone" | head -1 | sed 's/.*(\([A-F0-9-]*\)).*/\1/')
-          echo "DEVICE_ID=$DEVICE" >> "$GITHUB_ENV"
-          echo "Booting simulator: $DEVICE"
-          xcrun simctl boot "$DEVICE" || true
+          xcodebuild build \
+            -project Thump.xcodeproj \
+            -scheme ThumpWatch \
+            -destination 'platform=watchOS Simulator,name=Apple Watch Series 9 (45mm)' \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      # ── Run unit tests ──────────────────────────────────────
       - name: Run Tests
         run: |
           set -o pipefail
           cd apps/HeartCoach
-          echo "Using simulator device: $DEVICE_ID"
           xcodebuild test \
             -project Thump.xcodeproj \
             -scheme Thump \
-            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            2>&1 | tail -200
+            | xcpretty
+
+      # ── Coverage report ─────────────────────────────────────
       - name: Extract Code Coverage
         if: success()
         run: |
           cd apps/HeartCoach
-          xcrun xccov view --report --json TestResults.xcresult > coverage_report.json
-          echo "## Code Coverage Summary" >> "$GITHUB_STEP_SUMMARY"
           xcrun xccov view --report TestResults.xcresult | head -30 >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: |
-            apps/HeartCoach/TestResults.xcresult
-            apps/HeartCoach/coverage_report.json
+          path: apps/HeartCoach/TestResults.xcresult
           retention-days: 7

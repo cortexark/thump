@@ -1,0 +1,30 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+DerivedData/
+build/
+*.dSYM.zip
+*.dSYM
+*.moved-aside
+*.hmap
+*.ipa
+*.xcuserstate
+
+# Swift Package Manager
+.build/
+Packages/
+Package.pins
+Package.resolved
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Algorithm TODO & research files (local development only)
+TODO/
+.algo-research/
+
+# Feature requests & redesign specs (internal planning, not shipped)
+FEATURE_REQUESTS.md
+DASHBOARD_REDESIGN.md
