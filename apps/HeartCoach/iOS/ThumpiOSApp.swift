@@ -61,6 +61,7 @@ struct ThumpiOSApp: App {
                 .environmentObject(localStore)
                 .environmentObject(notificationService)
                 .task {
+                    guard !isRunningTests else { return }
                     await performStartupTasks()
                 }
         }
@@ -78,6 +79,11 @@ struct ThumpiOSApp: App {
     /// Whether the app is running in UI test mode (launched with `-UITestMode`).
     private var isUITestMode: Bool {
         CommandLine.arguments.contains("-UITestMode")
+    }
+
+    /// Whether the app is running under XCTest host execution.
+    private var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
     @ViewBuilder
