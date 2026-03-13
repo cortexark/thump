@@ -5,7 +5,7 @@
   "recommendation" : "tooMuchIntensity",
   "zoneBoundaries" : [
     {
-      "lower" : 121,
+      "lower" : 122,
       "upper" : 134
     },
     {

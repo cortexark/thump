@@ -34,9 +34,15 @@ enum TimeSeriesCheckpoint: Int, CaseIterable, Comparable {
 /// Each engine agent writes its results here; downstream engines read them.
 struct EngineResultStore {
 
+    private static let resultsDirEnvVar = "THUMP_RESULTS_DIR"
+
     /// Directory where result files are written.
     static var storeDir: URL {
-        URL(fileURLWithPath: #filePath)
+        if let override = ProcessInfo.processInfo.environment[resultsDirEnvVar],
+           !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
+        return URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("Results")
     }
@@ -337,7 +343,7 @@ enum TestPersonas {
     // 1. Young athlete (22M)
     static let youngAthlete = PersonaBaseline(
         name: "YoungAthlete", age: 22, sex: .male, weightKg: 75,
-        restingHR: 50, hrvSDNN: 72, vo2Max: 55, recoveryHR1m: 45, recoveryHR2m: 55,
+        restingHR: 48, hrvSDNN: 72, vo2Max: 55, recoveryHR1m: 45, recoveryHR2m: 55,
         sleepHours: 8.5, steps: 14000, walkMinutes: 60, workoutMinutes: 60,
         zoneMinutes: [20, 20, 30, 15, 8]
     )
@@ -362,7 +368,7 @@ enum TestPersonas {
     static let newMom = PersonaBaseline(
         name: "NewMom", age: 32, sex: .female, weightKg: 70,
         restingHR: 75, hrvSDNN: 28, vo2Max: 30, recoveryHR1m: 15, recoveryHR2m: 22,
-        sleepHours: 3.5, steps: 4000, walkMinutes: 15, workoutMinutes: 0,
+        sleepHours: 3.5, steps: 2000, walkMinutes: 5, workoutMinutes: 0,
         zoneMinutes: [45, 10, 0, 0, 0]
     )
 

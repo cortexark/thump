@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.95335286889876347,
+  "anomalyScore" : 0.95335286889876447,
   "confidence" : "medium",
   "multiNudgeCategories" : [
     "moderate",
@@ -9,7 +9,7 @@
   "nudgeCategory" : "moderate",
   "nudgeTitle" : "Try Something Different Today",
   "readinessLevel" : "primed",
-  "readinessScore" : 84,
+  "readinessScore" : 85,
   "regressionFlag" : false,
   "stressFlag" : false
 }

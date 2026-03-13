@@ -5,5 +5,5 @@
   "scenario" : "greatRecoveryDay",
   "status" : "improving",
   "stressFlag" : false,
-  "weekOverWeekTrendDirection" : "stable"
+  "weekOverWeekTrendDirection" : "elevated"
 }

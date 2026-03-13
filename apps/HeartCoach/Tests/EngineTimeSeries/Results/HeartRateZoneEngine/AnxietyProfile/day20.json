@@ -5,7 +5,7 @@
   "recommendation" : "perfectBalance",
   "zoneBoundaries" : [
     {
-      "lower" : 133,
+      "lower" : 132,
       "upper" : 144
     },
     {
@@ -14,10 +14,10 @@
     },
     {
       "lower" : 155,
-      "upper" : 167
+      "upper" : 166
     },
     {
-      "lower" : 167,
+      "lower" : 166,
       "upper" : 178
     },
     {

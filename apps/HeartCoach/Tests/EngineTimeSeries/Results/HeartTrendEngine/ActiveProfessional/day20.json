@@ -3,7 +3,7 @@
   "confidenceLevel" : "high",
   "regressionFlag" : false,
   "scenario" : "greatRecoveryDay",
-  "status" : "stable",
+  "status" : "needsAttention",
   "stressFlag" : false,
-  "weekOverWeekTrendDirection" : "elevated"
+  "weekOverWeekTrendDirection" : "significantElevation"
 }

@@ -14,6 +14,7 @@ import SwiftUI
 struct TrendsView: View {
 
     @StateObject private var viewModel = TrendsViewModel()
+    @EnvironmentObject private var healthKitService: HealthKitService
 
     @State private var animateChart = false
 
@@ -51,6 +52,7 @@ struct TrendsView: View {
             .toolbar(.hidden, for: .navigationBar)
             .onAppear { InteractionLog.pageView("Trends") }
             .task {
+                viewModel.bind(healthKitService: healthKitService)
                 await viewModel.loadHistory()
                 withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
                     animateChart = true

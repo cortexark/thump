@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.47006088718633071,
+  "anomalyScore" : 0.47006088718633615,
   "confidence" : "high",
   "multiNudgeCategories" : [
     "rest",
@@ -10,7 +10,7 @@
   "nudgeCategory" : "rest",
   "nudgeTitle" : "Rest and Recharge Today",
   "readinessLevel" : "recovering",
-  "readinessScore" : 38,
+  "readinessScore" : 39,
   "regressionFlag" : false,
   "stressFlag" : false
 }

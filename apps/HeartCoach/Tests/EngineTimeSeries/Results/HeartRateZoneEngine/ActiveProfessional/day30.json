@@ -5,15 +5,15 @@
   "recommendation" : "none",
   "zoneBoundaries" : [
     {
-      "lower" : 125,
-      "upper" : 137
+      "lower" : 124,
+      "upper" : 136
     },
     {
-      "lower" : 137,
-      "upper" : 149
+      "lower" : 136,
+      "upper" : 148
     },
     {
-      "lower" : 149,
+      "lower" : 148,
       "upper" : 160
     },
     {

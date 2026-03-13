@@ -119,8 +119,8 @@ struct ThumpiOSApp: App {
         // Start MetricKit crash reporting and performance monitoring
         MetricKitService.shared.start()
 
-        // Load subscription products and status
-        await subscriptionService.loadProducts()
+        // PERF-2: Product catalog loading deferred to PaywallView.
+        // Only entitlement status is needed at launch to gate features.
         await subscriptionService.updateSubscriptionStatus()
 
         // Sync subscription tier to local store

@@ -40,20 +40,21 @@ let package = Package(
                 "Validation/DatasetValidationTests.swift",
                 "Validation/Data",
                 "Validation/FREE_DATASETS.md",
-                "EngineTimeSeries/TimeSeriesTestInfra.swift",
-                "EngineTimeSeries/StressEngineTimeSeriesTests.swift",
-                "EngineTimeSeries/HeartTrendEngineTimeSeriesTests.swift",
-                "EngineTimeSeries/BioAgeEngineTimeSeriesTests.swift",
-                "EngineTimeSeries/ZoneEngineTimeSeriesTests.swift",
-                "EngineTimeSeries/CorrelationEngineTimeSeriesTests.swift",
-                "EngineTimeSeries/ReadinessEngineTimeSeriesTests.swift",
-                "EngineTimeSeries/NudgeGeneratorTimeSeriesTests.swift",
-                "EngineTimeSeries/BuddyRecommendationTimeSeriesTests.swift",
-                "EngineTimeSeries/CoachingEngineTimeSeriesTests.swift",
-                "EngineTimeSeries/Results",
+                "Validation/STRESS_ENGINE_VALIDATION_REPORT.md",
+                "EngineTimeSeries",
                 "EndToEndBehavioralTests.swift",
                 "UICoherenceTests.swift",
                 "AlgorithmComparisonTests.swift"
+            ]
+        ),
+        // TEST-3: Engine time-series validation suite (280 checkpoints).
+        // Run with: swift test --filter ThumpTimeSeriesTests
+        .testTarget(
+            name: "ThumpTimeSeriesTests",
+            dependencies: ["Thump"],
+            path: "Tests/EngineTimeSeries",
+            exclude: [
+                "Results"
             ]
         )
     ]

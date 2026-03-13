@@ -2,6 +2,7 @@
   "anomalyScore" : 0.43196632340943752,
   "confidenceLevel" : "medium",
   "regressionFlag" : true,
+  "scenario" : "missingActivity",
   "status" : "needsAttention",
   "stressFlag" : false,
   "weekOverWeekTrendDirection" : "stable"

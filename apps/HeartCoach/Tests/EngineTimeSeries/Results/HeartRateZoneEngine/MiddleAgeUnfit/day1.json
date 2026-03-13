@@ -5,7 +5,7 @@
   "recommendation" : "needsMoreAerobic",
   "zoneBoundaries" : [
     {
-      "lower" : 129,
+      "lower" : 128,
       "upper" : 138
     },
     {

@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.099779941707496059,
+  "anomalyScore" : 0.099779941707496184,
   "confidenceLevel" : "high",
   "regressionFlag" : true,
   "scenario" : "greatRecoveryDay",

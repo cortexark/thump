@@ -5,7 +5,7 @@
   "recommendation" : "needsMoreThreshold",
   "zoneBoundaries" : [
     {
-      "lower" : 118,
+      "lower" : 119,
       "upper" : 129
     },
     {

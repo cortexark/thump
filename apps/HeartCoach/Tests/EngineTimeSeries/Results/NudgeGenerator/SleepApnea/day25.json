@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.59362453150894667,
+  "anomalyScore" : 0.59362453150894601,
   "confidence" : "high",
   "multiNudgeCategories" : [
     "breathe",
@@ -10,7 +10,7 @@
   "nudgeCategory" : "breathe",
   "nudgeTitle" : "A Breathing Reset",
   "readinessLevel" : "recovering",
-  "readinessScore" : 37,
+  "readinessScore" : 38,
   "regressionFlag" : false,
   "stressFlag" : false
 }

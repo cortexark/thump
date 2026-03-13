@@ -26,6 +26,7 @@ struct StressView: View {
 
     @StateObject private var viewModel = StressViewModel()
     @EnvironmentObject private var connectivityService: ConnectivityService
+    @EnvironmentObject private var healthKitService: HealthKitService
 
     // MARK: - Body
 
@@ -49,6 +50,7 @@ struct StressView: View {
             .navigationBarTitleDisplayMode(.large)
             .onAppear { InteractionLog.pageView("Stress") }
             .task {
+                viewModel.bind(healthKitService: healthKitService)
                 viewModel.bind(connectivityService: connectivityService)
                 await viewModel.loadData()
             }

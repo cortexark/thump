@@ -5,19 +5,19 @@
   "recommendation" : "none",
   "zoneBoundaries" : [
     {
-      "lower" : 121,
-      "upper" : 133
+      "lower" : 122,
+      "upper" : 134
     },
     {
-      "lower" : 133,
+      "lower" : 134,
       "upper" : 146
     },
     {
       "lower" : 146,
-      "upper" : 158
+      "upper" : 159
     },
     {
-      "lower" : 158,
+      "lower" : 159,
       "upper" : 171
     },
     {

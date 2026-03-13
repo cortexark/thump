@@ -40,9 +40,9 @@ final class InsightsViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let healthKitService: HealthKitService
+    private var healthKitService: HealthKitService
     private let correlationEngine: CorrelationEngine
-    private let localStore: LocalStore
+    private var localStore: LocalStore
     /// Optional connectivity service for pushing the action plan to the Apple Watch.
     weak var connectivityService: ConnectivityService?
 
@@ -59,6 +59,12 @@ final class InsightsViewModel: ObservableObject {
     ) {
         self.healthKitService = healthKitService
         self.correlationEngine = CorrelationEngine()
+        self.localStore = localStore
+    }
+
+    /// Binds shared service dependencies (PERF-4).
+    func bind(healthKitService: HealthKitService, localStore: LocalStore) {
+        self.healthKitService = healthKitService
         self.localStore = localStore
     }
 

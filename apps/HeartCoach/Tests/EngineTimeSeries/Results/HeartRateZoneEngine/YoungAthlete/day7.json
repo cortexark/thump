@@ -6,18 +6,18 @@
   "zoneBoundaries" : [
     {
       "lower" : 120,
-      "upper" : 135
+      "upper" : 134
     },
     {
-      "lower" : 135,
+      "lower" : 134,
       "upper" : 149
     },
     {
       "lower" : 149,
-      "upper" : 164
+      "upper" : 163
     },
     {
-      "lower" : 164,
+      "lower" : 163,
       "upper" : 178
     },
     {

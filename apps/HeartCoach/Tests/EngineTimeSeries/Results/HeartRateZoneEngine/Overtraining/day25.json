@@ -5,15 +5,15 @@
   "recommendation" : "tooMuchIntensity",
   "zoneBoundaries" : [
     {
-      "lower" : 128,
-      "upper" : 139
+      "lower" : 126,
+      "upper" : 138
     },
     {
-      "lower" : 139,
-      "upper" : 151
+      "lower" : 138,
+      "upper" : 150
     },
     {
-      "lower" : 151,
+      "lower" : 150,
       "upper" : 163
     },
     {

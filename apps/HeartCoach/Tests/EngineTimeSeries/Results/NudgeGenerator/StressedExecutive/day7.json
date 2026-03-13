@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.83036312591105876,
+  "anomalyScore" : 0.83036312591106021,
   "confidence" : "low",
   "multiNudgeCategories" : [
     "moderate",
@@ -8,9 +8,9 @@
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "moderate",
-  "nudgeTitle" : "Quick Sync Check",
+  "nudgeTitle" : "We're Getting to Know You",
   "readinessLevel" : "moderate",
-  "readinessScore" : 53,
+  "readinessScore" : 54,
   "regressionFlag" : false,
   "stressFlag" : false
 }

@@ -669,6 +669,26 @@ WatchHomeView, WatchNudgeView (user sees recommendations)
 | CR-011 | Readiness receives real StressEngine score + consecutiveAlert from assessment | `DashboardViewModel.swift` |
 | CR-012 | CorrelationEngine uses `activityMinutes` (walk+workout) | `CorrelationEngine.swift`, `HeartModels.swift` |
 
+### Performance Fixes
+
+| ID | Summary | Files Changed |
+|----|---------|---------------|
+| CR-005/PERF-3 | Batch HealthKit history queries via `HKStatisticsCollectionQuery` (4 collection queries instead of N×9 individual) | `HealthKitService.swift` |
+| CR-013/ENG-5 | Real zoneMinutes ingestion from workout HR samples, bucketed into 5 zones by age-estimated max HR | `HealthKitService.swift` |
+| PERF-1 | Removed duplicate `updateSubscriptionStatus()` from `SubscriptionService.init()` | `SubscriptionService.swift` |
+| PERF-2 | Deferred `loadProducts()` from app startup to PaywallView appearance | `ThumpiOSApp.swift`, `PaywallView.swift` |
+| PERF-4 | Shared HealthKitService instance across view models via `bind()` pattern | `InsightsViewModel.swift`, `TrendsViewModel.swift`, `StressViewModel.swift`, views |
+| PERF-5 | Guarded `MetricKitService.start()` against repeated registration | `MetricKitService.swift` |
+
+### Test & Cleanup Fixes
+
+| ID | Summary | Files Changed |
+|----|---------|---------------|
+| TEST-1 | Fixed NewMom persona data (steps 4000→2000, walk 15→5) for genuine sedentary profile | `TimeSeriesTestInfra.swift` |
+| TEST-2 | Fixed YoungAthlete persona data (RHR 50→48) for realistic noise headroom | `TimeSeriesTestInfra.swift` |
+| TEST-3 | Created `ThumpTimeSeriesTests` target (110 XCTest cases, all passing) | `Package.swift` |
+| ORPHAN-1/2/3 | Moved `File.swift`, `AlertMetricsService.swift`, `ConfigLoader.swift` to `.unused/` | `.unused/` |
+
 ### Model Changes
 
 - `UserProfile` gained `lastStreakCreditDate: Date?` and `nudgeCompletionDates: Set<String>`
