@@ -26,25 +26,27 @@ let package = Package(
             dependencies: ["Thump"],
             path: "Tests",
             exclude: [
+                // iOS-only tests (need DashboardViewModel, StressViewModel, etc.)
                 "DashboardViewModelTests.swift",
                 "HealthDataProviderTests.swift",
                 "WatchConnectivityProviderTests.swift",
                 "CustomerJourneyTests.swift",
                 "DashboardBuddyIntegrationTests.swift",
                 "DashboardReadinessIntegrationTests.swift",
-                "EngineKPIValidationTests.swift",
-                "LegalGateTests.swift",
                 "StressViewActionTests.swift",
-                "MockProfiles/MockUserProfiles.swift",
-                "MockProfiles/MockProfilePipelineTests.swift",
+                // iOS-only (uses LegalDocument from iOS/Views)
+                "LegalGateTests.swift",
+                // Empty MockProfiles dir (files moved to EngineTimeSeries)
+                "MockProfiles",
+                // Dataset validation (needs external CSV files)
                 "Validation/DatasetValidationTests.swift",
                 "Validation/Data",
                 "Validation/FREE_DATASETS.md",
                 "Validation/STRESS_ENGINE_VALIDATION_REPORT.md",
-                "EngineTimeSeries",
-                "EndToEndBehavioralTests.swift",
-                "UICoherenceTests.swift",
-                "AlgorithmComparisonTests.swift"
+                // SIGSEGV in testFullComparisonSummary (String(format: "%s") crash)
+                "AlgorithmComparisonTests.swift",
+                // EngineTimeSeries has its own target (ThumpTimeSeriesTests)
+                "EngineTimeSeries"
             ]
         ),
         // TEST-3: Engine time-series validation suite (280 checkpoints).

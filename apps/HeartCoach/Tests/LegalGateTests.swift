@@ -8,6 +8,9 @@
 // - Gate does not re-appear after acceptance
 
 import XCTest
+#if canImport(UIKit)
+import UIKit
+#endif
 @testable import Thump
 
 final class LegalGateTests: XCTestCase {
@@ -158,8 +161,14 @@ final class LegalGateTests: XCTestCase {
         // threshold check (bottomY < screenHeight + 60) won't fire
         // until an actual scroll position is reported.
         let defaultValue: CGFloat = .infinity
+        #if canImport(UIKit)
         XCTAssertTrue(defaultValue > UIScreen.main.bounds.height + 60,
             "Default .infinity should always exceed the scroll threshold")
+        #else
+        // UIScreen not available on macOS; verify .infinity exceeds any plausible screen height
+        XCTAssertTrue(defaultValue > 3000,
+            "Default .infinity should always exceed the scroll threshold")
+        #endif
     }
 
     func testAcceptButton_setsKey_afterBothDocsScrolled() {
