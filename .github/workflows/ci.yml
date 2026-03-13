@@ -14,9 +14,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
-
 jobs:
   build-and-test:
     name: Build & Test
@@ -38,6 +35,12 @@ jobs:
       # ── Install tools ───────────────────────────────────────
       - name: Install XcodeGen
         run: brew install xcodegen
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: List available simulators
+        run: xcrun simctl list devices available | grep -E "iPhone|Apple Watch" | head -10
 
       - name: Generate Xcode Project
         run: |
@@ -73,7 +76,10 @@ jobs:
             -configuration Debug \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            2>&1 | xcpretty
+            2>&1 | tee /tmp/xcodebuild-watchos.log | xcpretty
+      - name: Show watchOS Build Errors (if failed)
+        if: failure()
+        run: grep -A2 "error:" /tmp/xcodebuild-watchos.log 2>/dev/null || echo "No watchOS error log"
 
       # ── Run unit tests ──────────────────────────────────────
       - name: Run Tests
@@ -88,7 +94,10 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            2>&1 | xcpretty --report junit
+            2>&1 | tee /tmp/xcodebuild-test.log | xcpretty
+      - name: Show Test Errors (if failed)
+        if: failure()
+        run: grep -A2 "error:" /tmp/xcodebuild-test.log 2>/dev/null || echo "No test error log"
 
       # ── Coverage report ─────────────────────────────────────
       - name: Extract Code Coverage
