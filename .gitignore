@@ -33,6 +33,11 @@ Package.resolved
 TaskPilot/
 ORCHESTRATOR_DRIVEN_IMPROVEMENTS.md
 
+# Project docs (local only)
+CLAUDE.md
+PROJECT_HISTORY.md
+TESTING_AND_IMPROVEMENTS.md
+
 # IDE
 .vscode/
 .idea/
