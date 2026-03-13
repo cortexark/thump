@@ -14,10 +14,10 @@ Total Bugs: 55 from BUGS.md + 10 from Code Review = 65 tracked issues
 | BUGS.md | P2-MAJOR | 28 | 4 | 24 |
 | BUGS.md | P3-MINOR | 5 | 1 | 4 |
 | BUGS.md | P4-COSMETIC | 13 | 0 | 13 |
-| Code Review | HIGH | 3 | 1 (CR-001 partial) | 2 |
+| Code Review | HIGH | 3 | 0 | 3 |
 | Code Review | MEDIUM | 4 | 0 | 4 |
 | Code Review | LOW | 3 | 0 | 3 |
-| **Total** | | **65** | **6** | **59** |
+| **Total** | | **65** | **5** | **60** |
 
 Plus 4 orphaned code findings and 5 oversized file findings from code review.
 
@@ -775,21 +775,20 @@ All cosmetic messaging/copy fixes. All FIXED on 2026-03-12.
 |-------|-------|
 | **ID** | CR-001 |
 | **Severity** | HIGH |
-| **Status** | **PARTIALLY FIXED** (2026-03-13) |
-| **Files** | `iOS/ThumpiOSApp.swift:29-53`, `iOS/Services/NotificationService.swift:20-96` |
+| **Status** | **FIXED** (2026-03-13) |
+| **Files** | `iOS/ThumpiOSApp.swift:29-53`, `iOS/Services/NotificationService.swift:20-96`, `iOS/ViewModels/DashboardViewModel.swift:531-564`, `iOS/Views/DashboardView.swift:29,55-60` |
 
 **Description:** The app root creates HealthKitService, SubscriptionService, ConnectivityService, and LocalStore, but not NotificationService. No production call sites exist. Anomaly alerts and nudge reminders cannot be authorized, scheduled, or delivered.
 
 **Root Cause:** Architecture drift — service was implemented but never integrated into the app lifecycle.
 
-**What is fixed:**
-- `NotificationService` is created as `@StateObject` in `ThumpiOSApp` and injected into the environment.
-- It now receives the shared root `localStore` instance (not its own default) so alert-budget state is owned by one persistence object.
-- Authorization is requested during `performStartupTasks()`.
-
-**What is still missing:**
-- No production call sites invoke `scheduleAnomalyAlert()`, `scheduleNudgeReminder()`, or cancellation methods from the live dashboard/assessment pipeline.
-- Users see the permission prompt but will never receive scheduled alerts until the assessment → notification scheduling path is wired.
+**Fix applied (3 commits on `fix/deterministic-test-seeds`):**
+1. `NotificationService` created as `@StateObject` in `ThumpiOSApp` and injected into the environment.
+2. Shared root `localStore` passed to `NotificationService(localStore: store)` so alert-budget state is owned by one persistence object.
+3. Authorization requested during `performStartupTasks()`.
+4. `DashboardViewModel` now accepts `NotificationService` via `bind()` and stores it as an optional dependency.
+5. `DashboardView` reads `@EnvironmentObject notificationService` and passes it to the view model at bind time.
+6. New `scheduleNotificationsIfNeeded(assessment:history:)` method in `DashboardViewModel` calls `scheduleAnomalyAlert()` when `assessment.status == .needsAttention`, and `scheduleSmartNudge()` for the daily nudge — both from live assessment output at the end of `refresh()`.
 
 ---
 

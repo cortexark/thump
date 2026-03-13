@@ -75,6 +75,7 @@ final class DashboardViewModel: ObservableObject {
 
     private var healthDataProvider: any HealthDataProviding
     private var localStore: LocalStore
+    private var notificationService: NotificationService?
 
     // MARK: - Private Properties
 
@@ -105,10 +106,12 @@ final class DashboardViewModel: ObservableObject {
 
     func bind(
         healthDataProvider: any HealthDataProviding,
-        localStore: LocalStore
+        localStore: LocalStore,
+        notificationService: NotificationService? = nil
     ) {
         self.healthDataProvider = healthDataProvider
         self.localStore = localStore
+        self.notificationService = notificationService
         bindToLocalStore(localStore)
     }
 
@@ -217,6 +220,9 @@ final class DashboardViewModel: ObservableObject {
                 snapshot: snapshot,
                 history: history
             )
+
+            // Schedule notifications from live assessment output (CR-001)
+            scheduleNotificationsIfNeeded(assessment: result, history: history)
 
             let totalMs = (CFAbsoluteTimeGetCurrent() - refreshStart) * 1000
             AppLogger.engine.info("Dashboard refresh complete in \(String(format: "%.0f", totalMs))ms — history=\(history.count) days")
@@ -520,6 +526,41 @@ final class DashboardViewModel: ObservableObject {
             current: snapshot,
             history: history
         )
+    }
+
+    // MARK: - Notification Scheduling (CR-001)
+
+    /// Schedules anomaly alerts and nudge reminders from live assessment output.
+    ///
+    /// Called at the end of `refresh()` after all engines have run, so the
+    /// assessment's status, flags, and daily nudge are fully resolved.
+    ///
+    /// - Parameters:
+    ///   - assessment: The freshly computed `HeartAssessment`.
+    ///   - history: Recent snapshot history, used for smart nudge timing.
+    private func scheduleNotificationsIfNeeded(
+        assessment: HeartAssessment,
+        history: [HeartSnapshot]
+    ) {
+        guard let notificationService, notificationService.isAuthorized else {
+            return
+        }
+
+        // Schedule anomaly alert if the assessment needs attention
+        if assessment.status == .needsAttention {
+            notificationService.scheduleAnomalyAlert(assessment: assessment)
+            AppLogger.engine.info("Notification: anomaly alert scheduled for status=\(assessment.status.rawValue)")
+        }
+
+        // Schedule smart nudge reminder for today's daily nudge
+        let nudge = assessment.dailyNudge
+        Task {
+            await notificationService.scheduleSmartNudge(
+                nudge: nudge,
+                history: history
+            )
+            AppLogger.engine.info("Notification: smart nudge scheduled for category=\(nudge.category.rawValue)")
+        }
     }
 
     private func bindToLocalStore(_ localStore: LocalStore) {

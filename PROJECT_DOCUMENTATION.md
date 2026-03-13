@@ -521,7 +521,7 @@ Repository: `Apple-watch`
 
 #### Subtask 4.4.1: Implementation
 - **What:** Schedule/cancel nudge notifications, request authorization, anomaly alerts
-- **Status:** PARTIALLY WIRED (CR-001). Authorization is requested at app startup and `NotificationService` is injected via environment with the shared `LocalStore`. However, no production call sites schedule anomaly alerts or nudge reminders from live assessment output. The scheduling/cancellation API exists but is not invoked from the dashboard or engine pipeline.
+- **Status:** WIRED (CR-001 FIXED). Authorization is requested at app startup; `NotificationService` is injected via environment with the shared `LocalStore`. `DashboardViewModel.scheduleNotificationsIfNeeded()` now calls `scheduleAnomalyAlert()` for `.needsAttention` assessments and `scheduleSmartNudge()` for the daily nudge at the end of every `refresh()` cycle. Files: `DashboardViewModel.swift:531-564`, `DashboardView.swift:29,55-60`.
 
 ---
 
@@ -658,7 +658,7 @@ WatchHomeView, WatchNudgeView (user sees recommendations)
 
 | ID | Summary | Files Changed |
 |----|---------|---------------|
-| CR-001 | NotificationService partially wired: authorization + shared LocalStore at startup; scheduling from live assessments still missing | `ThumpiOSApp.swift` |
+| CR-001 | NotificationService fully wired: authorization + shared LocalStore at startup; `scheduleNotificationsIfNeeded()` calls anomaly alerts and smart nudge scheduling from live assessment output | `ThumpiOSApp.swift`, `DashboardViewModel.swift`, `DashboardView.swift` |
 | CR-003 | Nudge completion tracked explicitly via `nudgeCompletionDates` | `HeartModels.swift`, `DashboardViewModel.swift`, `InsightsViewModel.swift` |
 | CR-004 | Streak credits guarded to once per calendar day | `HeartModels.swift`, `DashboardViewModel.swift` |
 | CR-006 | Package.swift excludes test data directories | `Package.swift` |
