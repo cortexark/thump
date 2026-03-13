@@ -260,7 +260,7 @@ struct ThumpBuddyFace: View {
             Image(systemName: "star.fill")
                 .font(.system(size: size * 0.16, weight: .bold))
                 .foregroundStyle(.white)
-                .symbolEffect(.bounce, isActive: true)
+                .symbolEffect(.pulse, isActive: true)
         } else {
             Image(systemName: "star.fill")
                 .font(.system(size: size * 0.16, weight: .bold))
