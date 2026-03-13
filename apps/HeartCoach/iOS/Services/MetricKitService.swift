@@ -35,9 +35,15 @@ final class MetricKitService: NSObject, MXMetricManagerSubscriber {
 
     // MARK: - Public API
 
+    /// Whether `start()` has already been called.
+    private var isStarted = false
+
     /// Registers the service as a MetricKit subscriber.
     /// Call this once during app launch (e.g. in `performStartupTasks`).
+    /// Guarded against repeated registration (PERF-5).
     func start() {
+        guard !isStarted else { return }
+        isStarted = true
         MXMetricManager.shared.add(self)
         AppLogger.info("MetricKit subscriber registered")
     }

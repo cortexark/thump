@@ -145,10 +145,22 @@ public final class LocalStore: ObservableObject {
         ) ?? []
     }
 
-    /// Append a single ``StoredSnapshot`` to the existing history.
+    /// Upsert a single ``StoredSnapshot`` into the existing history.
+    ///
+    /// If a snapshot for the same calendar day already exists, it is replaced
+    /// with the newer one. This prevents duplicate entries from pull-to-refresh,
+    /// tab revisits, or app relaunches on the same day.
     public func appendSnapshot(_ stored: StoredSnapshot) {
         var history = loadHistory()
-        history.append(stored)
+        let calendar = Calendar.current
+        let newDay = calendar.startOfDay(for: stored.snapshot.date)
+        if let idx = history.firstIndex(where: {
+            calendar.startOfDay(for: $0.snapshot.date) == newDay
+        }) {
+            history[idx] = stored
+        } else {
+            history.append(stored)
+        }
         saveHistory(history)
     }
 

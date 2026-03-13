@@ -93,7 +93,7 @@ final class TrendsViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let healthKitService: HealthKitService
+    private var healthKitService: HealthKitService
 
     // MARK: - Initialization
 
@@ -101,6 +101,11 @@ final class TrendsViewModel: ObservableObject {
     ///
     /// - Parameter healthKitService: The service used to fetch historical data.
     init(healthKitService: HealthKitService = HealthKitService()) {
+        self.healthKitService = healthKitService
+    }
+
+    /// Binds shared service dependencies (PERF-4).
+    func bind(healthKitService: HealthKitService) {
         self.healthKitService = healthKitService
     }
 

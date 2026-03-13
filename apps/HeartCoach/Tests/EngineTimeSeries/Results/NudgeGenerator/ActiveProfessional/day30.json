@@ -1,15 +1,15 @@
 {
-  "anomalyScore" : 0.0069674473301011928,
+  "anomalyScore" : 0.9050906618207939,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "celebrate",
+    "walk",
     "hydrate"
   ],
   "multiNudgeCount" : 2,
-  "nudgeCategory" : "celebrate",
-  "nudgeTitle" : "You're on a Roll!",
-  "readinessLevel" : "primed",
-  "readinessScore" : 84,
-  "regressionFlag" : false,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "You Might Enjoy a Post-Meal Walk",
+  "readinessLevel" : "ready",
+  "readinessScore" : 67,
+  "regressionFlag" : true,
   "stressFlag" : false
 }

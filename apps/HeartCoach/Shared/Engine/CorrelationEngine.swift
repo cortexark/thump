@@ -88,10 +88,10 @@ public struct CorrelationEngine: Sendable {
             ))
         }
 
-        // 3. Activity Minutes vs Recovery HR 1m
+        // 3. Activity Minutes (walk + workout) vs Recovery HR 1m (ENG-3)
         let workoutRec = pairedValues(
             history: history,
-            xKeyPath: \.workoutMinutes,
+            xKeyPath: \.activityMinutes,
             yKeyPath: \.recoveryHR1m
         )
         if workoutRec.x.count >= minimumPoints {

@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.28084170374466549,
+  "anomalyScore" : 1.3139754168741831,
   "confidence" : "low",
   "multiNudgeCategories" : [
     "moderate",
@@ -8,9 +8,9 @@
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "moderate",
-  "nudgeTitle" : "Quick Sync Check",
-  "readinessLevel" : "ready",
-  "readinessScore" : 71,
-  "regressionFlag" : false,
+  "nudgeTitle" : "How About Some Movement Today?",
+  "readinessLevel" : "moderate",
+  "readinessScore" : 54,
+  "regressionFlag" : true,
   "stressFlag" : false
 }

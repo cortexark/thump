@@ -34,9 +34,15 @@ enum TimeSeriesCheckpoint: Int, CaseIterable, Comparable {
 /// Each engine agent writes its results here; downstream engines read them.
 struct EngineResultStore {
 
+    private static let resultsDirEnvVar = "THUMP_RESULTS_DIR"
+
     /// Directory where result files are written.
     static var storeDir: URL {
-        URL(fileURLWithPath: #filePath)
+        if let override = ProcessInfo.processInfo.environment[resultsDirEnvVar],
+           !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
+        return URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("Results")
     }
@@ -158,7 +164,7 @@ struct PersonaBaseline {
     let zoneMinutes: [Double] // 5 zones
 
     // Daily noise standard deviations
-    var rhrNoise: Double { 3.0 }
+    var rhrNoise: Double { 2.0 }
     var hrvNoise: Double { 8.0 }
     var sleepNoise: Double { 0.5 }
     var stepsNoise: Double { 2000.0 }
@@ -186,9 +192,18 @@ struct TrendOverlay {
 
 extension PersonaBaseline {
 
+    /// Deterministic hash — Swift's String.hashValue is randomized per process.
+    private var stableNameHash: UInt64 {
+        var h: UInt64 = 5381
+        for byte in name.utf8 {
+            h = h &* 33 &+ UInt64(byte)
+        }
+        return h
+    }
+
     /// Generate a 30-day history of HeartSnapshots with realistic noise and optional trends.
     func generate30DayHistory() -> [HeartSnapshot] {
-        var rng = SeededRNG(seed: UInt64(abs(name.hashValue) &+ age))
+        var rng = SeededRNG(seed: stableNameHash &+ UInt64(age))
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -328,7 +343,7 @@ enum TestPersonas {
     // 1. Young athlete (22M)
     static let youngAthlete = PersonaBaseline(
         name: "YoungAthlete", age: 22, sex: .male, weightKg: 75,
-        restingHR: 50, hrvSDNN: 72, vo2Max: 55, recoveryHR1m: 45, recoveryHR2m: 55,
+        restingHR: 48, hrvSDNN: 72, vo2Max: 55, recoveryHR1m: 45, recoveryHR2m: 55,
         sleepHours: 8.5, steps: 14000, walkMinutes: 60, workoutMinutes: 60,
         zoneMinutes: [20, 20, 30, 15, 8]
     )
@@ -349,12 +364,12 @@ enum TestPersonas {
         zoneMinutes: [40, 25, 20, 8, 3]
     )
 
-    // 4. New mom (32F) — sleep deprived, stressed
+    // 4. New mom (32F) — sleep deprived, stressed, poor autonomic recovery
     static let newMom = PersonaBaseline(
         name: "NewMom", age: 32, sex: .female, weightKg: 70,
-        restingHR: 72, hrvSDNN: 32, vo2Max: 32, recoveryHR1m: 22, recoveryHR2m: 30,
-        sleepHours: 4.5, steps: 5000, walkMinutes: 20, workoutMinutes: 5,
-        zoneMinutes: [50, 15, 5, 0, 0]
+        restingHR: 75, hrvSDNN: 28, vo2Max: 30, recoveryHR1m: 15, recoveryHR2m: 22,
+        sleepHours: 3.5, steps: 2000, walkMinutes: 5, workoutMinutes: 0,
+        zoneMinutes: [45, 10, 0, 0, 0]
     )
 
     // 5. Middle-aged fit (45M) — marathon runner

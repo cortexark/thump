@@ -283,7 +283,7 @@ public struct HeartRateZoneEngine: Sendable {
         }
 
         let thisWeek = history.filter { $0.date >= weekAgo }
-        let zoneData = thisWeek.compactMap(\.zoneMinutes).filter { $0.count >= 5 }
+        let zoneData = thisWeek.map(\.zoneMinutes).filter { $0.count >= 5 }
         guard !zoneData.isEmpty else { return nil }
 
         var weeklyTotals: [Double] = [0, 0, 0, 0, 0]

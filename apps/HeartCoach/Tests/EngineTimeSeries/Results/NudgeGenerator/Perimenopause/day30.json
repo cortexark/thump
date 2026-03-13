@@ -1,15 +1,16 @@
 {
-  "anomalyScore" : 0.62068611910199989,
+  "anomalyScore" : 0.28757068930064672,
   "confidence" : "high",
   "multiNudgeCategories" : [
     "walk",
+    "rest",
     "hydrate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
   "nudgeTitle" : "You Might Enjoy a Post-Meal Walk",
   "readinessLevel" : "ready",
-  "readinessScore" : 69,
+  "readinessScore" : 71,
   "regressionFlag" : true,
   "stressFlag" : false
 }

@@ -1,16 +1,15 @@
 {
-  "anomalyScore" : 0.072690266925153402,
+  "anomalyScore" : 0.23766319368004768,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "moderate",
     "hydrate",
     "celebrate"
   ],
-  "multiNudgeCount" : 3,
-  "nudgeCategory" : "moderate",
-  "nudgeTitle" : "Feeling Up for a Little Extra?",
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "hydrate",
+  "nudgeTitle" : "Keep That Water Bottle Handy",
   "readinessLevel" : "primed",
-  "readinessScore" : 87,
-  "regressionFlag" : false,
+  "readinessScore" : 86,
+  "regressionFlag" : true,
   "stressFlag" : false
 }

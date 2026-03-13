@@ -77,10 +77,11 @@ final class SubscriptionService: ObservableObject {
             await self?.listenForTransactionUpdates()
         }
 
-        // Load initial subscription status
-        Task { [weak self] in
-            await self?.updateSubscriptionStatus()
-        }
+        // PERF-1: Removed redundant `updateSubscriptionStatus()` here.
+        // The startup path in ThumpiOSApp.performStartupTasks() calls
+        // loadProducts() + updateSubscriptionStatus() sequentially,
+        // which is the correct order. Firing it from init() created a
+        // duplicate query that raced the startup sequence.
     }
 
     #if DEBUG

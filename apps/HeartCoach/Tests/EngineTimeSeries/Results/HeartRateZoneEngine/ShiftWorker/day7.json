@@ -1,11 +1,11 @@
 {
-  "analysisScore" : 44,
-  "coachingMessage" : "Your aerobic zone (zone 3) could use more time today. This is where your heart gets the most benefit — try a brisk walk or bike ride.",
+  "analysisScore" : 57,
+  "coachingMessage" : "You're making progress on your zone targets. Keep mixing easy and moderate-intensity activities for the best results.",
   "fitnessLevel" : "moderate",
-  "recommendation" : "needsMoreAerobic",
+  "recommendation" : "none",
   "zoneBoundaries" : [
     {
-      "lower" : 125,
+      "lower" : 126,
       "upper" : 137
     },
     {

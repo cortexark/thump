@@ -75,6 +75,7 @@ final class DashboardViewModel: ObservableObject {
 
     private var healthDataProvider: any HealthDataProviding
     private var localStore: LocalStore
+    private var notificationService: NotificationService?
 
     // MARK: - Private Properties
 
@@ -105,10 +106,12 @@ final class DashboardViewModel: ObservableObject {
 
     func bind(
         healthDataProvider: any HealthDataProviding,
-        localStore: LocalStore
+        localStore: LocalStore,
+        notificationService: NotificationService? = nil
     ) {
         self.healthDataProvider = healthDataProvider
         self.localStore = localStore
+        self.notificationService = notificationService
         bindToLocalStore(localStore)
     }
 
@@ -218,6 +221,9 @@ final class DashboardViewModel: ObservableObject {
                 history: history
             )
 
+            // Schedule notifications from live assessment output (CR-001)
+            scheduleNotificationsIfNeeded(assessment: result, history: history)
+
             let totalMs = (CFAbsoluteTimeGetCurrent() - refreshStart) * 1000
             AppLogger.engine.info("Dashboard refresh complete in \(String(format: "%.0f", totalMs))ms — history=\(history.count) days")
 
@@ -231,8 +237,12 @@ final class DashboardViewModel: ObservableObject {
 
     /// Marks today's nudge as completed and updates the local store.
     ///
-    /// Increments the streak counter and persists the profile.
+    /// Records explicit completion for the day and increments the streak
+    /// at most once per calendar day (CR-003 + CR-004).
     func markNudgeComplete() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
         // Record completion by saving feedback
         let completionPayload = WatchFeedbackPayload(
             date: Date(),
@@ -241,15 +251,27 @@ final class DashboardViewModel: ObservableObject {
         )
         localStore.saveLastFeedback(completionPayload)
 
-        // Increment streak
+        // Record explicit nudge completion for this date (CR-003)
+        let dateKey = ISO8601DateFormatter().string(from: today).prefix(10)
+        localStore.profile.nudgeCompletionDates.insert(String(dateKey))
+
+        // Only credit streak once per calendar day (CR-004)
+        if let lastCredit = localStore.profile.lastStreakCreditDate,
+           calendar.isDate(lastCredit, inSameDayAs: today) {
+            // Already credited today — just save the completion record
+            localStore.saveProfile()
+            return
+        }
+
         localStore.profile.streakDays += 1
+        localStore.profile.lastStreakCreditDate = today
         localStore.saveProfile()
     }
 
     /// Marks a specific nudge (by index) as completed.
     func markNudgeComplete(at index: Int) {
         nudgeCompletionStatus[index] = true
-        // Also record as general positive feedback
+        // Also record as general positive feedback (streak guarded per-day)
         markNudgeComplete()
     }
 
@@ -416,22 +438,37 @@ final class DashboardViewModel: ObservableObject {
     // MARK: - Readiness Score
 
     /// Computes the readiness score from today's snapshot and recent history.
+    ///
+    /// Uses the actual StressEngine score when available instead of the
+    /// coarse 70.0 flag value (CR-011).
     private func computeReadiness(snapshot: HeartSnapshot, history: [HeartSnapshot]) {
-        // Get today's stress score from the assessment if available
-        let stressScore: Double? = if let assessment = assessment, assessment.stressFlag {
-            70.0 // Elevated if stress flag is set
+        // Compute stress first so readiness gets the real score
+        let stressEngine = StressEngine()
+        let stress = stressEngine.computeStress(
+            snapshot: snapshot,
+            recentHistory: history
+        )
+
+        // Use actual stress score; fall back to flag-based estimate only when engine returns nil
+        let stressScore: Double?
+        if let stress {
+            stressScore = stress.score
+        } else if let assessment = assessment, assessment.stressFlag {
+            stressScore = 70.0
         } else {
-            nil
+            stressScore = nil
         }
 
         let engine = ReadinessEngine()
         readinessResult = engine.compute(
             snapshot: snapshot,
             stressScore: stressScore,
-            recentHistory: history
+            recentHistory: history,
+            consecutiveAlert: assessment?.consecutiveAlert
         )
         if let result = readinessResult {
-            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue)")
+            let stressDesc = stressScore.map { String(format: "%.1f", $0) } ?? "nil"
+            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressDesc)")
         }
     }
 
@@ -490,6 +527,41 @@ final class DashboardViewModel: ObservableObject {
             current: snapshot,
             history: history
         )
+    }
+
+    // MARK: - Notification Scheduling (CR-001)
+
+    /// Schedules anomaly alerts and nudge reminders from live assessment output.
+    ///
+    /// Called at the end of `refresh()` after all engines have run, so the
+    /// assessment's status, flags, and daily nudge are fully resolved.
+    ///
+    /// - Parameters:
+    ///   - assessment: The freshly computed `HeartAssessment`.
+    ///   - history: Recent snapshot history, used for smart nudge timing.
+    private func scheduleNotificationsIfNeeded(
+        assessment: HeartAssessment,
+        history: [HeartSnapshot]
+    ) {
+        guard let notificationService, notificationService.isAuthorized else {
+            return
+        }
+
+        // Schedule anomaly alert if the assessment needs attention
+        if assessment.status == .needsAttention {
+            notificationService.scheduleAnomalyAlert(assessment: assessment)
+            AppLogger.engine.info("Notification: anomaly alert scheduled for status=\(assessment.status.rawValue)")
+        }
+
+        // Schedule smart nudge reminder for today's daily nudge
+        let nudge = assessment.dailyNudge
+        Task {
+            await notificationService.scheduleSmartNudge(
+                nudge: nudge,
+                history: history
+            )
+            AppLogger.engine.info("Notification: smart nudge scheduled for category=\(nudge.category.rawValue)")
+        }
     }
 
     private func bindToLocalStore(_ localStore: LocalStore) {

@@ -46,7 +46,8 @@ public struct CoachingEngine: Sendable {
         streakDays: Int
     ) -> CoachingReport {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        // Use snapshot date for deterministic replay, not wall-clock Date() (ENG-1)
+        let today = calendar.startOfDay(for: current.date)
         let weekAgo = calendar.date(byAdding: .day, value: -7, to: today) ?? today
         let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: today) ?? today
 

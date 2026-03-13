@@ -48,6 +48,12 @@ struct PaywallView: View {
             }
             .background(Color(.systemGroupedBackground))
             .onAppear { InteractionLog.pageView("Paywall") }
+            .task {
+                // PERF-2: Load product catalog on demand when paywall appears
+                if subscriptionService.availableProducts.isEmpty {
+                    await subscriptionService.loadProducts()
+                }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

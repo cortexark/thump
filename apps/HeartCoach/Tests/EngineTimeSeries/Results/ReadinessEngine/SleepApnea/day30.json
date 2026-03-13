@@ -1,6 +1,6 @@
 {
   "hadConsecutiveAlert" : false,
-  "level" : "moderate",
+  "level" : "recovering",
   "pillarCount" : 4,
   "pillarNames" : [
     "sleep",
@@ -10,10 +10,10 @@
   ],
   "pillarScores" : {
     "activityBalance" : 100,
-    "hrvTrend" : 46.736724899462956,
-    "recovery" : 21.129646424993247,
-    "sleep" : 31.22474306418593
+    "hrvTrend" : 0.29264609768040373,
+    "recovery" : 7.3984993416716032,
+    "sleep" : 12.311716810298506
   },
-  "score" : 44,
+  "score" : 25,
   "stressScoreInput" : null
 }

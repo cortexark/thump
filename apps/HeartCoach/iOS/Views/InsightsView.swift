@@ -21,6 +21,8 @@ struct InsightsView: View {
 
     @StateObject private var viewModel = InsightsViewModel()
     @EnvironmentObject private var connectivityService: ConnectivityService
+    @EnvironmentObject private var healthKitService: HealthKitService
+    @EnvironmentObject private var localStore: LocalStore
 
     // MARK: - State
 
@@ -36,6 +38,7 @@ struct InsightsView: View {
                 .navigationBarTitleDisplayMode(.large)
                 .onAppear { InteractionLog.pageView("Insights") }
                 .task {
+                    viewModel.bind(healthKitService: healthKitService, localStore: localStore)
                     viewModel.connectivityService = connectivityService
                     await viewModel.loadInsights()
                 }

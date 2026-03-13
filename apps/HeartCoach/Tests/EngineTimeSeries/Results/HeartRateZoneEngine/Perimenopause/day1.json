@@ -2,10 +2,10 @@
   "analysisScore" : 49,
   "coachingMessage" : "You're making progress on your zone targets. Keep mixing easy and moderate-intensity activities for the best results.",
   "fitnessLevel" : "active",
-  "recommendation" : "none",
+  "recommendation" : "needsMoreThreshold",
   "zoneBoundaries" : [
     {
-      "lower" : 118,
+      "lower" : 119,
       "upper" : 129
     },
     {

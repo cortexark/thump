@@ -459,11 +459,13 @@ public struct HeartTrendEngine: Sendable {
         // Need at least 14 days for a meaningful baseline
         guard rhrSnapshots.count >= 14 else { return nil }
 
-        // 28-day baseline (or all available if less)
-        let baselineWindow = min(28, rhrSnapshots.count)
-        let baselineSnapshots = Array(rhrSnapshots.suffix(baselineWindow))
+        // Split: current week (last 7) vs baseline (everything before that) (ENG-4)
+        let currentWeekCount = min(7, rhrSnapshots.count)
+        let baselineSnapshots = Array(rhrSnapshots.dropLast(currentWeekCount))
+        guard baselineSnapshots.count >= 7 else { return nil }
+
         let baselineValues = baselineSnapshots.compactMap(\.restingHeartRate)
-        guard baselineValues.count >= 14 else { return nil }
+        guard baselineValues.count >= 7 else { return nil }
 
         let baselineMean = baselineValues.reduce(0, +) / Double(baselineValues.count)
         let baselineStd = standardDeviation(baselineValues)
@@ -479,7 +481,7 @@ public struct HeartTrendEngine: Sendable {
             )
         }
 
-        // Current 7-day mean
+        // Current 7-day mean (non-overlapping with baseline)
         let recentMean = currentWeekRHRMean(rhrSnapshots)
         let z = (recentMean - baselineMean) / baselineStd
 
