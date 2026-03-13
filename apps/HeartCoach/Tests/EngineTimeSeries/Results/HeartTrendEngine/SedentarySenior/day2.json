@@ -2,6 +2,7 @@
   "anomalyScore" : 0,
   "confidenceLevel" : "low",
   "regressionFlag" : false,
+  "scenario" : "missingActivity",
   "status" : "stable",
   "stressFlag" : false
 }

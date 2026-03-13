@@ -9,11 +9,11 @@
     "hrvTrend"
   ],
   "pillarScores" : {
-    "activityBalance" : 80.694749976174791,
-    "hrvTrend" : 79.897939607517756,
-    "recovery" : 6.997344021092851,
-    "sleep" : 39.749897228155483
+    "activityBalance" : 74.090517939602734,
+    "hrvTrend" : 100,
+    "recovery" : 12.476838957725599,
+    "sleep" : 52.711965376871817
   },
-  "score" : 45,
+  "score" : 53,
   "stressScoreInput" : null
 }

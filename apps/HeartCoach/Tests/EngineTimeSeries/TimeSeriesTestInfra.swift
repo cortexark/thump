@@ -186,9 +186,18 @@ struct TrendOverlay {
 
 extension PersonaBaseline {
 
+    /// Deterministic hash — Swift's String.hashValue is randomized per process.
+    private var stableNameHash: UInt64 {
+        var h: UInt64 = 5381
+        for byte in name.utf8 {
+            h = h &* 33 &+ UInt64(byte)
+        }
+        return h
+    }
+
     /// Generate a 30-day history of HeartSnapshots with realistic noise and optional trends.
     func generate30DayHistory() -> [HeartSnapshot] {
-        var rng = SeededRNG(seed: UInt64(abs(name.hashValue) &+ age))
+        var rng = SeededRNG(seed: stableNameHash &+ UInt64(age))
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -352,9 +361,9 @@ enum TestPersonas {
     // 4. New mom (32F) — sleep deprived, stressed
     static let newMom = PersonaBaseline(
         name: "NewMom", age: 32, sex: .female, weightKg: 70,
-        restingHR: 72, hrvSDNN: 32, vo2Max: 32, recoveryHR1m: 22, recoveryHR2m: 30,
-        sleepHours: 4.5, steps: 5000, walkMinutes: 20, workoutMinutes: 5,
-        zoneMinutes: [50, 15, 5, 0, 0]
+        restingHR: 75, hrvSDNN: 28, vo2Max: 30, recoveryHR1m: 18, recoveryHR2m: 25,
+        sleepHours: 3.5, steps: 4000, walkMinutes: 15, workoutMinutes: 0,
+        zoneMinutes: [45, 10, 0, 0, 0]
     )
 
     // 5. Middle-aged fit (45M) — marathon runner

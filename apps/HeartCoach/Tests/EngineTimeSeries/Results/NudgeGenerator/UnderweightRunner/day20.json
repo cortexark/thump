@@ -1,16 +1,15 @@
 {
-  "anomalyScore" : 0.22698646846706033,
+  "anomalyScore" : 0.61286506495239035,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "walk",
     "hydrate",
     "rest"
   ],
-  "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "Keep That Walking Groove Going",
-  "readinessLevel" : "primed",
-  "readinessScore" : 89,
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "hydrate",
+  "nudgeTitle" : "Quick Hydration Check-In",
+  "readinessLevel" : "ready",
+  "readinessScore" : 78,
   "regressionFlag" : false,
   "stressFlag" : false
 }

@@ -1,7 +1,7 @@
 {
-  "anomalyScore" : 0.28084170374466549,
+  "anomalyScore" : 1.313975416874184,
   "confidenceLevel" : "low",
-  "regressionFlag" : false,
-  "status" : "stable",
+  "regressionFlag" : true,
+  "status" : "needsAttention",
   "stressFlag" : false
 }

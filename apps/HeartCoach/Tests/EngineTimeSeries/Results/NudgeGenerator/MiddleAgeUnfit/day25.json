@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.22305239664953447,
+  "anomalyScore" : 1.0318991758174465,
   "confidence" : "high",
   "multiNudgeCategories" : [
     "walk",
@@ -10,7 +10,7 @@
   "nudgeCategory" : "walk",
   "nudgeTitle" : "Keep It Light Today",
   "readinessLevel" : "moderate",
-  "readinessScore" : 40,
+  "readinessScore" : 51,
   "regressionFlag" : false,
   "stressFlag" : false
 }

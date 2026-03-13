@@ -1,15 +1,16 @@
 {
-  "anomalyScore" : 0.71026165991811485,
+  "anomalyScore" : 1.4538233061697476,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "hydrate",
-    "rest"
+    "walk",
+    "rest",
+    "hydrate"
   ],
-  "multiNudgeCount" : 2,
-  "nudgeCategory" : "hydrate",
-  "nudgeTitle" : "Quick Hydration Check-In",
-  "readinessLevel" : "ready",
-  "readinessScore" : 60,
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "An Easy Walk Today",
+  "readinessLevel" : "moderate",
+  "readinessScore" : 46,
   "regressionFlag" : false,
   "stressFlag" : false
 }

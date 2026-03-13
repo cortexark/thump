@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.7239517145628076,
+  "anomalyScore" : 0.89598800002534618,
   "confidence" : "high",
   "multiNudgeCategories" : [
     "rest",
@@ -9,7 +9,7 @@
   "nudgeCategory" : "rest",
   "nudgeTitle" : "A Cozy Bedtime Routine",
   "readinessLevel" : "ready",
-  "readinessScore" : 66,
+  "readinessScore" : 69,
   "regressionFlag" : true,
   "stressFlag" : false
 }

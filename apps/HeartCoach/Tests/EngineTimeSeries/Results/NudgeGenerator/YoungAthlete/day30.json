@@ -1,5 +1,5 @@
 {
-  "anomalyScore" : 0.65273993668583008,
+  "anomalyScore" : 1.0531493091022808,
   "confidence" : "high",
   "multiNudgeCategories" : [
     "hydrate",
@@ -9,7 +9,7 @@
   "nudgeCategory" : "hydrate",
   "nudgeTitle" : "Quick Hydration Check-In",
   "readinessLevel" : "primed",
-  "readinessScore" : 81,
+  "readinessScore" : 87,
   "regressionFlag" : false,
   "stressFlag" : false
 }

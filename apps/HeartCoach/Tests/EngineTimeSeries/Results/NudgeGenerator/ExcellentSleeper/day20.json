@@ -1,15 +1,16 @@
 {
-  "anomalyScore" : 0.94901599966444217,
+  "anomalyScore" : 0.2173992839115432,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "rest",
-    "hydrate"
+    "walk",
+    "hydrate",
+    "celebrate"
   ],
-  "multiNudgeCount" : 2,
-  "nudgeCategory" : "rest",
-  "nudgeTitle" : "A Cozy Bedtime Routine",
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "Keep That Walking Groove Going",
   "readinessLevel" : "primed",
-  "readinessScore" : 81,
-  "regressionFlag" : true,
+  "readinessScore" : 92,
+  "regressionFlag" : false,
   "stressFlag" : false
 }

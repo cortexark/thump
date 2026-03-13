@@ -1,16 +1,15 @@
 {
-  "anomalyScore" : 0.13225240031911858,
+  "anomalyScore" : 0.95335286889876347,
   "confidence" : "medium",
   "multiNudgeCategories" : [
-    "walk",
-    "hydrate",
-    "celebrate"
+    "moderate",
+    "hydrate"
   ],
-  "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "Keep That Walking Groove Going",
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Try Something Different Today",
   "readinessLevel" : "primed",
-  "readinessScore" : 83,
+  "readinessScore" : 84,
   "regressionFlag" : false,
   "stressFlag" : false
 }
