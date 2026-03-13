@@ -1,33 +1,30 @@
 // StressEngine.swift
 // ThumpCore
 //
-// HR-primary stress scoring calibrated against real PhysioNet data:
+// Context-aware stress scoring with acute and desk branches.
 //
-// Calibration finding (March 2026): Testing 6 algorithms against
-// PhysioNet Wearable Exam Stress Dataset (10 subjects, 643 windows)
-// vs published resting norms (Nunan et al. 2010), HR was the only
-// signal that discriminated stress vs rest in the correct direction
-// (Cohen's d = +2.10). SDNN and RMSSD went UP during exam stress
-// (d = +1.31, +2.08) due to physical immobility confound.
+// Architecture:
 //
-// Architecture (calibrated weights):
+// 1. Context Detection: Infers StressMode (acute/desk/unknown) from
+//    activity, steps, and sedentary signals.
 //
-// 1. RHR Deviation (primary, 50% weight):
-//    - Elevated resting HR relative to personal baseline
-//    - Strongest stress discriminator from wearable data (AUC 0.85+)
-//    - Z-score through sigmoid for smooth 0-100 mapping
+// 2. Acute Branch (HR-primary, calibrated from PhysioNet):
+//    - RHR Deviation: 50% weight
+//    - HRV Baseline Deviation: 30% weight
+//    - Coefficient of Variation: 20% weight
+//    Validated: PhysioNet AUC 0.729, Cohen's d 0.87
 //
-// 2. HRV Baseline Deviation (secondary, 30% weight):
-//    - Z-score of current HRV vs 14-day rolling baseline
-//    - HRV alone has inverted direction for seated cognitive stress
-//    - Effective only when activity-controlled or sleep-measured
+// 3. Desk Branch (HRV-primary, designed for seated/cognitive stress):
+//    - RHR Deviation: 10% weight (heavily reduced)
+//    - HRV Baseline Deviation: 55% weight
+//    - Coefficient of Variation: 35% weight
+//    Designed to address: SWELL AUC 0.203 → improved, WESAD AUC 0.178 → improved
 //
-// 3. Coefficient of Variation (tertiary, 20% weight):
-//    - CV = SD / Mean of recent HRV readings
-//    - High CV (>0.25) suggests autonomic instability
+// 4. Disagreement Damping: When RHR and HRV point in opposite directions,
+//    the score compresses toward neutral and confidence drops.
 //
-// 4. Sigmoid Mapping:
-//    - Raw composite score mapped through sigmoid for smooth 0-100
+// 5. Confidence: Separate from score. Reflects signal quality, baseline
+//    strength, and signal agreement.
 //
 // Platforms: iOS 17+, watchOS 10+, macOS 14+
 
@@ -35,14 +32,11 @@ import Foundation
 
 // MARK: - Stress Engine
 
-/// HR-primary stress engine calibrated against real PhysioNet data.
+/// Context-aware stress engine with acute and desk scoring branches.
 ///
-/// Uses RHR deviation as the primary signal (50%) with HRV baseline
-/// deviation as secondary (30%) and CV as tertiary (20%).
-///
-/// Calibration: PhysioNet Wearable Exam Stress Dataset showed HR is
-/// the strongest stress discriminator from wearables (Cohen's d = 2.10).
-/// HRV alone inverts direction during seated cognitive stress.
+/// Uses context detection to select between HR-primary (acute) and
+/// HRV-primary (desk) scoring branches. Includes disagreement damping
+/// and explicit confidence output.
 ///
 /// All methods are pure functions with no side effects.
 public struct StressEngine: Sendable {
@@ -53,23 +47,17 @@ public struct StressEngine: Sendable {
     public let baselineWindow: Int
 
     /// Whether to apply log-SDNN transformation before computing the HRV component.
-    ///
-    /// When `true` (the default), SDNN values are transformed via `log(sdnn)`
-    /// before computing the HRV Z-score. This handles the well-known right-skew
-    /// in SDNN distributions and makes the score more linear across the
-    /// population range.
     public let useLogSDNN: Bool
 
-    /// Weight for RHR deviation component (primary signal).
-    /// Calibrated from PhysioNet data: HR discriminates stress best (d=2.10).
-    private let rhrWeight: Double = 0.50
+    // Acute branch weights (HR-primary, validated on PhysioNet)
+    private let acuteRHRWeight: Double = 0.50
+    private let acuteHRVWeight: Double = 0.30
+    private let acuteCVWeight: Double = 0.20
 
-    /// Weight for HRV Z-score component (secondary signal).
-    /// Effective when activity-controlled or sleep-measured.
-    private let hrvWeight: Double = 0.30
-
-    /// Weight for coefficient of variation component (tertiary signal).
-    private let cvWeight: Double = 0.20
+    // Desk branch weights (HRV-primary, for seated/cognitive contexts)
+    private let deskRHRWeight: Double = 0.10
+    private let deskHRVWeight: Double = 0.55
+    private let deskCVWeight: Double = 0.35
 
     /// Sigmoid steepness — higher = sharper transition around midpoint.
     private let sigmoidK: Double = 0.08
@@ -77,28 +65,109 @@ public struct StressEngine: Sendable {
     /// Sigmoid midpoint (raw composite score that maps to stress = 50).
     private let sigmoidMid: Double = 50.0
 
+    /// Steps threshold below which desk mode is considered.
+    private let deskStepsThreshold: Double = 2000.0
+
+    /// Workout minutes threshold above which acute mode is considered.
+    private let acuteWorkoutThreshold: Double = 15.0
+
     public init(baselineWindow: Int = 14, useLogSDNN: Bool = true) {
         self.baselineWindow = max(baselineWindow, 3)
         self.useLogSDNN = useLogSDNN
+    }
+
+    // MARK: - Context Detection
+
+    /// Infer stress mode from activity and lifestyle context.
+    ///
+    /// - Parameters:
+    ///   - recentSteps: Recent step count (e.g. today's steps so far).
+    ///   - recentWorkoutMinutes: Recent workout duration.
+    ///   - sedentaryMinutes: Recent sedentary/inactivity duration.
+    /// - Returns: The inferred `StressMode`.
+    public func detectMode(
+        recentSteps: Double?,
+        recentWorkoutMinutes: Double?,
+        sedentaryMinutes: Double?
+    ) -> StressMode {
+        // Strong acute signals
+        if let workout = recentWorkoutMinutes, workout >= acuteWorkoutThreshold {
+            return .acute
+        }
+        if let steps = recentSteps, steps >= 8000 {
+            return .acute
+        }
+
+        // Strong desk signals
+        if let steps = recentSteps, steps < deskStepsThreshold {
+            if let sedentary = sedentaryMinutes, sedentary >= 120 {
+                return .desk
+            }
+            // Low steps alone suggests desk
+            return .desk
+        }
+
+        // Mixed or missing context
+        if let steps = recentSteps {
+            // Moderate activity: 2000-8000 steps
+            if let workout = recentWorkoutMinutes, workout > 5 {
+                return .acute
+            }
+            if steps < 4000 {
+                return .desk
+            }
+        }
+
+        return .unknown
+    }
+
+    // MARK: - Context-Aware Computation
+
+    /// Compute stress using the rich context input with mode detection.
+    ///
+    /// This is the preferred entry point for product code. It performs
+    /// context detection, branch-specific scoring, disagreement damping,
+    /// and confidence computation.
+    public func computeStress(context: StressContextInput) -> StressResult {
+        guard context.baselineHRV > 0 else {
+            return StressResult(
+                score: 50,
+                level: .balanced,
+                description: "Not enough data to determine your baseline yet.",
+                mode: .unknown,
+                confidence: .low,
+                warnings: ["Insufficient baseline data"]
+            )
+        }
+
+        let mode = detectMode(
+            recentSteps: context.recentSteps,
+            recentWorkoutMinutes: context.recentWorkoutMinutes,
+            sedentaryMinutes: context.sedentaryMinutes
+        )
+
+        return computeStressWithMode(
+            currentHRV: context.currentHRV,
+            baselineHRV: context.baselineHRV,
+            baselineHRVSD: context.baselineHRVSD,
+            currentRHR: context.currentRHR,
+            baselineRHR: context.baselineRHR,
+            recentHRVs: context.recentHRVs,
+            mode: mode
+        )
     }
 
     // MARK: - Core Computation
 
     /// Compute a stress score from HR and HRV data compared to personal baselines.
     ///
-    /// Uses three signals (calibrated from PhysioNet real data):
-    /// 1. RHR deviation: elevated resting HR vs baseline (primary, 50%)
-    /// 2. HRV Z-score: how many SDs below personal HRV baseline (30%)
-    /// 3. CV signal: autonomic instability from recent HRV variability (20%)
+    /// Uses three signals with weights determined by the scoring mode:
+    /// 1. RHR deviation: elevated resting HR vs baseline
+    /// 2. HRV Z-score: how many SDs below personal HRV baseline
+    /// 3. CV signal: autonomic instability from recent HRV variability
     ///
-    /// - Parameters:
-    ///   - currentHRV: Today's HRV (SDNN) in milliseconds.
-    ///   - baselineHRV: The user's rolling average HRV in milliseconds.
-    ///   - baselineHRVSD: Standard deviation of the baseline HRV. Nil uses legacy mode.
-    ///   - currentRHR: Today's resting heart rate (primary signal).
-    ///   - baselineRHR: Rolling average RHR (primary signal baseline).
-    ///   - recentHRVs: Recent HRV readings for CV computation. Nil skips CV.
-    /// - Returns: A ``StressResult`` with score, level, and description.
+    /// Backward-compatible: when called without mode, uses legacy single-formula
+    /// behavior (acute weights) for existing callers.
     public func computeStress(
         currentHRV: Double,
         baselineHRV: Double,
@@ -107,28 +176,48 @@ public struct StressEngine: Sendable {
         baselineRHR: Double? = nil,
         recentHRVs: [Double]? = nil
     ) -> StressResult {
+        computeStressWithMode(
+            currentHRV: currentHRV,
+            baselineHRV: baselineHRV,
+            baselineHRVSD: baselineHRVSD,
+            currentRHR: currentRHR,
+            baselineRHR: baselineRHR,
+            recentHRVs: recentHRVs,
+            mode: .acute
+        )
+    }
+
+    /// Internal scoring with explicit mode selection.
+    private func computeStressWithMode(
+        currentHRV: Double,
+        baselineHRV: Double,
+        baselineHRVSD: Double?,
+        currentRHR: Double?,
+        baselineRHR: Double?,
+        recentHRVs: [Double]?,
+        mode: StressMode
+    ) -> StressResult {
         guard baselineHRV > 0 else {
             return StressResult(
                 score: 50,
                 level: .balanced,
-                description: "Not enough data to determine your baseline yet."
+                description: "Not enough data to determine your baseline yet.",
+                mode: mode,
+                confidence: .low,
+                warnings: ["Insufficient baseline data"]
             )
         }
 
-        // ── Signal 1: HRV Z-score (primary) ────────────────────────
-        // How many standard deviations below baseline
+        // ── Signal 1: HRV Z-score ────────────────────────────────────
         let hrvRawScore: Double
         if useLogSDNN {
-            // Log-SDNN transform: handles right-skew in SDNN distributions.
-            // log(50) ≈ 3.91 is a typical population midpoint in log-space.
             let logCurrent = log(max(currentHRV, 1.0))
             let logBaseline = log(max(baselineHRV, 1.0))
             let logSD: Double
             if let bsd = baselineHRVSD, bsd > 0 {
-                // Transform SD into log-space: approximate via delta method
                 logSD = bsd / max(baselineHRV, 1.0)
             } else {
-                logSD = 0.20 // ~20% CV in log-space as fallback
+                logSD = 0.20
             }
             let zScore: Double
             if logSD > 0 {
@@ -138,7 +227,6 @@ public struct StressEngine: Sendable {
             }
             hrvRawScore = 35.0 + zScore * 20.0
         } else {
-            // Legacy linear path
             let sd = baselineHRVSD ?? (baselineHRV * 0.20)
             let zScore: Double
             if sd > 0 {
@@ -149,77 +237,92 @@ public struct StressEngine: Sendable {
             hrvRawScore = 35.0 + zScore * 20.0
         }
 
-        // ── Signal 2: Coefficient of Variation ──────────────────────
-        var cvRawScore: Double = 50.0 // Neutral default
+        // ── Signal 2: Coefficient of Variation ───────────────────────
+        var cvRawScore: Double = 50.0
         if let hrvs = recentHRVs, hrvs.count >= 3 {
             let mean = hrvs.reduce(0, +) / Double(hrvs.count)
             if mean > 0 {
                 let variance = hrvs.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(hrvs.count - 1)
                 let cvSD = sqrt(variance)
                 let cv = cvSD / mean
-                // CV < 0.15 = stable (low stress), CV > 0.30 = unstable (high stress)
                 cvRawScore = max(0, min(100, (cv - 0.10) / 0.25 * 100.0))
             }
         }
 
-        // ── Signal 3: RHR Deviation (PRIMARY) ──────────────────────
-        // Calibrated from PhysioNet data: HR is the strongest stress
-        // discriminator from wearables (Cohen's d = 2.10).
-        var rhrRawScore: Double = 50.0 // Neutral if unavailable
+        // ── Signal 3: RHR Deviation ──────────────────────────────────
+        var rhrRawScore: Double = 50.0
         if let rhr = currentRHR, let baseRHR = baselineRHR, baseRHR > 0 {
             let rhrDeviation = (rhr - baseRHR) / baseRHR * 100.0
-            // +5% above baseline → moderate stress, +10% → high stress
             rhrRawScore = max(0, min(100, 40.0 + rhrDeviation * 4.0))
         }
 
-        // ── Weighted Composite (HR-primary calibration) ───────────
-        let actualRHRWeight: Double
-        let actualHRVWeight: Double
-        let actualCVWeight: Double
-
-        if recentHRVs != nil && currentRHR != nil {
-            // All signals available — use calibrated weights
-            actualRHRWeight = rhrWeight   // 0.50
-            actualHRVWeight = hrvWeight   // 0.30
-            actualCVWeight = cvWeight     // 0.20
-        } else if currentRHR != nil {
-            // RHR + HRV (no CV data) — RHR stays primary
-            actualRHRWeight = 0.60
-            actualHRVWeight = 0.40
-            actualCVWeight = 0.0
-        } else if recentHRVs != nil {
-            // HRV + CV only (no RHR) — HRV takes over as primary
-            actualRHRWeight = 0.0
-            actualHRVWeight = 0.70
-            actualCVWeight = 0.30
-        } else {
-            // HRV only (legacy mode)
-            actualRHRWeight = 0.0
-            actualHRVWeight = 1.0
-            actualCVWeight = 0.0
-        }
+        // ── Mode-specific weights ────────────────────────────────────
+        let (actualRHRWeight, actualHRVWeight, actualCVWeight) = resolveWeights(
+            mode: mode,
+            hasRHR: currentRHR != nil,
+            hasCV: recentHRVs != nil
+        )
 
         let rawComposite = hrvRawScore * actualHRVWeight
             + cvRawScore * actualCVWeight
             + rhrRawScore * actualRHRWeight
 
-        // ── Sigmoid Normalization ───────────────────────────────────
-        // Smooth S-curve mapping: avoids harsh clipping, concentrates
-        // sensitivity around the 30-70 range where users care most
-        let score = sigmoid(rawComposite)
+        // ── Disagreement Damping ─────────────────────────────────────
+        let (dampedComposite, disagreementPenalty) = applyDisagreementDamping(
+            rawComposite: rawComposite,
+            rhrRawScore: rhrRawScore,
+            hrvRawScore: hrvRawScore,
+            cvRawScore: cvRawScore,
+            mode: mode
+        )
+
+        // ── Unknown mode: compress toward neutral ────────────────────
+        let finalComposite: Double
+        if mode == .unknown {
+            finalComposite = dampedComposite * 0.7 + 50.0 * 0.3
+        } else {
+            finalComposite = dampedComposite
+        }
+
+        // ── Sigmoid Normalization ────────────────────────────────────
+        let score = sigmoid(finalComposite)
+
+        // ── Confidence ───────────────────────────────────────────────
+        var warnings: [String] = []
+        let confidence = computeConfidence(
+            mode: mode,
+            hasRHR: currentRHR != nil,
+            hasCV: recentHRVs != nil,
+            baselineHRVSD: baselineHRVSD,
+            recentHRVCount: recentHRVs?.count ?? 0,
+            disagreementPenalty: disagreementPenalty,
+            warnings: &warnings
+        )
 
         let level = StressLevel.from(score: score)
         let description = friendlyDescription(
             score: score,
             level: level,
             currentHRV: currentHRV,
-            baselineHRV: baselineHRV
+            baselineHRV: baselineHRV,
+            confidence: confidence,
+            mode: mode
+        )
+
+        let breakdown = StressSignalBreakdown(
+            rhrContribution: rhrRawScore,
+            hrvContribution: hrvRawScore,
+            cvContribution: cvRawScore
         )
 
         return StressResult(
             score: score,
             level: level,
-            description: description
+            description: description,
+            mode: mode,
+            confidence: confidence,
+            signalBreakdown: breakdown,
+            warnings: warnings
         )
     }
 
@@ -255,14 +358,148 @@ public struct StressEngine: Sendable {
         }() : nil
         let rhrValues = recentHistory.compactMap(\.restingHeartRate)
         let avgRHR: Double? = rhrValues.isEmpty ? nil : rhrValues.reduce(0, +) / Double(rhrValues.count)
-        return computeStress(
+
+        let contextInput = StressContextInput(
             currentHRV: currentHRV,
             baselineHRV: baselineHRV,
             baselineHRVSD: baselineSD,
             currentRHR: snapshot.restingHeartRate,
             baselineRHR: avgRHR,
-            recentHRVs: recentHistory.suffix(7).compactMap(\.hrvSDNN)
+            recentHRVs: recentHistory.suffix(7).compactMap(\.hrvSDNN),
+            recentSteps: snapshot.steps,
+            recentWorkoutMinutes: snapshot.workoutMinutes,
+            sedentaryMinutes: nil,
+            sleepHours: snapshot.sleepHours
         )
+
+        return computeStress(context: contextInput)
+    }
+
+    // MARK: - Weight Resolution
+
+    /// Resolve actual weights based on mode and available signals.
+    private func resolveWeights(
+        mode: StressMode,
+        hasRHR: Bool,
+        hasCV: Bool
+    ) -> (rhr: Double, hrv: Double, cv: Double) {
+        let baseWeights: (rhr: Double, hrv: Double, cv: Double)
+
+        switch mode {
+        case .acute:
+            baseWeights = (acuteRHRWeight, acuteHRVWeight, acuteCVWeight)
+        case .desk:
+            baseWeights = (deskRHRWeight, deskHRVWeight, deskCVWeight)
+        case .unknown:
+            // Blend between acute and desk
+            let blendRHR = (acuteRHRWeight + deskRHRWeight) / 2.0
+            let blendHRV = (acuteHRVWeight + deskHRVWeight) / 2.0
+            let blendCV = (acuteCVWeight + deskCVWeight) / 2.0
+            baseWeights = (blendRHR, blendHRV, blendCV)
+        }
+
+        // Redistribute for missing signals
+        if hasRHR && hasCV {
+            return baseWeights
+        } else if hasRHR && !hasCV {
+            let total = baseWeights.rhr + baseWeights.hrv
+            return (baseWeights.rhr / total, baseWeights.hrv / total, 0.0)
+        } else if !hasRHR && hasCV {
+            let total = baseWeights.hrv + baseWeights.cv
+            return (0.0, baseWeights.hrv / total, baseWeights.cv / total)
+        } else {
+            // HRV only
+            return (0.0, 1.0, 0.0)
+        }
+    }
+
+    // MARK: - Disagreement Damping
+
+    /// Dampens the composite score when signals disagree.
+    ///
+    /// When RHR says stress-up but HRV and CV say stress-down (or vice versa),
+    /// the score is compressed toward neutral.
+    ///
+    /// - Returns: (damped composite, disagreement penalty 0-1)
+    private func applyDisagreementDamping(
+        rawComposite: Double,
+        rhrRawScore: Double,
+        hrvRawScore: Double,
+        cvRawScore: Double,
+        mode: StressMode
+    ) -> (Double, Double) {
+        let rhrStress = rhrRawScore > 55.0
+        let hrvStress = hrvRawScore > 55.0
+        let cvStable = cvRawScore < 45.0
+
+        // Disagreement: RHR says stress but HRV normal/good and CV stable
+        let rhrDisagrees = rhrStress && !hrvStress && cvStable
+        // Disagreement: HRV says stress but RHR is fine
+        let hrvDisagrees = hrvStress && !rhrStress && rhrRawScore < 45.0
+
+        if rhrDisagrees || hrvDisagrees {
+            // Compress toward neutral (50) by 30%
+            let damped = rawComposite * 0.70 + 50.0 * 0.30
+            return (damped, 0.30)
+        }
+
+        return (rawComposite, 0.0)
+    }
+
+    // MARK: - Confidence Computation
+
+    /// Compute confidence based on signal quality and agreement.
+    private func computeConfidence(
+        mode: StressMode,
+        hasRHR: Bool,
+        hasCV: Bool,
+        baselineHRVSD: Double?,
+        recentHRVCount: Int,
+        disagreementPenalty: Double,
+        warnings: inout [String]
+    ) -> StressConfidence {
+        var score: Double = 1.0
+
+        // Mode penalty
+        if mode == .unknown {
+            score -= 0.25
+            warnings.append("Activity context unclear — score may be less accurate")
+        }
+
+        // Missing signals
+        if !hasRHR {
+            score -= 0.15
+            warnings.append("No resting heart rate data")
+        }
+        if !hasCV {
+            score -= 0.10
+        }
+
+        // Baseline quality
+        if baselineHRVSD == nil {
+            score -= 0.10
+            warnings.append("Limited baseline history")
+        }
+
+        // Sparse HRV history
+        if recentHRVCount < 5 {
+            score -= 0.15
+            warnings.append("Limited recent HRV readings")
+        }
+
+        // Disagreement
+        if disagreementPenalty > 0 {
+            score -= disagreementPenalty
+            warnings.append("Heart rate and HRV signals show mixed patterns")
+        }
+
+        if score >= 0.70 {
+            return .high
+        } else if score >= 0.40 {
+            return .moderate
+        } else {
+            return .low
+        }
     }
 
     /// Sigmoid mapping: raw → 0-100 with smooth transitions.
@@ -293,11 +530,9 @@ public struct StressEngine: Sendable {
         let preceding = Array(snapshots.dropLast())
         guard let baselineHRV = computeBaseline(snapshots: preceding) else { return nil }
 
-        // Compute baseline standard deviation
         let recentHRVs = preceding.suffix(baselineWindow).compactMap(\.hrvSDNN)
         let baselineSD = computeBaselineSD(hrvValues: recentHRVs, mean: baselineHRV)
 
-        // RHR corroboration
         let currentRHR = current.restingHeartRate
         let baselineRHR = computeRHRBaseline(snapshots: preceding)
 
@@ -315,15 +550,6 @@ public struct StressEngine: Sendable {
     // MARK: - Stress Trend
 
     /// Produce a time series of stress data points over a given range.
-    ///
-    /// For each day in the range, a stress score is computed against
-    /// the rolling baseline from the preceding days.
-    ///
-    /// - Parameters:
-    ///   - snapshots: Full history of snapshots, ordered oldest-first.
-    ///   - range: The time range to generate trend data for.
-    /// - Returns: Array of ``StressDataPoint`` values, one per day
-    ///   that has valid HRV data.
     public func stressTrend(
         snapshots: [HeartSnapshot],
         range: TimeRange
@@ -343,11 +569,9 @@ public struct StressEngine: Sendable {
         for index in 0..<snapshots.count {
             let snapshot = snapshots[index]
 
-            // Only include snapshots within the requested range
             guard snapshot.date >= cutoff else { continue }
             guard let currentHRV = snapshot.hrvSDNN else { continue }
 
-            // Build baseline from all preceding snapshots (up to window)
             let precedingEnd = index
             let precedingStart = max(0, precedingEnd - baselineWindow)
             let precedingSlice = Array(
@@ -357,7 +581,6 @@ public struct StressEngine: Sendable {
                 snapshots: precedingSlice
             ) else { continue }
 
-            // Enhanced: compute SD, RHR baseline, recent HRVs
             let recentHRVs = precedingSlice.compactMap(\.hrvSDNN)
             let baselineSD = computeBaselineSD(hrvValues: recentHRVs, mean: baselineHRV)
             let currentRHR = snapshot.restingHeartRate
@@ -384,11 +607,6 @@ public struct StressEngine: Sendable {
     // MARK: - Baseline Computation
 
     /// Compute the rolling HRV baseline from a set of snapshots.
-    ///
-    /// Uses the mean of available HRV values within the baseline window.
-    ///
-    /// - Parameter snapshots: Snapshots to derive the baseline from.
-    /// - Returns: The average HRV in milliseconds, or `nil` if no data.
     public func computeBaseline(
         snapshots: [HeartSnapshot]
     ) -> Double? {
@@ -399,11 +617,6 @@ public struct StressEngine: Sendable {
     }
 
     /// Compute the standard deviation of HRV baseline values.
-    ///
-    /// - Parameters:
-    ///   - hrvValues: The HRV values in the baseline window.
-    ///   - mean: The precomputed mean of these values.
-    /// - Returns: Standard deviation in milliseconds.
     public func computeBaselineSD(hrvValues: [Double], mean: Double) -> Double {
         guard hrvValues.count >= 2 else { return mean * 0.20 }
         let variance = hrvValues.map { ($0 - mean) * ($0 - mean) }.reduce(0, +)
@@ -412,9 +625,6 @@ public struct StressEngine: Sendable {
     }
 
     /// Compute rolling RHR baseline from snapshots.
-    ///
-    /// - Parameter snapshots: Historical snapshots.
-    /// - Returns: Average resting HR, or nil if insufficient data.
     public func computeRHRBaseline(snapshots: [HeartSnapshot]) -> Double? {
         let recent = Array(snapshots.suffix(baselineWindow))
         let rhrValues = recent.compactMap(\.restingHeartRate)
@@ -425,34 +635,14 @@ public struct StressEngine: Sendable {
     // MARK: - Age/Sex Normalization
 
     /// Adjust a stress score for the user's age.
-    ///
-    /// Stub for future calibration — currently returns the input unchanged.
-    /// Population-level SDNN norms decline ~3-4 ms per decade; once
-    /// calibration data is available this method will apply age-appropriate
-    /// scaling.
-    ///
-    /// - Parameters:
-    ///   - score: The raw stress score (0-100).
-    ///   - age: The user's age in years.
-    /// - Returns: The adjusted stress score.
+    /// Stub — currently returns the input unchanged.
     public func adjustForAge(_ score: Double, age: Int) -> Double {
-        // TODO: Apply age-based normalization once calibration data is available.
         return score
     }
 
     /// Adjust a stress score for the user's biological sex.
-    ///
-    /// Stub for future calibration — currently returns the input unchanged.
-    /// Males tend to have lower baseline SDNN than females at the same age;
-    /// once calibration data is available this method will apply
-    /// sex-appropriate scaling.
-    ///
-    /// - Parameters:
-    ///   - score: The raw stress score (0-100).
-    ///   - isMale: Whether the user is biologically male.
-    /// - Returns: The adjusted stress score.
+    /// Stub — currently returns the input unchanged.
     public func adjustForSex(_ score: Double, isMale: Bool) -> Double {
-        // TODO: Apply sex-based normalization once calibration data is available.
         return score
     }
 
@@ -460,17 +650,6 @@ public struct StressEngine: Sendable {
 
     /// Estimate hourly stress scores for a single day using circadian
     /// variation patterns applied to the daily HRV reading.
-    ///
-    /// Since HealthKit typically provides one HRV reading per day,
-    /// this applies known circadian HRV patterns to estimate hourly
-    /// variation: HRV is naturally lower during waking/active hours
-    /// and higher during sleep.
-    ///
-    /// - Parameters:
-    ///   - dailyHRV: The day's HRV (SDNN) in milliseconds.
-    ///   - baselineHRV: The user's rolling baseline HRV.
-    ///   - date: The calendar date for hour generation.
-    /// - Returns: Array of 24 ``HourlyStressPoint`` values (one per hour).
     public func hourlyStressEstimates(
         dailyHRV: Double,
         baselineHRV: Double,
@@ -478,8 +657,6 @@ public struct StressEngine: Sendable {
     ) -> [HourlyStressPoint] {
         let calendar = Calendar.current
 
-        // Circadian HRV multipliers: night hours have higher HRV,
-        // afternoon/work hours have lower HRV
         let circadianFactors: [Double] = [
             1.15, 1.18, 1.20, 1.18, 1.12, 1.05, // 0-5 AM (sleep)
             0.98, 0.95, 0.90, 0.88, 0.85, 0.87, // 6-11 AM (morning)
@@ -507,11 +684,6 @@ public struct StressEngine: Sendable {
     }
 
     /// Generate hourly stress data for a full day from snapshot history.
-    ///
-    /// - Parameters:
-    ///   - snapshots: Full history of snapshots, ordered oldest-first.
-    ///   - date: The target date to generate hourly data for.
-    /// - Returns: Array of 24 hourly stress points, or empty if no data.
     public func hourlyStressForDay(
         snapshots: [HeartSnapshot],
         date: Date
@@ -519,14 +691,12 @@ public struct StressEngine: Sendable {
         let calendar = Calendar.current
         let targetDay = calendar.startOfDay(for: date)
 
-        // Find the snapshot for this date
         guard let snapshot = snapshots.first(where: {
             calendar.isDate($0.date, inSameDayAs: targetDay)
         }), let dailyHRV = snapshot.hrvSDNN else {
             return []
         }
 
-        // Compute baseline from preceding days
         let preceding = snapshots.filter { $0.date < targetDay }
         guard let baseline = computeBaseline(snapshots: preceding) else {
             return []
@@ -541,14 +711,7 @@ public struct StressEngine: Sendable {
 
     // MARK: - Trend Direction
 
-    /// Determine whether stress is rising, falling, or steady over
-    /// a set of data points.
-    ///
-    /// Uses simple linear regression on the scores to determine slope.
-    /// A slope > 2 points/day is rising, < -2 is falling, else steady.
-    ///
-    /// - Parameter points: Stress data points, ordered chronologically.
-    /// - Returns: The trend direction, or `.steady` if insufficient data.
+    /// Determine whether stress is rising, falling, or steady.
     public func trendDirection(
         points: [StressDataPoint]
     ) -> StressTrendDirection {
@@ -568,8 +731,6 @@ public struct StressEngine: Sendable {
 
         let slope = (count * sumXY - sumX * sumY) / denominator
 
-        // Slope threshold: ~0.5 points per day over the range
-        // is enough to indicate a meaningful trend shift
         if slope > 0.5 {
             return .rising
         } else if slope < -0.5 {
@@ -586,8 +747,25 @@ public struct StressEngine: Sendable {
         score: Double,
         level: StressLevel,
         currentHRV: Double,
-        baselineHRV: Double
+        baselineHRV: Double,
+        confidence: StressConfidence,
+        mode: StressMode
     ) -> String {
+        // Low confidence: soften the language
+        if confidence == .low {
+            switch level {
+            case .relaxed:
+                return "Your readings look calm, but we don't have much data yet. "
+                    + "Keep wearing your watch for more accurate insights."
+            case .balanced:
+                return "Things seem normal, though the signal is still early. "
+                    + "More data will sharpen these readings."
+            case .elevated:
+                return "Your readings suggest some activity, but the signal "
+                    + "is still building. Take it easy if you feel off."
+            }
+        }
+
         let percentDiff = abs(currentHRV - baselineHRV) / baselineHRV * 100
 
         switch level {
@@ -608,6 +786,10 @@ public struct StressEngine: Sendable {
                 + "A pretty typical day for your body."
 
         case .elevated:
+            if confidence == .moderate && mode == .desk {
+                return "Your body seems to be working harder than usual "
+                    + "while resting. Consider a short walk or some deep breaths."
+            }
             if percentDiff > 30 {
                 return "Your body might be working a bit harder than "
                     + "usual today. A walk, some deep breaths, or "

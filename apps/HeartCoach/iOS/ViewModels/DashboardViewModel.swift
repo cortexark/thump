@@ -451,24 +451,30 @@ final class DashboardViewModel: ObservableObject {
 
         // Use actual stress score; fall back to flag-based estimate only when engine returns nil
         let stressScore: Double?
+        let stressConf: StressConfidence?
         if let stress {
             stressScore = stress.score
+            stressConf = stress.confidence
         } else if let assessment = assessment, assessment.stressFlag {
             stressScore = 70.0
+            stressConf = .low
         } else {
             stressScore = nil
+            stressConf = nil
         }
 
         let engine = ReadinessEngine()
         readinessResult = engine.compute(
             snapshot: snapshot,
             stressScore: stressScore,
+            stressConfidence: stressConf,
             recentHistory: history,
             consecutiveAlert: assessment?.consecutiveAlert
         )
         if let result = readinessResult {
             let stressDesc = stressScore.map { String(format: "%.1f", $0) } ?? "nil"
-            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressDesc)")
+            let confDesc = stressConf?.rawValue ?? "nil"
+            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressDesc) stressConf=\(confDesc)")
         }
     }
 
@@ -517,7 +523,7 @@ final class DashboardViewModel: ObservableObject {
         )
         self.stressResult = computedStress
         if let s = computedStress {
-            AppLogger.engine.info("Stress: score=\(String(format: "%.1f", s.score)) level=\(s.level.rawValue)")
+            AppLogger.engine.info("Stress: score=\(String(format: "%.1f", s.score)) level=\(s.level.rawValue) mode=\(s.mode.rawValue) confidence=\(s.confidence.rawValue)")
         }
 
         buddyRecommendations = engine.recommend(

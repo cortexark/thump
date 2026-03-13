@@ -383,19 +383,13 @@ final class StressViewModel: ObservableObject {
             return
         }
 
-        // Compute today's stress
-        if let todayScore = engine.dailyStressScore(
-            snapshots: history
-        ) {
-            let today = history.last
-            let baseline = engine.computeBaseline(
-                snapshots: Array(history.dropLast())
+        // Compute today's stress using context-aware path
+        if let today = history.last {
+            let preceding = Array(history.dropLast())
+            currentStress = engine.computeStress(
+                snapshot: today,
+                recentHistory: preceding
             )
-            let result = engine.computeStress(
-                currentHRV: today?.hrvSDNN ?? 0,
-                baselineHRV: baseline ?? 0
-            )
-            currentStress = result
         } else {
             currentStress = nil
         }

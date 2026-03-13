@@ -87,9 +87,23 @@ struct StressView: View {
                         .font(.headline)
                         .foregroundStyle(.primary)
 
-                    Text("Score: \(Int(stress.score))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text("Score: \(Int(stress.score))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if stress.confidence == .low {
+                            Text(stress.confidence.displayName)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 1)
+                                .background(
+                                    Capsule().fill(Color.orange.opacity(0.15))
+                                )
+                        }
+                    }
                 }
 
                 Spacer()
@@ -148,6 +162,19 @@ struct StressView: View {
                         .foregroundStyle(stressColor(for: stress.level))
                 }
                 .padding(.top, 2)
+
+                // Signal quality warnings
+                if !stress.warnings.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(stress.warnings.first ?? "")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 2)
+                }
             }
             .padding(ThumpSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
