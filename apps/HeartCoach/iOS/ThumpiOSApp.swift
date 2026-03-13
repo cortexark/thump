@@ -36,10 +36,19 @@ struct ThumpiOSApp: App {
     @StateObject var connectivityService = ConnectivityService()
 
     /// UserDefaults-backed local persistence for profile, history, and settings.
-    @StateObject var localStore = LocalStore()
+    @StateObject var localStore: LocalStore
 
     /// Local notification service for anomaly alerts and nudge reminders (CR-001).
-    @StateObject var notificationService = NotificationService()
+    /// Shares the root `localStore` so alert-budget state is owned by one persistence object.
+    @StateObject var notificationService: NotificationService
+
+    // MARK: - Initialization
+
+    init() {
+        let store = LocalStore()
+        _localStore = StateObject(wrappedValue: store)
+        _notificationService = StateObject(wrappedValue: NotificationService(localStore: store))
+    }
 
     // MARK: - Scene
 

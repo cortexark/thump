@@ -14,7 +14,7 @@ Total Bugs: 55 from BUGS.md + 10 from Code Review = 65 tracked issues
 | BUGS.md | P2-MAJOR | 28 | 4 | 24 |
 | BUGS.md | P3-MINOR | 5 | 1 | 4 |
 | BUGS.md | P4-COSMETIC | 13 | 0 | 13 |
-| Code Review | HIGH | 3 | 1 | 2 |
+| Code Review | HIGH | 3 | 1 (CR-001 partial) | 2 |
 | Code Review | MEDIUM | 4 | 0 | 4 |
 | Code Review | LOW | 3 | 0 | 3 |
 | **Total** | | **65** | **6** | **59** |
@@ -775,14 +775,21 @@ All cosmetic messaging/copy fixes. All FIXED on 2026-03-12.
 |-------|-------|
 | **ID** | CR-001 |
 | **Severity** | HIGH |
-| **Status** | **FIXED** (2026-03-13) |
-| **Files** | `iOS/ThumpiOSApp.swift:29-39`, `iOS/Services/NotificationService.swift:20-96` |
+| **Status** | **PARTIALLY FIXED** (2026-03-13) |
+| **Files** | `iOS/ThumpiOSApp.swift:29-53`, `iOS/Services/NotificationService.swift:20-96` |
 
 **Description:** The app root creates HealthKitService, SubscriptionService, ConnectivityService, and LocalStore, but not NotificationService. No production call sites exist. Anomaly alerts and nudge reminders cannot be authorized, scheduled, or delivered.
 
 **Root Cause:** Architecture drift — service was implemented but never integrated into the app lifecycle.
 
-**Fix:** Added NotificationService as @StateObject in ThumpiOSApp, injected into environment, and wired authorization request into performStartupTasks().
+**What is fixed:**
+- `NotificationService` is created as `@StateObject` in `ThumpiOSApp` and injected into the environment.
+- It now receives the shared root `localStore` instance (not its own default) so alert-budget state is owned by one persistence object.
+- Authorization is requested during `performStartupTasks()`.
+
+**What is still missing:**
+- No production call sites invoke `scheduleAnomalyAlert()`, `scheduleNudgeReminder()`, or cancellation methods from the live dashboard/assessment pipeline.
+- Users see the permission prompt but will never receive scheduled alerts until the assessment → notification scheduling path is wired.
 
 ---
 
@@ -948,13 +955,15 @@ All cosmetic messaging/copy fixes. All FIXED on 2026-03-12.
 | **ID** | CR-011 |
 | **Severity** | MEDIUM |
 | **Status** | **FIXED** (2026-03-13) |
-| **Files** | `iOS/ViewModels/DashboardViewModel.swift:420-432` |
+| **Files** | `iOS/ViewModels/DashboardViewModel.swift:438-465` |
 
-**Description:** Readiness computation receives `70.0` when `stressFlag == true`, otherwise `nil`. The actual StressEngine score is computed later in `computeBuddyRecommendations()` and never fed back to readiness.
+**Description:** Readiness computation receives `70.0` when `stressFlag == true`, otherwise `nil`. The actual StressEngine score is computed later in `computeBuddyRecommendations()` and never fed back to readiness. Additionally, `consecutiveAlert` from the assessment was not passed to ReadinessEngine even though the engine supports an overtraining cap.
 
-**Root Cause:** Engine computation order — stress computed after readiness in the refresh pipeline.
+**Root Cause:** Engine computation order — stress computed after readiness in the refresh pipeline. Missing parameter pass-through for consecutiveAlert.
 
-**Fix:** `computeReadiness()` now runs StressEngine directly and feeds actual score to ReadinessEngine, with fallback to 70.0 only when engine returns nil.
+**Fix:**
+- `computeReadiness()` now runs StressEngine directly and feeds actual score to ReadinessEngine, with fallback to 70.0 only when engine returns nil.
+- Now also passes `assessment?.consecutiveAlert` to `ReadinessEngine.compute()` so the overtraining cap is applied when 3+ days of consecutive elevation are detected.
 
 ---
 

@@ -457,7 +457,8 @@ final class DashboardViewModel: ObservableObject {
         readinessResult = engine.compute(
             snapshot: snapshot,
             stressScore: stressScore,
-            recentHistory: history
+            recentHistory: history,
+            consecutiveAlert: assessment?.consecutiveAlert
         )
         if let result = readinessResult {
             AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressScore.map { String(format: \"%.1f\", $0) } ?? \"nil\")")

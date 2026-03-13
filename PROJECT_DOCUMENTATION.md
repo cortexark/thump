@@ -521,7 +521,7 @@ Repository: `Apple-watch`
 
 #### Subtask 4.4.1: Implementation
 - **What:** Schedule/cancel nudge notifications, request authorization, anomaly alerts
-- **Status:** Implemented but NOT wired into production app (CR-001). No production call sites.
+- **Status:** PARTIALLY WIRED (CR-001). Authorization is requested at app startup and `NotificationService` is injected via environment with the shared `LocalStore`. However, no production call sites schedule anomaly alerts or nudge reminders from live assessment output. The scheduling/cancellation API exists but is not invoked from the dashboard or engine pipeline.
 
 ---
 
@@ -658,7 +658,7 @@ WatchHomeView, WatchNudgeView (user sees recommendations)
 
 | ID | Summary | Files Changed |
 |----|---------|---------------|
-| CR-001 | NotificationService wired into app startup | `ThumpiOSApp.swift` |
+| CR-001 | NotificationService partially wired: authorization + shared LocalStore at startup; scheduling from live assessments still missing | `ThumpiOSApp.swift` |
 | CR-003 | Nudge completion tracked explicitly via `nudgeCompletionDates` | `HeartModels.swift`, `DashboardViewModel.swift`, `InsightsViewModel.swift` |
 | CR-004 | Streak credits guarded to once per calendar day | `HeartModels.swift`, `DashboardViewModel.swift` |
 | CR-006 | Package.swift excludes test data directories | `Package.swift` |
@@ -666,7 +666,7 @@ WatchHomeView, WatchNudgeView (user sees recommendations)
 | CR-008 | HeartTrend baseline excludes current week | `HeartTrendEngine.swift` |
 | CR-009 | CoachingEngine uses `current.date` not `Date()` | `CoachingEngine.swift` |
 | CR-010 | SmartNudgeScheduler uses snapshot date for day-of-week | `SmartNudgeScheduler.swift` |
-| CR-011 | Readiness receives real StressEngine score | `DashboardViewModel.swift` |
+| CR-011 | Readiness receives real StressEngine score + consecutiveAlert from assessment | `DashboardViewModel.swift` |
 | CR-012 | CorrelationEngine uses `activityMinutes` (walk+workout) | `CorrelationEngine.swift`, `HeartModels.swift` |
 
 ### Model Changes
