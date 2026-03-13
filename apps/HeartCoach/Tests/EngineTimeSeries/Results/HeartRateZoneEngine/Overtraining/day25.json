@@ -1,27 +1,27 @@
 {
-  "analysisScore" : 77,
-  "coachingMessage" : "You're pushing hard today — over 57% in high zones. Balance is key: most training should be in zones 1-2 for sustainable gains.",
-  "fitnessLevel" : "athletic",
+  "analysisScore" : 90,
+  "coachingMessage" : "Excellent zone distribution today! You're hitting your targets across all zones. This kind of balanced training builds real fitness.",
+  "fitnessLevel" : "active",
   "recommendation" : "tooMuchIntensity",
   "zoneBoundaries" : [
     {
-      "lower" : 121,
-      "upper" : 134
+      "lower" : 126,
+      "upper" : 138
     },
     {
-      "lower" : 134,
-      "upper" : 147
+      "lower" : 138,
+      "upper" : 150
     },
     {
-      "lower" : 147,
-      "upper" : 161
+      "lower" : 150,
+      "upper" : 163
     },
     {
-      "lower" : 161,
-      "upper" : 174
+      "lower" : 163,
+      "upper" : 175
     },
     {
-      "lower" : 174,
+      "lower" : 175,
       "upper" : 187
     }
   ],

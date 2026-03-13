@@ -1,16 +1,16 @@
 {
-  "anomalyScore" : 0.25753686747884719,
+  "anomalyScore" : 0.7274117961818336,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "hydrate",
+    "walk",
     "rest",
-    "celebrate"
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "hydrate",
-  "nudgeTitle" : "Keep That Water Bottle Handy",
-  "readinessLevel" : "ready",
-  "readinessScore" : 64,
-  "regressionFlag" : true,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "Keep It Light Today",
+  "readinessLevel" : "moderate",
+  "readinessScore" : 59,
+  "regressionFlag" : false,
   "stressFlag" : false
 }

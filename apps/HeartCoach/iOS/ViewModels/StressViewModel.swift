@@ -87,7 +87,7 @@ final class StressViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let healthKitService: HealthKitService
+    private var healthKitService: HealthKitService
     private let engine: StressEngine
     private let scheduler: SmartNudgeScheduler
 
@@ -108,6 +108,11 @@ final class StressViewModel: ObservableObject {
         self.healthKitService = healthKitService
         self.engine = engine
         self.scheduler = scheduler
+    }
+
+    /// Binds shared service dependencies (PERF-4).
+    func bind(healthKitService: HealthKitService) {
+        self.healthKitService = healthKitService
     }
 
     /// Binds the connectivity service so watch actions can be dispatched.

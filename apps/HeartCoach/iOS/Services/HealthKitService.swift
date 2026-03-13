@@ -162,6 +162,11 @@ final class HealthKitService: ObservableObject {
 
     /// Fetches historical snapshots for the specified number of past days.
     ///
+    /// Uses `HKStatisticsCollectionQuery` to batch metric queries across the
+    /// entire date range, replacing the previous per-day fan-out approach
+    /// (CR-005/PERF-3). For N days this fires ~6 collection queries instead
+    /// of N × 9 individual queries.
+    ///
     /// Returns snapshots ordered oldest-first. Days with no data are still
     /// included with nil metric values.
     /// - Parameter days: The number of past days to fetch (not including today).
@@ -170,34 +175,84 @@ final class HealthKitService: ObservableObject {
         guard days > 0 else { return [] }
 
         let today = calendar.startOfDay(for: Date())
-        var snapshots: [HeartSnapshot] = []
+        guard let rangeStart = calendar.date(byAdding: .day, value: -days, to: today) else {
+            return []
+        }
 
-        // Fetch each day concurrently
-        try await withThrowingTaskGroup(of: (Int, HeartSnapshot).self) { group in
+        // Batch-fetch metrics that support HKStatisticsCollectionQuery
+        async let rhrByDay = batchAverageQuery(
+            identifier: .restingHeartRate,
+            unit: HKUnit.count().unitDivided(by: .minute()),
+            start: rangeStart, end: today, option: .discreteAverage
+        )
+        async let hrvByDay = batchAverageQuery(
+            identifier: .heartRateVariabilitySDNN,
+            unit: HKUnit.secondUnit(with: .milli),
+            start: rangeStart, end: today, option: .discreteAverage
+        )
+        async let stepsByDay = batchSumQuery(
+            identifier: .stepCount,
+            unit: HKUnit.count(),
+            start: rangeStart, end: today
+        )
+        async let walkByDay = batchSumQuery(
+            identifier: .appleExerciseTime,
+            unit: HKUnit.minute(),
+            start: rangeStart, end: today
+        )
+
+        let rhr = try await rhrByDay
+        let hrv = try await hrvByDay
+        let steps = try await stepsByDay
+        let walk = try await walkByDay
+
+        // Metrics that don't fit collection queries are fetched per-day concurrently:
+        // VO2max (sparse), recovery HR (workout-dependent), sleep, weight, workout minutes
+        var perDayExtras: [Date: (vo2: Double?, recov1: Double?, recov2: Double?,
+                                  workout: Double?, sleep: Double?, weight: Double?)] = [:]
+
+        try await withThrowingTaskGroup(
+            of: (Date, Double?, Double?, Double?, Double?, Double?, Double?).self
+        ) { group in
             for dayOffset in 1...days {
-                let offset = dayOffset
+                guard let targetDate = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
                 group.addTask { [self] in
-                    guard let targetDate = calendar.date(
-                        byAdding: .day, value: -offset, to: today
-                    ) else {
-                        // Fallback: approximate the intended date using TimeInterval
-                        let fallbackDate = today.addingTimeInterval(TimeInterval(-offset * 86400))
-                        return (offset, HeartSnapshot(date: fallbackDate))
-                    }
-                    let snapshot = try await self.fetchSnapshot(for: targetDate)
-                    return (offset, snapshot)
+                    async let vo2 = queryVO2Max(for: targetDate)
+                    async let recovery = queryRecoveryHR(for: targetDate)
+                    async let workout = queryWorkoutMinutes(for: targetDate)
+                    async let sleep = querySleepHours(for: targetDate)
+                    async let weight = queryBodyMass(for: targetDate)
+
+                    let r = try await recovery
+                    return (targetDate,
+                            try await vo2, r.oneMin, r.twoMin,
+                            try await workout, try await sleep, try await weight)
                 }
             }
-
-            var results: [(Int, HeartSnapshot)] = []
-            for try await result in group {
-                results.append(result)
+            for try await (date, vo2, r1, r2, wk, sl, wt) in group {
+                perDayExtras[date] = (vo2, r1, r2, wk, sl, wt)
             }
+        }
 
-            // Sort by offset descending (oldest first)
-            snapshots = results
-                .sorted { $0.0 > $1.0 }
-                .map { $0.1 }
+        // Assemble snapshots oldest-first
+        var snapshots: [HeartSnapshot] = []
+        for dayOffset in (1...days).reversed() {
+            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
+            let extras = perDayExtras[date]
+            snapshots.append(HeartSnapshot(
+                date: date,
+                restingHeartRate: rhr[date],
+                hrvSDNN: hrv[date],
+                recoveryHR1m: extras?.recov1,
+                recoveryHR2m: extras?.recov2,
+                vo2Max: extras?.vo2,
+                zoneMinutes: [],
+                steps: steps[date],
+                walkMinutes: walk[date],
+                workoutMinutes: extras?.workout,
+                sleepHours: extras?.sleep,
+                bodyMassKg: extras?.weight
+            ))
         }
 
         return snapshots
@@ -217,6 +272,7 @@ final class HealthKitService: ObservableObject {
         async let workout = queryWorkoutMinutes(for: date)
         async let sleep = querySleepHours(for: date)
         async let weight = queryBodyMass(for: date)
+        async let zones = queryZoneMinutes(for: date)
 
         let rhrVal = try await rhr
         let hrvVal = try await hrv
@@ -227,6 +283,7 @@ final class HealthKitService: ObservableObject {
         let workoutVal = try await workout
         let sleepVal = try await sleep
         let weightVal = try await weight
+        let zonesVal = try await zones
 
         return HeartSnapshot(
             date: date,
@@ -235,13 +292,106 @@ final class HealthKitService: ObservableObject {
             recoveryHR1m: recoveryVal.oneMin,
             recoveryHR2m: recoveryVal.twoMin,
             vo2Max: vo2Val,
-            zoneMinutes: [],
+            zoneMinutes: zonesVal,
             steps: stepsVal,
             walkMinutes: walkVal,
             workoutMinutes: workoutVal,
             sleepHours: sleepVal,
             bodyMassKg: weightVal
         )
+    }
+
+    // MARK: - Private: Batch Collection Queries (CR-005)
+
+    /// Fetches a per-day average for a quantity type across the entire date range
+    /// using a single `HKStatisticsCollectionQuery`.
+    ///
+    /// - Returns: Dictionary keyed by day start date with the average value.
+    private func batchAverageQuery(
+        identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        start: Date,
+        end: Date,
+        option: HKStatisticsOptions
+    ) async throws -> [Date: Double] {
+        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else {
+            return [:]
+        }
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: start, end: end, options: .strictStartDate
+        )
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: option,
+                anchorDate: start,
+                intervalComponents: DateComponents(day: 1)
+            )
+
+            query.initialResultsHandler = { _, collection, error in
+                if let error {
+                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                    return
+                }
+
+                var results: [Date: Double] = [:]
+                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
+                    if let avg = statistics.averageQuantity() {
+                        results[statistics.startDate] = avg.doubleValue(for: unit)
+                    }
+                }
+                continuation.resume(returning: results)
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    /// Fetches a per-day cumulative sum for a quantity type across the date range
+    /// using a single `HKStatisticsCollectionQuery`.
+    ///
+    /// - Returns: Dictionary keyed by day start date with the summed value.
+    private func batchSumQuery(
+        identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        start: Date,
+        end: Date
+    ) async throws -> [Date: Double] {
+        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else {
+            return [:]
+        }
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: start, end: end, options: .strictStartDate
+        )
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum,
+                anchorDate: start,
+                intervalComponents: DateComponents(day: 1)
+            )
+
+            query.initialResultsHandler = { _, collection, error in
+                if let error {
+                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                    return
+                }
+
+                var results: [Date: Double] = [:]
+                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
+                    if let sum = statistics.sumQuantity() {
+                        results[statistics.startDate] = sum.doubleValue(for: unit)
+                    }
+                }
+                continuation.resume(returning: results)
+            }
+            healthStore.execute(query)
+        }
     }
 
     // MARK: - Private: Individual Metric Queries
@@ -466,6 +616,112 @@ final class HealthKitService: ObservableObject {
         }
 
         return totalMinutes
+    }
+
+    /// Queries heart rate zone minutes from workout sessions for the given date (CR-013).
+    ///
+    /// Computes zones using 5 standard heart rate zones based on estimated max HR
+    /// (220 - age, or 190 as fallback). Returns an array of 5 doubles representing
+    /// minutes spent in each zone, or an empty array if no workout HR data exists.
+    private func queryZoneMinutes(for date: Date) async throws -> [Double] {
+        guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return [] }
+        let bpmUnit = HKUnit.count().unitDivided(by: .minute())
+
+        let dayStart = calendar.startOfDay(for: date)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return [] }
+
+        // Estimate max HR from user's age (220 - age), fallback 190
+        let maxHR: Double
+        if let dob = readDateOfBirth() {
+            let age = Double(calendar.dateComponents([.year], from: dob, to: date).year ?? 30)
+            maxHR = max(220.0 - age, 140.0)
+        } else {
+            maxHR = 190.0
+        }
+
+        // Zone thresholds as percentage of max HR
+        let z1Ceil = maxHR * 0.50  // Zone 1: 50-60%
+        let z2Ceil = maxHR * 0.60  // Zone 2: 60-70%
+        let z3Ceil = maxHR * 0.70  // Zone 3: 70-80%
+        let z4Ceil = maxHR * 0.80  // Zone 4: 80-90%
+        // Zone 5: 90-100%
+
+        // Fetch all HR samples for the day's workouts
+        let workoutPredicate = HKQuery.predicateForSamples(
+            withStart: dayStart, end: dayEnd, options: .strictStartDate
+        )
+
+        let workouts: [HKWorkout] = try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: HKWorkoutType.workoutType(),
+                predicate: workoutPredicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                    return
+                }
+                continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
+            }
+            healthStore.execute(query)
+        }
+
+        guard !workouts.isEmpty else { return [] }
+
+        // Query HR samples during workout intervals
+        var zoneSeconds: [Double] = [0, 0, 0, 0, 0]
+
+        for workout in workouts {
+            let hrPredicate = HKQuery.predicateForSamples(
+                withStart: workout.startDate, end: workout.endDate, options: .strictStartDate
+            )
+
+            let hrSamples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+                let query = HKSampleQuery(
+                    sampleType: heartRateType,
+                    predicate: hrPredicate,
+                    limit: HKObjectQueryNoLimit,
+                    sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+                ) { _, samples, error in
+                    if let error {
+                        continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                        return
+                    }
+                    continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
+                }
+                healthStore.execute(query)
+            }
+
+            // Bucket each HR sample into zones by duration between consecutive samples
+            for i in 0..<hrSamples.count {
+                let bpm = hrSamples[i].quantity.doubleValue(for: bpmUnit)
+                let sampleDuration: TimeInterval
+                if i + 1 < hrSamples.count {
+                    sampleDuration = min(
+                        hrSamples[i + 1].startDate.timeIntervalSince(hrSamples[i].startDate),
+                        60.0 // cap at 60s to handle sparse samples
+                    )
+                } else {
+                    sampleDuration = min(
+                        workout.endDate.timeIntervalSince(hrSamples[i].startDate),
+                        60.0
+                    )
+                }
+
+                let zone: Int
+                if bpm < z1Ceil { zone = 0 }
+                else if bpm < z2Ceil { zone = 1 }
+                else if bpm < z3Ceil { zone = 2 }
+                else if bpm < z4Ceil { zone = 3 }
+                else { zone = 4 }
+
+                zoneSeconds[zone] += sampleDuration
+            }
+        }
+
+        // Convert seconds to minutes
+        return zoneSeconds.map { $0 / 60.0 }
     }
 
     /// Queries the total sleep hours for the given date.

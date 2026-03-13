@@ -26,6 +26,7 @@ struct DashboardView: View {
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
     @EnvironmentObject private var localStore: LocalStore
+    @EnvironmentObject private var notificationService: NotificationService
 
     // MARK: - View Model
 
@@ -55,7 +56,8 @@ struct DashboardView: View {
                     if !hasBoundDependencies {
                         viewModel.bind(
                             healthDataProvider: healthKitService,
-                            localStore: localStore
+                            localStore: localStore,
+                            notificationService: notificationService
                         )
                         hasBoundDependencies = true
                     }

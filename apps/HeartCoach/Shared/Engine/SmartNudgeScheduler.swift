@@ -239,7 +239,7 @@ public struct SmartNudgeScheduler: Sendable {
 
         // 4. Near bedtime → wind-down
         let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: Date())
+        let dayOfWeek = calendar.component(.weekday, from: todaySnapshot?.date ?? Date())
         if let pattern = patterns.first(where: { $0.dayOfWeek == dayOfWeek }),
            currentHour >= pattern.typicalBedtimeHour - 1,
            currentHour <= pattern.typicalBedtimeHour {
@@ -328,7 +328,7 @@ public struct SmartNudgeScheduler: Sendable {
 
         // 4. Near bedtime → wind-down
         let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: Date())
+        let dayOfWeek = calendar.component(.weekday, from: todaySnapshot?.date ?? Date())
         if let pattern = patterns.first(where: { $0.dayOfWeek == dayOfWeek }),
            currentHour >= pattern.typicalBedtimeHour - 1,
            currentHour <= pattern.typicalBedtimeHour {

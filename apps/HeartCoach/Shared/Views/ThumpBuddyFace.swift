@@ -254,11 +254,18 @@ struct ThumpBuddyFace: View {
 
     // MARK: - Star Eye (Conquering)
 
+    @ViewBuilder
     private var starEye: some View {
-        Image(systemName: "star.fill")
-            .font(.system(size: size * 0.16, weight: .bold))
-            .foregroundStyle(.white)
-            .symbolEffect(.bounce, isActive: true)
+        if #available(macOS 15, iOS 17, watchOS 10, *) {
+            Image(systemName: "star.fill")
+                .font(.system(size: size * 0.16, weight: .bold))
+                .foregroundStyle(.white)
+                .symbolEffect(.pulse, isActive: true)
+        } else {
+            Image(systemName: "star.fill")
+                .font(.system(size: size * 0.16, weight: .bold))
+                .foregroundStyle(.white)
+        }
     }
 
     // MARK: - Eye Sizing

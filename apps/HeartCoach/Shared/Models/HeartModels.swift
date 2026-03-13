@@ -174,6 +174,17 @@ public struct HeartSnapshot: Codable, Equatable, Identifiable, Sendable {
         self.bodyMassKg = Self.clamp(bodyMassKg, to: 20...350)
     }
 
+    /// Total activity minutes (walk + workout combined).
+    /// Returns nil only when both components are nil (ENG-3).
+    public var activityMinutes: Double? {
+        switch (walkMinutes, workoutMinutes) {
+        case let (w?, wo?): return w + wo
+        case let (w?, nil): return w
+        case let (nil, wo?): return wo
+        case (nil, nil): return nil
+        }
+    }
+
     /// Clamps an optional value to a valid range, returning nil if the
     /// original is nil or if it falls completely outside the range.
     private static func clamp(_ value: Double?, to range: ClosedRange<Double>) -> Double? {
@@ -1234,6 +1245,14 @@ public struct UserProfile: Codable, Equatable, Sendable {
     /// Current consecutive-day engagement streak.
     public var streakDays: Int
 
+    /// The last calendar date a streak credit was granted.
+    /// Used to prevent same-day nudge taps from inflating the streak.
+    public var lastStreakCreditDate: Date?
+
+    /// Dates on which the user explicitly completed a nudge action.
+    /// Keyed by ISO date string (yyyy-MM-dd) for Codable simplicity.
+    public var nudgeCompletionDates: Set<String>
+
     /// User's date of birth for bio age calculation. Nil if not set.
     public var dateOfBirth: Date?
 
@@ -1245,6 +1264,8 @@ public struct UserProfile: Codable, Equatable, Sendable {
         joinDate: Date = Date(),
         onboardingComplete: Bool = false,
         streakDays: Int = 0,
+        lastStreakCreditDate: Date? = nil,
+        nudgeCompletionDates: Set<String> = [],
         dateOfBirth: Date? = nil,
         biologicalSex: BiologicalSex = .notSet
     ) {
@@ -1252,6 +1273,8 @@ public struct UserProfile: Codable, Equatable, Sendable {
         self.joinDate = joinDate
         self.onboardingComplete = onboardingComplete
         self.streakDays = streakDays
+        self.lastStreakCreditDate = lastStreakCreditDate
+        self.nudgeCompletionDates = nudgeCompletionDates
         self.dateOfBirth = dateOfBirth
         self.biologicalSex = biologicalSex
     }

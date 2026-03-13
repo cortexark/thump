@@ -36,7 +36,19 @@ struct ThumpiOSApp: App {
     @StateObject var connectivityService = ConnectivityService()
 
     /// UserDefaults-backed local persistence for profile, history, and settings.
-    @StateObject var localStore = LocalStore()
+    @StateObject var localStore: LocalStore
+
+    /// Local notification service for anomaly alerts and nudge reminders (CR-001).
+    /// Shares the root `localStore` so alert-budget state is owned by one persistence object.
+    @StateObject var notificationService: NotificationService
+
+    // MARK: - Initialization
+
+    init() {
+        let store = LocalStore()
+        _localStore = StateObject(wrappedValue: store)
+        _notificationService = StateObject(wrappedValue: NotificationService(localStore: store))
+    }
 
     // MARK: - Scene
 
@@ -47,7 +59,9 @@ struct ThumpiOSApp: App {
                 .environmentObject(subscriptionService)
                 .environmentObject(connectivityService)
                 .environmentObject(localStore)
+                .environmentObject(notificationService)
                 .task {
+                    guard !isRunningTests else { return }
                     await performStartupTasks()
                 }
         }
@@ -65,6 +79,11 @@ struct ThumpiOSApp: App {
     /// Whether the app is running in UI test mode (launched with `-UITestMode`).
     private var isUITestMode: Bool {
         CommandLine.arguments.contains("-UITestMode")
+    }
+
+    /// Whether the app is running under XCTest host execution.
+    private var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
     @ViewBuilder
@@ -96,11 +115,18 @@ struct ThumpiOSApp: App {
 
         connectivityService.bind(localStore: localStore)
 
+        // Request notification authorization (CR-001)
+        do {
+            try await notificationService.requestAuthorization()
+        } catch {
+            AppLogger.info("Notification authorization request failed: \(error.localizedDescription)")
+        }
+
         // Start MetricKit crash reporting and performance monitoring
         MetricKitService.shared.start()
 
-        // Load subscription products and status
-        await subscriptionService.loadProducts()
+        // PERF-2: Product catalog loading deferred to PaywallView.
+        // Only entitlement status is needed at launch to gate features.
         await subscriptionService.updateSubscriptionStatus()
 
         // Sync subscription tier to local store

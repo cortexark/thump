@@ -1,8 +1,8 @@
 {
-  "analysisScore" : 77,
-  "coachingMessage" : "You're making progress on your zone targets. Keep mixing easy and moderate-intensity activities for the best results.",
+  "analysisScore" : 94,
+  "coachingMessage" : "Excellent zone distribution today! You're hitting your targets across all zones. This kind of balanced training builds real fitness.",
   "fitnessLevel" : "active",
-  "recommendation" : "none",
+  "recommendation" : "tooMuchIntensity",
   "zoneBoundaries" : [
     {
       "lower" : 122,

@@ -7,9 +7,9 @@
     "recovery"
   ],
   "pillarScores" : {
-    "recovery" : 22.116371852068397,
-    "sleep" : 35.178664402185717
+    "recovery" : 33.402936465613301,
+    "sleep" : 11.846767531218664
   },
-  "score" : 29,
+  "score" : 23,
   "stressScoreInput" : null
 }

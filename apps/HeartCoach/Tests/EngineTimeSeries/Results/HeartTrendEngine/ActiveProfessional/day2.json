@@ -2,6 +2,7 @@
   "anomalyScore" : 0,
   "confidenceLevel" : "low",
   "regressionFlag" : false,
+  "scenario" : "greatRecoveryDay",
   "status" : "stable",
   "stressFlag" : false
 }
