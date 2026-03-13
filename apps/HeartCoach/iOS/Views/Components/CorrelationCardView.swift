@@ -51,17 +51,10 @@ struct CorrelationCardView: View {
         return correlation.isBeneficial ? .green : .red
     }
 
-    /// A human-readable label for the correlation strength.
-    private var strengthLabel: String {
-        let value = correlation.correlationStrength
-        let prefix = value >= 0 ? "+" : ""
-        return "\(prefix)\(String(format: "%.2f", value))"
-    }
-
     /// A descriptive word for the connection magnitude.
     private var magnitudeLabel: String {
         switch absoluteStrength {
-        case 0..<0.1:  return "Just a Hint"
+        case 0..<0.1:  return "Too Early to Tell"
         case 0.1..<0.3: return "Slight Connection"
         case 0.3..<0.5: return "Noticeable Connection"
         case 0.5..<0.7: return "Clear Connection"
@@ -117,21 +110,20 @@ struct CorrelationCardView: View {
         VStack(spacing: 6) {
             // Connection strength label
             HStack {
-                Text("-1")
+                Text("Weak")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
                 Spacer()
 
-                Text(strengthLabel)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .fontDesign(.rounded)
+                Text(magnitudeLabel)
+                    .font(.caption)
+                    .fontWeight(.semibold)
                     .foregroundStyle(strengthColor)
 
                 Spacer()
 
-                Text("+1")
+                Text("Strong")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

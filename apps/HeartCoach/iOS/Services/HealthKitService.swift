@@ -79,7 +79,8 @@ final class HealthKitService: ObservableObject {
             .stepCount,
             .distanceWalkingRunning,
             .activeEnergyBurned,
-            .appleExerciseTime
+            .appleExerciseTime,
+            .bodyMass
         ]
 
         var readTypes = Set<HKObjectType>(
@@ -88,6 +89,17 @@ final class HealthKitService: ObservableObject {
 
         if let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) {
             readTypes.insert(sleepType)
+        }
+
+        // Characteristic types — biological sex and date of birth
+        let characteristicIdentifiers: [HKCharacteristicTypeIdentifier] = [
+            .biologicalSex,
+            .dateOfBirth
+        ]
+        for id in characteristicIdentifiers {
+            if let charType = HKCharacteristicType.characteristicType(forIdentifier: id) {
+                readTypes.insert(charType)
+            }
         }
 
         try await healthStore.requestAuthorization(toShare: [], read: readTypes)
@@ -103,6 +115,36 @@ final class HealthKitService: ObservableObject {
         // which should attempt a sample query to verify data access.
         await MainActor.run {
             self.isAuthorized = true
+        }
+    }
+
+    // MARK: - Characteristics (Biological Sex & Date of Birth)
+
+    /// Reads the user's biological sex from HealthKit.
+    /// Returns `.notSet` if the user hasn't set it in Apple Health or
+    /// if the read fails (e.g. not authorized).
+    func readBiologicalSex() -> BiologicalSex {
+        do {
+            let hkSex = try healthStore.biologicalSex().biologicalSex
+            switch hkSex {
+            case .male: return .male
+            case .female: return .female
+            case .notSet, .other: return .notSet
+            @unknown default: return .notSet
+            }
+        } catch {
+            return .notSet
+        }
+    }
+
+    /// Reads the user's date of birth from HealthKit.
+    /// Returns nil if the user hasn't set it or if the read fails.
+    func readDateOfBirth() -> Date? {
+        do {
+            let components = try healthStore.dateOfBirthComponents()
+            return Calendar.current.date(from: components)
+        } catch {
+            return nil
         }
     }
 
@@ -174,6 +216,7 @@ final class HealthKitService: ObservableObject {
         async let walking = queryWalkingMinutes(for: date)
         async let workout = queryWorkoutMinutes(for: date)
         async let sleep = querySleepHours(for: date)
+        async let weight = queryBodyMass(for: date)
 
         let rhrVal = try await rhr
         let hrvVal = try await hrv
@@ -183,6 +226,7 @@ final class HealthKitService: ObservableObject {
         let walkVal = try await walking
         let workoutVal = try await workout
         let sleepVal = try await sleep
+        let weightVal = try await weight
 
         return HeartSnapshot(
             date: date,
@@ -195,7 +239,8 @@ final class HealthKitService: ObservableObject {
             steps: stepsVal,
             walkMinutes: walkVal,
             workoutMinutes: workoutVal,
-            sleepHours: sleepVal
+            sleepHours: sleepVal,
+            bodyMassKg: weightVal
         )
     }
 
@@ -308,6 +353,44 @@ final class HealthKitService: ObservableObject {
 
         let predicate = HKQuery.predicateForSamples(
             withStart: dayStart, end: dayEnd, options: .strictStartDate
+        )
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                    return
+                }
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let value = sample.quantity.doubleValue(for: unit)
+                continuation.resume(returning: value)
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    /// Queries the most recent body mass (weight) sample on or before the given date.
+    ///
+    /// Weight doesn't change daily like heart rate — we want the latest reading
+    /// within the past 30 days. Falls back to nil if no recent weight data exists.
+    private func queryBodyMass(for date: Date) async throws -> Double? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .bodyMass) else { return nil }
+        let unit = HKUnit.gramUnit(with: .kilo)
+
+        // Look back up to 30 days for the most recent weight entry.
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: date)) ?? date
+        guard let lookbackStart = calendar.date(byAdding: .day, value: -30, to: dayEnd) else { return nil }
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: lookbackStart, end: dayEnd, options: .strictStartDate
         )
 
         return try await withCheckedThrowingContinuation { continuation in

@@ -40,6 +40,19 @@ final class NotificationService: ObservableObject {
         static let categoryNudge = "NUDGE_REMINDER"
     }
 
+    // MARK: - Default Delivery Hours
+
+    // BUG-053: These fallback delivery hours are hardcoded defaults.
+    // TODO: Make configurable via Settings UI so users can set preferred
+    // notification windows per nudge category (e.g. "morning activity hour").
+    private enum DefaultDeliveryHour {
+        static let activity = 9        // Walk/moderate fallback: 9 AM
+        static let breathe = 15        // Breathing exercises: 3 PM
+        static let hydrate = 11        // Hydration reminders: 11 AM
+        static let evening = 18        // General fallback: 6 PM
+        static let latestMorning = 12  // Cap for wake-adjusted activity nudges
+    }
+
     // MARK: - Initialization
 
     init(
@@ -95,14 +108,17 @@ final class NotificationService: ObservableObject {
 
         let content = UNMutableNotificationContent()
         content.title = alertTitle(for: assessment)
-        content.body = assessment.explanation
+        // BUG-034: Do not include health metric values (PHI) in notification payloads.
+        // Notification content is visible on the lock screen and in Notification Center.
+        // Use a generic body instead of assessment.explanation which contains metric values.
+        content.body = "Check your Thump insights for an update on your heart health."
         content.sound = .default
         content.categoryIdentifier = Identifiers.categoryAnomaly
 
-        // Add assessment context to the notification payload
+        // BUG-034: Only include non-PHI routing metadata in userInfo.
+        // Removed anomalyScore which exposes health metric values in the notification payload.
         content.userInfo = [
             "status": assessment.status.rawValue,
-            "anomalyScore": assessment.anomalyScore,
             "regressionFlag": assessment.regressionFlag,
             "stressFlag": assessment.stressFlag
         ]
@@ -184,6 +200,50 @@ final class NotificationService: ObservableObject {
         } catch {
             debugPrint("[NotificationService] Failed to schedule nudge reminder: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Smart Nudge Scheduling
+
+    /// Schedules a nudge reminder using learned sleep patterns for optimal timing.
+    ///
+    /// Uses `SmartNudgeScheduler` to determine the best delivery hour based on
+    /// the user's historical bedtime and wake patterns.
+    ///
+    /// - Parameters:
+    ///   - nudge: The `DailyNudge` to schedule.
+    ///   - history: Historical snapshots for pattern learning.
+    func scheduleSmartNudge(nudge: DailyNudge, history: [HeartSnapshot]) async {
+        let scheduler = SmartNudgeScheduler()
+        let patterns = scheduler.learnSleepPatterns(from: history)
+
+        // Determine optimal hour based on nudge category
+        let hour: Int
+        switch nudge.category {
+        case .rest:
+            // Wind-down nudges go before bedtime
+            hour = scheduler.bedtimeNudgeHour(patterns: patterns, for: Date())
+        case .walk, .moderate:
+            // Activity nudges go mid-morning (or after learned wake time + 2 hours)
+            let calendar = Calendar.current
+            let dayOfWeek = calendar.component(.weekday, from: Date())
+            if let pattern = patterns.first(where: { $0.dayOfWeek == dayOfWeek }),
+               pattern.observationCount >= 3 {
+                hour = min(pattern.typicalWakeHour + 2, DefaultDeliveryHour.latestMorning)
+            } else {
+                hour = DefaultDeliveryHour.activity
+            }
+        case .breathe:
+            // Breathing nudges go mid-afternoon when stress typically peaks
+            hour = DefaultDeliveryHour.breathe
+        case .hydrate:
+            // Hydration nudges go late morning
+            hour = DefaultDeliveryHour.hydrate
+        default:
+            // Default: early evening
+            hour = DefaultDeliveryHour.evening
+        }
+
+        await scheduleNudgeReminder(nudge: nudge, at: hour)
     }
 
     // MARK: - Cancellation
@@ -273,7 +333,7 @@ final class NotificationService: ObservableObject {
     /// Generates an alert title based on the assessment's signals.
     private func alertTitle(for assessment: HeartAssessment) -> String {
         if assessment.stressFlag {
-            return "Elevated Physiological Load Detected"
+            return "Heart Working Harder Than Usual"
         }
         if assessment.regressionFlag {
             return "Heart Metric Trend Change"

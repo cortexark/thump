@@ -47,11 +47,34 @@ final class StressViewModel: ObservableObject {
     /// Computed trend direction.
     @Published var trendDirection: StressTrendDirection = .steady
 
-    /// Smart nudge action recommendation.
+    /// Smart nudge action recommendation (primary).
     @Published var smartAction: SmartNudgeAction = .standardNudge
+
+    /// All applicable smart actions ranked by priority.
+    @Published var smartActions: [SmartNudgeAction] = [.standardNudge]
 
     /// Learned sleep patterns.
     @Published var sleepPatterns: [SleepPattern] = []
+
+    // MARK: - Action State
+
+    /// Whether a guided breathing session is currently running.
+    @Published var isBreathingSessionActive: Bool = false
+
+    /// Seconds remaining in the current breathing session countdown.
+    @Published var breathingSecondsRemaining: Int = 0
+
+    /// Whether the walk suggestion sheet/alert is shown.
+    @Published var walkSuggestionShown: Bool = false
+
+    /// Whether the journal entry sheet is presented.
+    @Published var isJournalSheetPresented: Bool = false
+
+    /// The journal prompt to display in the sheet (if any).
+    @Published var activeJournalPrompt: JournalPrompt?
+
+    /// Whether a breath prompt was sent to the watch (for UI feedback).
+    @Published var didSendBreathPromptToWatch: Bool = false
 
     /// Whether data is being loaded.
     @Published var isLoading: Bool = false
@@ -68,6 +91,13 @@ final class StressViewModel: ObservableObject {
     private let engine: StressEngine
     private let scheduler: SmartNudgeScheduler
 
+    /// Optional connectivity service for sending messages to the watch.
+    /// Set via `bind(connectivityService:)` from the view layer.
+    private var connectivityService: ConnectivityService?
+
+    /// Timer driving the breathing countdown.
+    private var breathingTimer: Timer?
+
     // MARK: - Initialization
 
     init(
@@ -78,6 +108,11 @@ final class StressViewModel: ObservableObject {
         self.healthKitService = healthKitService
         self.engine = engine
         self.scheduler = scheduler
+    }
+
+    /// Binds the connectivity service so watch actions can be dispatched.
+    func bind(connectivityService: ConnectivityService) {
+        self.connectivityService = connectivityService
     }
 
     // MARK: - Public API
@@ -133,15 +168,91 @@ final class StressViewModel: ObservableObject {
         }
     }
 
-    /// Handle the smart action button tap.
-    func handleSmartAction() {
-        // In a real app this would trigger the appropriate action:
-        // - journalPrompt: navigate to journal entry screen
-        // - breatheOnWatch: send breath prompt via WatchConnectivity
-        // - morningCheckIn: show check-in sheet
-        // - bedtimeWindDown: dismiss
-        // For now, reset to standard
-        smartAction = .standardNudge
+    /// Handle the smart action button tap, routing to the correct behavior.
+    func handleSmartAction(_ action: SmartNudgeAction? = nil) {
+        let target = action ?? smartAction
+
+        switch target {
+        case .journalPrompt(let prompt):
+            presentJournalSheet(prompt: prompt)
+
+        case .breatheOnWatch:
+            sendBreathPromptToWatch()
+
+        case .activitySuggestion:
+            showWalkSuggestion()
+
+        case .morningCheckIn:
+            // Dismiss the card
+            smartAction = .standardNudge
+
+        case .bedtimeWindDown:
+            // Acknowledge and dismiss
+            smartAction = .standardNudge
+
+        case .restSuggestion:
+            startBreathingSession()
+
+        case .standardNudge:
+            break
+        }
+    }
+
+    // MARK: - Action Methods
+
+    /// Starts a guided breathing session with a countdown timer.
+    func startBreathingSession(durationSeconds: Int = 60) {
+        breathingSecondsRemaining = durationSeconds
+        isBreathingSessionActive = true
+        breathingTimer?.invalidate()
+        breathingTimer = Timer.scheduledTimer(
+            withTimeInterval: 1.0,
+            repeats: true
+        ) { [weak self] timer in
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                if self.breathingSecondsRemaining > 0 {
+                    self.breathingSecondsRemaining -= 1
+                } else {
+                    self.stopBreathingSession()
+                }
+            }
+        }
+    }
+
+    /// Stops the breathing session and resets the countdown.
+    func stopBreathingSession() {
+        breathingTimer?.invalidate()
+        breathingTimer = nil
+        isBreathingSessionActive = false
+        breathingSecondsRemaining = 0
+    }
+
+    /// Shows the walk suggestion (opens Health-style prompt).
+    func showWalkSuggestion() {
+        walkSuggestionShown = true
+    }
+
+    /// Presents the journal sheet, optionally with a specific prompt.
+    func presentJournalSheet(prompt: JournalPrompt? = nil) {
+        activeJournalPrompt = prompt
+        isJournalSheetPresented = true
+    }
+
+    /// Sends a breathing exercise prompt to the paired Apple Watch.
+    func sendBreathPromptToWatch() {
+        let nudge = DailyNudge(
+            category: .breathe,
+            title: "Breathe",
+            description: "Take a moment for slow, deep breaths.",
+            durationMinutes: 3,
+            icon: "wind"
+        )
+        connectivityService?.sendBreathPrompt(nudge)
+        didSendBreathPromptToWatch = true
     }
 
     // MARK: - Computed Properties
@@ -232,23 +343,25 @@ final class StressViewModel: ObservableObject {
     var trendInsight: String? {
         switch trendDirection {
         case .rising:
-            return "Consider taking some extra breaks today. "
-                + "A few deep breaths or a short walk can help."
+            return "Stress signals have been climbing over this period. "
+                + "Short breaks, a brief walk, or a few slow breaths "
+                + "can help bring things down."
         case .falling:
-            return "Whatever you've been doing seems to be helping. "
-                + "Keep it up!"
+            return "Stress readings have been easing off. "
+                + "Something in your recent routine seems to be working."
         case .steady:
             guard let avg = averageStress else { return nil }
             let level = StressLevel.from(score: avg)
             switch level {
             case .relaxed:
-                return "You've been in a nice relaxed zone."
+                return "Readings have stayed in the relaxed range "
+                    + "throughout this period."
             case .balanced:
-                return "Things have been pretty even — "
-                    + "your body is handling the load well."
+                return "Readings have been fairly consistent "
+                    + "with no big swings in either direction."
             case .elevated:
-                return "Stress has been consistently higher. "
-                    + "Try to build in some recovery time."
+                return "Stress has been running consistently higher. "
+                    + "Building in some recovery time may be worth trying."
             }
         }
     }
@@ -269,7 +382,6 @@ final class StressViewModel: ObservableObject {
         if let todayScore = engine.dailyStressScore(
             snapshots: history
         ) {
-            let level = StressLevel.from(score: todayScore)
             let today = history.last
             let baseline = engine.computeBaseline(
                 snapshots: Array(history.dropLast())
@@ -308,7 +420,11 @@ final class StressViewModel: ObservableObject {
         sleepPatterns = scheduler.learnSleepPatterns(from: history)
     }
 
-    /// Compute the smart nudge action.
+    /// Compute smart nudge actions (single + multiple).
+    /// When readiness is low (recovering/moderate), injects a bedtimeWindDown action
+    /// that surfaces the WHY (HRV/sleep driver) and the WHAT (tonight's action).
+    /// This closes the causal loop on the Stress screen:
+    /// stress pattern → low HRV → low readiness → "here's what to fix tonight".
     private func computeSmartAction() {
         let currentHour = Calendar.current.component(.hour, from: Date())
         smartAction = scheduler.recommendAction(
@@ -318,6 +434,65 @@ final class StressViewModel: ObservableObject {
             patterns: sleepPatterns,
             currentHour: currentHour
         )
+        smartActions = scheduler.recommendActions(
+            stressPoints: trendPoints,
+            trendDirection: trendDirection,
+            todaySnapshot: history.last,
+            patterns: sleepPatterns,
+            currentHour: currentHour
+        )
+
+        // Readiness gate: compute readiness from our own history and inject a
+        // bedtimeWindDown card if the body needs recovery.
+        injectRecoveryActionIfNeeded()
+    }
+
+    /// Computes readiness from current history and prepends a bedtimeWindDown
+    /// smart action when readiness is recovering or moderate.
+    private func injectRecoveryActionIfNeeded() {
+        guard let today = history.last else { return }
+
+        let stressScore: Double? = currentStress.map { s in s.score > 60 ? 70.0 : 25.0 }
+        guard let readiness = ReadinessEngine().compute(
+            snapshot: today,
+            stressScore: stressScore,
+            recentHistory: Array(history.dropLast())
+        ) else { return }
+
+        guard readiness.level == .recovering || readiness.level == .moderate else { return }
+
+        // Identify the weakest pillar to personalise the message
+        let hrvPillar   = readiness.pillars.first { $0.type == .hrvTrend }
+        let sleepPillar = readiness.pillars.first { $0.type == .sleep }
+        let weakest = [hrvPillar, sleepPillar].compactMap { $0 }.min { $0.score < $1.score }
+
+        let nudgeTitle: String
+        let nudgeDescription: String
+
+        if weakest?.type == .hrvTrend {
+            nudgeTitle = "Sleep to Rebuild Your HRV"
+            nudgeDescription = "Your HRV is below your recent baseline — your nervous system "
+                + "is still working. The single best thing tonight: 8 hours of sleep. "
+                + "Every hour directly rebuilds HRV, which lifts readiness by tomorrow morning."
+        } else {
+            let hrs = today.sleepHours.map { String(format: "%.1f", $0) } ?? "not enough"
+            nudgeTitle = "Earlier Bedtime = Better Tomorrow"
+            nudgeDescription = "You got \(hrs) hours last night. Short sleep raises your RHR "
+                + "and suppresses HRV — which is what your current readings are showing. "
+                + "Aim to be in bed by 10 PM to break the cycle."
+        }
+
+        let recoveryNudge = DailyNudge(
+            category: .rest,
+            title: nudgeTitle,
+            description: nudgeDescription,
+            durationMinutes: nil,
+            icon: "bed.double.fill"
+        )
+
+        // Prepend as the first action so it's always visible at the top
+        smartActions.insert(.bedtimeWindDown(recoveryNudge), at: 0)
+        smartAction = .bedtimeWindDown(recoveryNudge)
     }
 
     // MARK: - Preview Support

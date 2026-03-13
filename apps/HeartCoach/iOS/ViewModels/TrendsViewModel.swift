@@ -27,27 +27,27 @@ final class TrendsViewModel: ObservableObject {
         case hrv = "HRV"
         case recovery = "Recovery"
         case vo2Max = "VO2 Max"
-        case steps = "Steps"
+        case activeMinutes = "Active Min"
 
         /// The unit string displayed alongside chart values.
         var unit: String {
             switch self {
-            case .restingHR: return "bpm"
-            case .hrv:       return "ms"
-            case .recovery:  return "bpm"
-            case .vo2Max:    return "mL/kg/min"
-            case .steps:     return "steps"
+            case .restingHR:      return "bpm"
+            case .hrv:            return "ms"
+            case .recovery:       return "bpm"
+            case .vo2Max:         return "mL/kg/min"
+            case .activeMinutes:  return "min"
             }
         }
 
         /// SF Symbol icon for this metric type.
         var icon: String {
             switch self {
-            case .restingHR: return "heart.fill"
-            case .hrv:       return "waveform.path.ecg"
-            case .recovery:  return "arrow.down.heart.fill"
-            case .vo2Max:    return "lungs.fill"
-            case .steps:     return "figure.walk"
+            case .restingHR:      return "heart.fill"
+            case .hrv:            return "waveform.path.ecg"
+            case .recovery:       return "arrow.down.heart.fill"
+            case .vo2Max:         return "lungs.fill"
+            case .activeMinutes:  return "figure.run"
             }
         }
     }
@@ -246,8 +246,11 @@ final class TrendsViewModel: ObservableObject {
             return snapshot.recoveryHR1m
         case .vo2Max:
             return snapshot.vo2Max
-        case .steps:
-            return snapshot.steps
+        case .activeMinutes:
+            let walk = snapshot.walkMinutes ?? 0
+            let workout = snapshot.workoutMinutes ?? 0
+            let total = walk + workout
+            return total > 0 ? total : nil
         }
     }
 }

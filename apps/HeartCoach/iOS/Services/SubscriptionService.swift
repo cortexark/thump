@@ -50,6 +50,9 @@ final class SubscriptionService: ObservableObject {
     /// Whether a purchase is currently in progress.
     @Published var purchaseInProgress: Bool = false
 
+    /// Error from the most recent product-loading attempt, if any.
+    @Published var productLoadError: Error?
+
     // MARK: - Product IDs
 
     /// All Thump subscription product identifiers.
@@ -104,9 +107,13 @@ final class SubscriptionService: ObservableObject {
 
             await MainActor.run {
                 self.availableProducts = sorted
+                self.productLoadError = nil
             }
         } catch {
             debugPrint("[SubscriptionService] Failed to load products: \(error.localizedDescription)")
+            await MainActor.run {
+                self.productLoadError = error
+            }
         }
     }
 

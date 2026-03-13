@@ -190,11 +190,11 @@ struct TrendChartView: View {
                 .font(.title2)
                 .foregroundStyle(.secondary)
 
-            Text("No data available")
+            Text("No trend data yet")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Text("Wear your Apple Watch to start collecting data.")
+            Text("Wear your Apple Watch for 3+ days to see trends here.")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)

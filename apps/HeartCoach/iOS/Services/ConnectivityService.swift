@@ -55,8 +55,23 @@ final class ConnectivityService: NSObject, ObservableObject {
 
     /// Binds the shared local store so inbound feedback and assessment replies
     /// can use persisted app state rather than transient in-memory state only.
+    ///
+    /// After binding, immediately caches and pushes the latest persisted assessment
+    /// so the watch receives data as soon as the app finishes startup — without
+    /// waiting for the Dashboard view to load and call `refresh()`.
     func bind(localStore: LocalStore) {
         self.localStore = localStore
+
+        // Seed the in-memory cache from persisted history so reply handlers
+        // have data even before the dashboard has run its first refresh.
+        if let persisted = localStore.loadHistory().last?.assessment {
+            latestAssessment = persisted
+        }
+
+        // Proactively push to the watch if it's already reachable.
+        if let assessment = latestAssessment, session?.isReachable == true {
+            sendAssessment(assessment)
+        }
     }
 
     // MARK: - Outbound: Send Assessment
@@ -126,6 +141,42 @@ final class ConnectivityService: NSObject, ObservableObject {
                 debugPrint(
                     "[ConnectivityService] Breath prompt sendMessage failed: "
                     + "\(error.localizedDescription)"
+                )
+                session.transferUserInfo(message)
+            }
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
+
+    // MARK: - Outbound: Action Plan
+
+    /// Sends a ``WatchActionPlan`` (daily + weekly + monthly buddy recommendations)
+    /// to the paired Apple Watch.
+    ///
+    /// Uses `sendMessage` for live delivery when the watch is reachable,
+    /// falling back to `transferUserInfo` for guaranteed background delivery.
+    ///
+    /// - Parameter plan: The action plan to transmit.
+    func sendActionPlan(_ plan: WatchActionPlan) {
+        guard let session = session else {
+            debugPrint("[ConnectivityService] No active session for action plan.")
+            return
+        }
+
+        guard let message = ConnectivityMessageCodec.encode(
+            plan,
+            type: .actionPlan
+        ) else {
+            debugPrint("[ConnectivityService] Failed to encode action plan payload.")
+            return
+        }
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                debugPrint(
+                    "[ConnectivityService] Action plan sendMessage failed, "
+                    + "using transferUserInfo: \(error.localizedDescription)"
                 )
                 session.transferUserInfo(message)
             }
@@ -248,10 +299,17 @@ extension ConnectivityService: WCSessionDelegate {
     }
 
     /// Called when the watch reachability status changes.
+    ///
+    /// When the watch becomes reachable, proactively push the latest cached
+    /// assessment so the watch UI updates without needing to request it.
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         let reachable = session.isReachable
         Task { @MainActor [weak self] in
-            self?.isWatchReachable = reachable
+            guard let self else { return }
+            self.isWatchReachable = reachable
+            if reachable, let assessment = self.latestAssessment {
+                self.sendAssessment(assessment)
+            }
         }
     }
 

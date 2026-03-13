@@ -29,6 +29,9 @@ final class InsightsViewModel: ObservableObject {
     /// The most recent weekly summary report.
     @Published var weeklyReport: WeeklyReport?
 
+    /// Personalised action plan derived from the week's data.
+    @Published var actionPlan: WeeklyActionPlan?
+
     /// Whether insights data is being loaded.
     @Published var isLoading: Bool = true
 
@@ -40,6 +43,8 @@ final class InsightsViewModel: ObservableObject {
     private let healthKitService: HealthKitService
     private let correlationEngine: CorrelationEngine
     private let localStore: LocalStore
+    /// Optional connectivity service for pushing the action plan to the Apple Watch.
+    weak var connectivityService: ConnectivityService?
 
     // MARK: - Initialization
 
@@ -104,10 +109,24 @@ final class InsightsViewModel: ObservableObject {
                 weekAssessments.append(assessment)
             }
 
-            weeklyReport = generateWeeklyReport(
+            let report = generateWeeklyReport(
                 from: weekHistory,
                 assessments: weekAssessments
             )
+            weeklyReport = report
+
+            let plan = generateActionPlan(
+                from: weekHistory,
+                assessments: weekAssessments,
+                report: report
+            )
+            actionPlan = plan
+
+            // Push to Apple Watch if paired and a connectivity service is available.
+            if let connectivity = connectivityService {
+                let watchPlan = buildWatchActionPlan(from: plan, report: report, assessments: weekAssessments)
+                connectivity.sendActionPlan(watchPlan)
+            }
 
             isLoading = false
         } catch {
@@ -222,6 +241,251 @@ final class InsightsViewModel: ObservableObject {
         }
     }
 
+    /// Builds a personalised `WeeklyActionPlan` from a week of snapshots and assessments.
+    ///
+    /// Produces one action item per meaningful category based on the user's
+    /// actual metric averages for the week.
+    private func generateActionPlan(
+        from history: [HeartSnapshot],
+        assessments: [HeartAssessment],
+        report: WeeklyReport
+    ) -> WeeklyActionPlan {
+        var items: [WeeklyActionItem] = []
+
+        // Sleep action
+        let sleepValues = history.compactMap(\.sleepHours)
+        let avgSleep = sleepValues.isEmpty ? nil : sleepValues.reduce(0, +) / Double(sleepValues.count)
+        let sleepItem = buildSleepAction(avgSleep: avgSleep)
+        items.append(sleepItem)
+
+        // Breathe / wind-down action
+        let stressDays = assessments.filter { $0.stressFlag }.count
+        let breatheItem = buildBreatheAction(stressDays: stressDays, totalDays: assessments.count)
+        items.append(breatheItem)
+
+        // Activity action
+        let walkValues = history.compactMap(\.walkMinutes)
+        let workoutValues = history.compactMap(\.workoutMinutes)
+        let avgActive = walkValues.isEmpty && workoutValues.isEmpty ? nil :
+            (walkValues.reduce(0, +) + workoutValues.reduce(0, +)) /
+            Double(max(1, walkValues.count + workoutValues.count))
+        let activityItem = buildActivityAction(avgActiveMinutes: avgActive)
+        items.append(activityItem)
+
+        // Sunlight exposure (inferred from step and walk patterns — no GPS needed)
+        let stepValues = history.compactMap(\.steps)
+        let avgSteps = stepValues.isEmpty ? nil : stepValues.reduce(0, +) / Double(stepValues.count)
+        let sunlightItem = buildSunlightAction(avgSteps: avgSteps, avgWalkMinutes: avgActive)
+        items.append(sunlightItem)
+
+        return WeeklyActionPlan(
+            items: items,
+            weekStart: report.weekStart,
+            weekEnd: report.weekEnd
+        )
+    }
+
+    private func buildSleepAction(avgSleep: Double?) -> WeeklyActionItem {
+        let target = 7.5
+        let windDownHour = 21 // 9 pm default wind-down reminder
+
+        if let avg = avgSleep, avg < 6.5 {
+            let gap = Int((target - avg) * 60)
+            return WeeklyActionItem(
+                category: .sleep,
+                title: "Go to Bed Earlier",
+                detail: "Your average sleep this week was \(String(format: "%.1f", avg)) hrs. Try going to bed \(gap) minutes earlier to reach 7.5 hrs.",
+                icon: "moon.stars.fill",
+                colorName: "nudgeRest",
+                supportsReminder: true,
+                suggestedReminderHour: windDownHour
+            )
+        } else if let avg = avgSleep, avg < 7.0 {
+            return WeeklyActionItem(
+                category: .sleep,
+                title: "Protect Your Wind-Down Time",
+                detail: "You averaged \(String(format: "%.1f", avg)) hrs this week. A consistent wind-down routine at 9 pm can help you reach 7-8 hrs.",
+                icon: "moon.stars.fill",
+                colorName: "nudgeRest",
+                supportsReminder: true,
+                suggestedReminderHour: windDownHour
+            )
+        } else {
+            return WeeklyActionItem(
+                category: .sleep,
+                title: "Keep Your Sleep Consistent",
+                detail: "Good sleep this week. Aim to wake and sleep at the same time each day to reinforce your rhythm.",
+                icon: "moon.stars.fill",
+                colorName: "nudgeRest",
+                supportsReminder: true,
+                suggestedReminderHour: windDownHour
+            )
+        }
+    }
+
+    private func buildBreatheAction(stressDays: Int, totalDays: Int) -> WeeklyActionItem {
+        let fraction = totalDays > 0 ? Double(stressDays) / Double(totalDays) : 0
+        let midAfternoonHour = 15
+
+        if fraction >= 0.5 {
+            return WeeklyActionItem(
+                category: .breathe,
+                title: "Daily Breathing Reset",
+                detail: "Your heart was working harder than usual on \(stressDays) of \(totalDays) days. A 5-minute breathing session mid-afternoon can help you feel more relaxed.",
+                icon: "wind",
+                colorName: "nudgeBreathe",
+                supportsReminder: true,
+                suggestedReminderHour: midAfternoonHour
+            )
+        } else if fraction > 0 {
+            return WeeklyActionItem(
+                category: .breathe,
+                title: "Meditate at Wake Time",
+                detail: "Starting the day with 3 minutes of box breathing after waking helps set a lower baseline HRV trend.",
+                icon: "wind",
+                colorName: "nudgeBreathe",
+                supportsReminder: true,
+                suggestedReminderHour: 7
+            )
+        } else {
+            return WeeklyActionItem(
+                category: .breathe,
+                title: "Maintain Your Calm",
+                detail: "No elevated load detected this week. A short breathing practice in the morning can lock in this pattern.",
+                icon: "wind",
+                colorName: "nudgeBreathe",
+                supportsReminder: false,
+                suggestedReminderHour: nil
+            )
+        }
+    }
+
+    private func buildActivityAction(avgActiveMinutes: Double?) -> WeeklyActionItem {
+        let dailyGoal = 30.0
+        let morningHour = 9
+
+        if let avg = avgActiveMinutes, avg < dailyGoal {
+            let extra = Int(dailyGoal - avg)
+            return WeeklyActionItem(
+                category: .activity,
+                title: "Walk \(extra) More Minutes Today",
+                detail: "Your daily average active time was \(Int(avg)) min this week. Adding just \(extra) minutes gets you to the 30-min goal.",
+                icon: "figure.walk",
+                colorName: "nudgeWalk",
+                supportsReminder: true,
+                suggestedReminderHour: morningHour
+            )
+        } else if let avg = avgActiveMinutes {
+            return WeeklyActionItem(
+                category: .activity,
+                title: "Sustain Your \(Int(avg))-Min Streak",
+                detail: "You hit an average of \(Int(avg)) active minutes daily. Keep the momentum by scheduling your movement at the same time each day.",
+                icon: "figure.walk",
+                colorName: "nudgeWalk",
+                supportsReminder: true,
+                suggestedReminderHour: morningHour
+            )
+        } else {
+            return WeeklyActionItem(
+                category: .activity,
+                title: "Start With a 10-Minute Walk",
+                detail: "No activity data yet this week. A 10-minute morning walk is enough to begin building a habit.",
+                icon: "figure.walk",
+                colorName: "nudgeWalk",
+                supportsReminder: true,
+                suggestedReminderHour: morningHour
+            )
+        }
+    }
+
+    /// Builds a sunlight action item with inferred time-of-day windows.
+    ///
+    /// No GPS is required. Windows are inferred from the weekly step and
+    /// walkMinutes totals:
+    ///
+    /// - **Morning** is considered active when avg daily steps >= 1 500
+    ///   (enough to suggest a pre-commute / leaving-home burst).
+    /// - **Lunch** is considered active when avg walkMinutes >= 10 per day,
+    ///   suggesting the user breaks from sedentary time at midday.
+    /// - **Evening** is considered active when avg daily steps >= 3 000,
+    ///   suggesting movement later in the day (commute home / after-work walk).
+    ///
+    /// Thresholds are deliberately conservative so we surface the window as
+    /// "not yet observed" and coach the user to claim it, rather than
+    /// assuming they already do it.
+    private func buildSunlightAction(
+        avgSteps: Double?,
+        avgWalkMinutes: Double?
+    ) -> WeeklyActionItem {
+        let windows = inferSunlightWindows(avgSteps: avgSteps, avgWalkMinutes: avgWalkMinutes)
+        let observedCount = windows.filter(\.hasObservedMovement).count
+
+        let title: String
+        let detail: String
+
+        switch observedCount {
+        case 0:
+            title = "Catch Some Daylight Today"
+            detail = "Your movement data doesn't show clear outdoor windows yet. Pick one of the three opportunities below — even 5 minutes counts."
+        case 1:
+            title = "One Sunlight Window Found"
+            detail = "You have one regular movement window that could include outdoor light. Two more are waiting — tap to set reminders."
+        case 2:
+            title = "Two Good Windows Already"
+            detail = "You're moving in two natural light windows. Adding a third would give your circadian rhythm the strongest possible signal."
+        default:
+            title = "All Three Windows Covered"
+            detail = "Morning, midday, and evening movement detected. Prioritise outdoor exposure in at least one of them each day."
+        }
+
+        return WeeklyActionItem(
+            category: .sunlight,
+            title: title,
+            detail: detail,
+            icon: "sun.max.fill",
+            colorName: "nudgeCelebrate",
+            supportsReminder: true,
+            suggestedReminderHour: 7,
+            sunlightWindows: windows
+        )
+    }
+
+    /// Infers which time-of-day sunlight windows the user is likely active in,
+    /// using only step count and walk minutes — no GPS or location access needed.
+    private func inferSunlightWindows(
+        avgSteps: Double?,
+        avgWalkMinutes: Double?
+    ) -> [SunlightWindow] {
+        // Morning: >= 1 500 steps/day suggests the user leaves home and moves
+        let morningActive = (avgSteps ?? 0) >= 1_500
+
+        // Lunch: >= 10 walk-minutes/day suggests a midday break away from desk
+        let lunchActive = (avgWalkMinutes ?? 0) >= 10
+
+        // Evening: >= 3 000 steps/day suggests meaningful movement later in day.
+        // Morning alone can't account for all of these, so a high count implies
+        // an additional movement burst (commute home, after-work walk).
+        let eveningActive = (avgSteps ?? 0) >= 3_000
+
+        return [
+            SunlightWindow(
+                slot: .morning,
+                reminderHour: SunlightSlot.morning.defaultHour,
+                hasObservedMovement: morningActive
+            ),
+            SunlightWindow(
+                slot: .lunch,
+                reminderHour: SunlightSlot.lunch.defaultHour,
+                hasObservedMovement: lunchActive
+            ),
+            SunlightWindow(
+                slot: .evening,
+                reminderHour: SunlightSlot.evening.defaultHour,
+                hasObservedMovement: eveningActive
+            )
+        ]
+    }
+
     /// Selects the most impactful insight string for the weekly report.
     ///
     /// Prefers the strongest correlation interpretation, falling back
@@ -248,5 +512,80 @@ final class InsightsViewModel: ObservableObject {
         } else {
             return "Your heart health metrics remained generally stable this week."
         }
+    }
+
+    // MARK: - Watch Action Plan Builder
+
+    /// Converts a ``WeeklyActionPlan`` (iOS detail view model) into the compact
+    /// ``WatchActionPlan`` that fits comfortably within WatchConnectivity limits.
+    private func buildWatchActionPlan(
+        from plan: WeeklyActionPlan,
+        report: WeeklyReport?,
+        assessments: [HeartAssessment]
+    ) -> WatchActionPlan {
+        // Map WeeklyActionItems → WatchActionItems (max 4, one per domain)
+        let dailyItems: [WatchActionItem] = plan.items.prefix(4).map { item in
+            let nudgeCategory: NudgeCategory = {
+                switch item.category {
+                case .sleep:    return .rest
+                case .breathe:  return .breathe
+                case .activity: return .walk
+                case .sunlight: return .sunlight
+                case .hydrate:  return .hydrate
+                }
+            }()
+            return WatchActionItem(
+                category: nudgeCategory,
+                title: item.title,
+                detail: item.detail,
+                icon: item.icon,
+                reminderHour: item.supportsReminder ? item.suggestedReminderHour : nil
+            )
+        }
+
+        // Weekly summary
+        let avgScore = report?.avgCardioScore
+        let activeDays = assessments.filter { $0.status == .improving }.count
+        let lowStressDays = assessments.filter { !$0.stressFlag }.count
+        let weeklyHeadline: String = {
+            if activeDays >= 5 {
+                return "You nailed \(activeDays) of 7 days this week!"
+            } else if activeDays >= 3 {
+                return "\(activeDays) strong days this week — keep building!"
+            } else {
+                return "Let's aim for more active days next week."
+            }
+        }()
+
+        // Monthly summary (uses report trend direction as proxy for month direction)
+        let monthName = Calendar.current.monthSymbols[Calendar.current.component(.month, from: Date()) - 1]
+        let scoreDelta = report.map { r -> Double in
+            switch r.trendDirection {
+            case .up:   return 8
+            case .flat: return 0
+            case .down: return -5
+            }
+        }
+        let monthlyHeadline: String = {
+            guard let delta = scoreDelta else { return "Keep wearing your watch for monthly insights." }
+            if delta > 0 {
+                return "Trending up in \(monthName) — great work!"
+            } else if delta == 0 {
+                return "Holding steady in \(monthName). Consistency pays off."
+            } else {
+                return "Room to grow in \(monthName). Small steps add up."
+            }
+        }()
+
+        return WatchActionPlan(
+            dailyItems: dailyItems,
+            weeklyHeadline: weeklyHeadline,
+            weeklyAvgScore: avgScore,
+            weeklyActiveDays: activeDays,
+            weeklyLowStressDays: lowStressDays,
+            monthlyHeadline: monthlyHeadline,
+            monthlyScoreDelta: scoreDelta,
+            monthName: monthName
+        )
     }
 }
