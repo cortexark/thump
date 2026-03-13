@@ -10,6 +10,22 @@ import Foundation
 import Combine
 import SwiftUI
 
+// MARK: - Sync State
+
+/// Represents the current state of the watch → iPhone sync pipeline.
+enum WatchSyncState: Equatable {
+    /// Waiting for session activation or initial request.
+    case waiting
+    /// Phone is paired but currently not reachable (out of range / Bluetooth off).
+    case phoneUnreachable
+    /// A request is in-flight.
+    case syncing
+    /// Assessment received successfully.
+    case ready
+    /// Sync failed with an error message.
+    case failed(String)
+}
+
 // MARK: - Watch View Model
 
 /// The primary view model for the watch interface. Observes assessment
@@ -23,6 +39,9 @@ final class WatchViewModel: ObservableObject {
     /// The most recent assessment received from the companion phone app.
     @Published var latestAssessment: HeartAssessment?
 
+    /// Current state of the sync pipeline — drives the placeholder UI.
+    @Published private(set) var syncState: WatchSyncState = .waiting
+
     /// Whether the user has submitted feedback for the current session.
     @Published var feedbackSubmitted: Bool = false
 
@@ -32,6 +51,10 @@ final class WatchViewModel: ObservableObject {
 
     /// Whether the user has marked the current nudge as complete.
     @Published var nudgeCompleted: Bool = false
+
+    /// The latest action plan received from the companion phone app.
+    /// Drives the daily / weekly / monthly buddy recommendation screens.
+    @Published var latestActionPlan: WatchActionPlan?
 
     // MARK: - Dependencies
 
@@ -73,12 +96,44 @@ final class WatchViewModel: ObservableObject {
         // Cancel any existing subscriptions before re-binding.
         cancellables.removeAll()
 
+        // Assessment received → move to ready.
         service.$latestAssessment
             .sink { [weak self] assessment in
                 guard let assessment else { return }
                 Task { @MainActor [weak self] in
                     self?.latestAssessment = assessment
+                    self?.syncState = .ready
                     self?.resetSessionStateIfNeeded()
+                }
+            }
+            .store(in: &cancellables)
+
+        // Connection error → move to failed.
+        service.$connectionError
+            .compactMap { $0 }
+            .sink { [weak self] error in
+                Task { @MainActor [weak self] in
+                    self?.syncState = .failed(error)
+                }
+            }
+            .store(in: &cancellables)
+
+        // Reachability changes → update state when no assessment yet.
+        service.$isPhoneReachable
+            .sink { [weak self] reachable in
+                Task { @MainActor [weak self] in
+                    guard let self, self.latestAssessment == nil else { return }
+                    self.syncState = reachable ? .syncing : .phoneUnreachable
+                }
+            }
+            .store(in: &cancellables)
+
+        // Action plan received → update local copy.
+        service.$latestActionPlan
+            .sink { [weak self] plan in
+                guard let plan else { return }
+                Task { @MainActor [weak self] in
+                    self?.latestActionPlan = plan
                 }
             }
             .store(in: &cancellables)
@@ -124,6 +179,7 @@ final class WatchViewModel: ObservableObject {
 
     /// Manually requests the latest assessment from the companion phone app.
     func sync() {
+        syncState = .syncing
         connectivityService?.requestLatestAssessment()
     }
 

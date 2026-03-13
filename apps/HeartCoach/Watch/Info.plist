@@ -2,8 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Thump Watch reads your heart rate data to show real-time wellness status and capture your feedback.</string>
+	<string>Thump reads your heart rate, HRV, recovery, VO2 max, steps, exercise, and sleep data to show wellness insights and fitness suggestions.</string>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>

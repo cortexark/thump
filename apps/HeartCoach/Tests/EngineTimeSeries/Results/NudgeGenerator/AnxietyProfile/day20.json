@@ -1,0 +1,15 @@
+{
+  "anomalyScore" : 0.68421411132178545,
+  "confidence" : "high",
+  "multiNudgeCategories" : [
+    "rest",
+    "hydrate"
+  ],
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "rest",
+  "nudgeTitle" : "A Cozy Bedtime Routine",
+  "readinessLevel" : "moderate",
+  "readinessScore" : 43,
+  "regressionFlag" : true,
+  "stressFlag" : false
+}

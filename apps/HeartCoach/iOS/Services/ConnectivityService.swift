@@ -29,8 +29,8 @@ final class ConnectivityService: NSObject, ObservableObject {
     // MARK: - Private Properties
 
     private var session: WCSession?
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+    private var localStore = LocalStore()
+    private var latestAssessment: HeartAssessment?
 
     // MARK: - Initialization
 
@@ -53,6 +53,27 @@ final class ConnectivityService: NSObject, ObservableObject {
         self.session = wcSession
     }
 
+    /// Binds the shared local store so inbound feedback and assessment replies
+    /// can use persisted app state rather than transient in-memory state only.
+    ///
+    /// After binding, immediately caches and pushes the latest persisted assessment
+    /// so the watch receives data as soon as the app finishes startup — without
+    /// waiting for the Dashboard view to load and call `refresh()`.
+    func bind(localStore: LocalStore) {
+        self.localStore = localStore
+
+        // Seed the in-memory cache from persisted history so reply handlers
+        // have data even before the dashboard has run its first refresh.
+        if let persisted = localStore.loadHistory().last?.assessment {
+            latestAssessment = persisted
+        }
+
+        // Proactively push to the watch if it's already reachable.
+        if let assessment = latestAssessment, session?.isReachable == true {
+            sendAssessment(assessment)
+        }
+    }
+
     // MARK: - Outbound: Send Assessment
 
     /// Sends a `HeartAssessment` to the paired Apple Watch.
@@ -68,31 +89,125 @@ final class ConnectivityService: NSObject, ObservableObject {
             return
         }
 
-        do {
-            let data = try encoder.encode(assessment)
-            guard let jsonDict = try JSONSerialization.jsonObject(
-                with: data, options: []
-            ) as? [String: Any] else {
-                debugPrint("[ConnectivityService] Failed to serialize assessment to dictionary.")
-                return
-            }
+        guard let message = ConnectivityMessageCodec.encode(
+            assessment,
+            type: .assessment
+        ) else {
+            debugPrint("[ConnectivityService] Failed to encode assessment payload.")
+            return
+        }
 
-            let message: [String: Any] = [
-                "type": "assessment",
-                "payload": jsonDict
-            ]
+        latestAssessment = assessment
 
-            if session.isReachable {
-                session.sendMessage(message, replyHandler: nil) { error in
-                    // Reachability changed; fall back to guaranteed delivery.
-                    debugPrint("[ConnectivityService] sendMessage failed, using transferUserInfo: \(error.localizedDescription)")
-                    session.transferUserInfo(message)
-                }
-            } else {
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                // Reachability changed; fall back to guaranteed delivery.
+                debugPrint(
+                    "[ConnectivityService] sendMessage failed, "
+                    + "using transferUserInfo: \(error.localizedDescription)"
+                )
                 session.transferUserInfo(message)
             }
-        } catch {
-            debugPrint("[ConnectivityService] Failed to encode assessment: \(error.localizedDescription)")
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
+
+    // MARK: - Outbound: Breath Prompt
+
+    /// Sends a breathing exercise prompt to the Apple Watch.
+    ///
+    /// When stress is rising, this delivers a gentle "take a breath"
+    /// nudge directly to the watch via live messaging (or background
+    /// transfer if the watch isn't currently reachable).
+    ///
+    /// - Parameter nudge: The breathing nudge to send.
+    func sendBreathPrompt(_ nudge: DailyNudge) {
+        guard let session = session else {
+            debugPrint("[ConnectivityService] No active session for breath prompt.")
+            return
+        }
+
+        let message: [String: Any] = [
+            "type": "breathPrompt",
+            "title": nudge.title,
+            "description": nudge.description,
+            "durationMinutes": nudge.durationMinutes ?? 3,
+            "category": nudge.category.rawValue
+        ]
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                debugPrint(
+                    "[ConnectivityService] Breath prompt sendMessage failed: "
+                    + "\(error.localizedDescription)"
+                )
+                session.transferUserInfo(message)
+            }
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
+
+    // MARK: - Outbound: Action Plan
+
+    /// Sends a ``WatchActionPlan`` (daily + weekly + monthly buddy recommendations)
+    /// to the paired Apple Watch.
+    ///
+    /// Uses `sendMessage` for live delivery when the watch is reachable,
+    /// falling back to `transferUserInfo` for guaranteed background delivery.
+    ///
+    /// - Parameter plan: The action plan to transmit.
+    func sendActionPlan(_ plan: WatchActionPlan) {
+        guard let session = session else {
+            debugPrint("[ConnectivityService] No active session for action plan.")
+            return
+        }
+
+        guard let message = ConnectivityMessageCodec.encode(
+            plan,
+            type: .actionPlan
+        ) else {
+            debugPrint("[ConnectivityService] Failed to encode action plan payload.")
+            return
+        }
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                debugPrint(
+                    "[ConnectivityService] Action plan sendMessage failed, "
+                    + "using transferUserInfo: \(error.localizedDescription)"
+                )
+                session.transferUserInfo(message)
+            }
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
+
+    // MARK: - Outbound: Check-In Request
+
+    /// Sends a morning check-in prompt to the Apple Watch.
+    ///
+    /// - Parameter message: The check-in question to display.
+    func sendCheckInPrompt(_ promptMessage: String) {
+        guard let session = session else { return }
+
+        let message: [String: Any] = [
+            "type": "checkInPrompt",
+            "message": promptMessage
+        ]
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                debugPrint(
+                    "[ConnectivityService] Check-in sendMessage failed: "
+                    + "\(error.localizedDescription)"
+                )
+                session.transferUserInfo(message)
+            }
+        } else {
+            session.transferUserInfo(message)
         }
     }
 
@@ -122,24 +237,25 @@ final class ConnectivityService: NSObject, ObservableObject {
 
     /// Decodes a `WatchFeedbackPayload` from the incoming message and publishes it.
     nonisolated private func handleFeedbackMessage(_ message: [String: Any]) {
-        guard let payloadDict = message["payload"],
-              JSONSerialization.isValidJSONObject(payloadDict) else {
+        guard let payload = ConnectivityMessageCodec.decode(
+            WatchFeedbackPayload.self,
+            from: message
+        ) else {
             debugPrint("[ConnectivityService] Feedback message missing or invalid payload.")
             return
         }
 
-        do {
-            let data = try JSONSerialization.data(withJSONObject: payloadDict, options: [])
-            // Use a local decoder to avoid cross-isolation access to self.decoder
-            let localDecoder = JSONDecoder()
-            let payload = try localDecoder.decode(WatchFeedbackPayload.self, from: data)
-
-            Task { @MainActor [weak self] in
-                self?.latestWatchFeedback = payload
-            }
-        } catch {
-            debugPrint("[ConnectivityService] Failed to decode feedback payload: \(error.localizedDescription)")
+        Task { @MainActor [weak self] in
+            self?.latestWatchFeedback = payload
+            self?.localStore.saveLastFeedback(payload)
         }
+    }
+
+    private func currentAssessment() -> HeartAssessment? {
+        if let latestAssessment {
+            return latestAssessment
+        }
+        return localStore.loadHistory().last?.assessment
     }
 }
 
@@ -183,10 +299,17 @@ extension ConnectivityService: WCSessionDelegate {
     }
 
     /// Called when the watch reachability status changes.
+    ///
+    /// When the watch becomes reachable, proactively push the latest cached
+    /// assessment so the watch UI updates without needing to request it.
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         let reachable = session.isReachable
         Task { @MainActor [weak self] in
-            self?.isWatchReachable = reachable
+            guard let self else { return }
+            self.isWatchReachable = reachable
+            if reachable, let assessment = self.latestAssessment {
+                self.sendAssessment(assessment)
+            }
         }
     }
 
@@ -204,8 +327,32 @@ extension ConnectivityService: WCSessionDelegate {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
+        if let type = message["type"] as? String,
+           type == ConnectivityMessageType.requestAssessment.rawValue {
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    replyHandler(ConnectivityMessageCodec.errorMessage("Connectivity service unavailable."))
+                    return
+                }
+
+                guard let assessment = self.currentAssessment(),
+                      let response = ConnectivityMessageCodec.encode(
+                        assessment,
+                        type: .assessment
+                      ) else {
+                    replyHandler(ConnectivityMessageCodec.errorMessage(
+                        "No assessment available yet. Open Thump on your iPhone to refresh."
+                    ))
+                    return
+                }
+
+                replyHandler(response)
+            }
+            return
+        }
+
         handleIncomingMessage(message)
-        replyHandler(["status": "received"])
+        replyHandler(ConnectivityMessageCodec.acknowledgement())
     }
 
     /// Handles background `transferUserInfo` deliveries from the watch.

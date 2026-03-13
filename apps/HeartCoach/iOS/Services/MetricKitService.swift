@@ -31,7 +31,7 @@ final class MetricKitService: NSObject, MXMetricManagerSubscriber {
 
     // MARK: - Initialization
 
-    private override init() { super.init() }
+    override private init() { super.init() }
 
     // MARK: - Public API
 

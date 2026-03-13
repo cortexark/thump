@@ -1,0 +1,8 @@
+{
+  "anomalyScore" : 0.25882652214590779,
+  "confidenceLevel" : "medium",
+  "regressionFlag" : true,
+  "status" : "needsAttention",
+  "stressFlag" : false,
+  "weekOverWeekTrendDirection" : "stable"
+}

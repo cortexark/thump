@@ -29,6 +29,15 @@ Package.resolved
 .ux/
 .project/
 
+# TaskPilot / Orchestrator (internal tooling, not part of the app)
+TaskPilot/
+ORCHESTRATOR_DRIVEN_IMPROVEMENTS.md
+
+# Project docs (local only)
+CLAUDE.md
+PROJECT_HISTORY.md
+TESTING_AND_IMPROVEMENTS.md
+
 # IDE
 .vscode/
 .idea/

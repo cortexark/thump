@@ -15,9 +15,9 @@ struct StatusCardView: View {
 
     private var statusText: String {
         switch status {
-        case .improving:      return "Improving"
-        case .stable:         return "Stable"
-        case .needsAttention: return "Needs Attention"
+        case .improving:      return "Building Momentum"
+        case .stable:         return "Holding Steady"
+        case .needsAttention: return "Check In"
         }
     }
 
@@ -37,14 +37,13 @@ struct StatusCardView: View {
         }
     }
 
-
     // MARK: - Accessibility
 
     private var accessibilityDescription: String {
-        var parts = ["Heart health status: \(statusText)"]
-        parts.append("confidence \(confidence.displayName)")
+        var parts = ["Wellness status: \(statusText)"]
+        parts.append("pattern strength \(confidence.displayName)")
         if let score = cardioScore {
-            parts.append("cardio score \(Int(score)) out of 100")
+            parts.append("cardio fitness is around \(Int(score))")
         }
         if !explanation.isEmpty {
             parts.append(explanation)
@@ -71,13 +70,13 @@ struct StatusCardView: View {
 
             // Cardio score display
             if let score = cardioScore {
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text("\(Int(score))")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("~\(Int(score))")
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                         .foregroundStyle(statusColor)
 
-                    Text("/ 100")
-                        .font(.subheadline)
+                    Text("Your cardio fitness is around here")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -107,32 +106,35 @@ struct StatusCardView: View {
     }
 }
 
-#Preview("Improving with Score") {
+#Preview("Building Momentum") {
     StatusCardView(
         status: .improving,
         confidence: .high,
         cardioScore: 78,
-        explanation: "Your resting heart rate has decreased over the past 7 days, and HRV is trending upward. Great progress."
+        explanation: "Your resting heart rate has been easing down over the past week, "
+            + "and your HRV looks like it's heading up. Nice work!"
     )
     .padding()
 }
 
-#Preview("Needs Attention") {
+#Preview("Check In") {
     StatusCardView(
         status: .needsAttention,
         confidence: .medium,
         cardioScore: 42,
-        explanation: "We noticed elevated resting heart rate and reduced HRV over the past 3 days. Consider extra rest."
+        explanation: "Your resting heart rate has been a bit higher and HRV "
+            + "a bit lower the last few days. A little extra rest might feel good."
     )
     .padding()
 }
 
-#Preview("Stable, No Score") {
+#Preview("Holding Steady") {
     StatusCardView(
         status: .stable,
         confidence: .low,
         cardioScore: nil,
-        explanation: "Not enough data yet to compute a full score. Keep wearing your watch."
+        explanation: "We're still getting to know your patterns. "
+            + "Keep wearing your watch and we'll have more to share soon!"
     )
     .padding()
 }

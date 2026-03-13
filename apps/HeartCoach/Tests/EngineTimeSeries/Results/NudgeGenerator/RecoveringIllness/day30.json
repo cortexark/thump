@@ -1,0 +1,16 @@
+{
+  "anomalyScore" : 0.14277142052998557,
+  "confidence" : "high",
+  "multiNudgeCategories" : [
+    "celebrate",
+    "hydrate",
+    "moderate"
+  ],
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "celebrate",
+  "nudgeTitle" : "You're on a Roll!",
+  "readinessLevel" : "ready",
+  "readinessScore" : 73,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

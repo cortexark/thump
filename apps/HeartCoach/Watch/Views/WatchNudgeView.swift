@@ -43,7 +43,7 @@ struct WatchNudgeView: View {
             }
             .padding(.horizontal, 4)
         }
-        .navigationTitle("Today's Nudge")
+        .navigationTitle("Today's Idea")
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -137,8 +137,8 @@ struct WatchNudgeView: View {
         .buttonStyle(.borderedProminent)
         .tint(viewModel.nudgeCompleted ? .gray : .green)
         .disabled(viewModel.nudgeCompleted)
-        .accessibilityLabel(viewModel.nudgeCompleted ? "Nudge completed" : "Mark nudge as complete")
-        .accessibilityHint(viewModel.nudgeCompleted ? "" : "Double tap to mark this coaching nudge as complete")
+        .accessibilityLabel(viewModel.nudgeCompleted ? "Done! Nice work." : "Mark as done")
+        .accessibilityHint(viewModel.nudgeCompleted ? "" : "Double tap to mark this suggestion as done")
     }
 
     // MARK: - Feedback Link
@@ -152,8 +152,8 @@ struct WatchNudgeView: View {
         }
         .buttonStyle(.plain)
         .padding(.bottom, 8)
-        .accessibilityLabel("Give feedback on this nudge")
-        .accessibilityHint("Double tap to submit feedback about this coaching nudge")
+        .accessibilityLabel("Share how this felt")
+        .accessibilityHint("Double tap to let us know what you thought")
     }
 
     // MARK: - No Nudge Placeholder
@@ -165,18 +165,18 @@ struct WatchNudgeView: View {
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
 
-            Text("No Nudge Available")
+            Text("Nothing Here Yet")
                 .font(.headline)
 
-            Text("Sync with your iPhone to receive today's coaching nudge.")
+            Text("Sync with your iPhone to get today's suggestion.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .padding()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("No nudge available. Sync with your iPhone to receive today's coaching nudge.")
-        .navigationTitle("Today's Nudge")
+        .accessibilityLabel("Nothing here yet. Sync with your iPhone to get today's suggestion.")
+        .navigationTitle("Today's Idea")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

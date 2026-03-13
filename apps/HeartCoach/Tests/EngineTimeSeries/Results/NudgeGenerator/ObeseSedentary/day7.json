@@ -1,0 +1,16 @@
+{
+  "anomalyScore" : 1.4397004185256548,
+  "confidence" : "low",
+  "multiNudgeCategories" : [
+    "moderate",
+    "rest",
+    "breathe"
+  ],
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "How About Some Movement Today?",
+  "readinessLevel" : "recovering",
+  "readinessScore" : 36,
+  "regressionFlag" : true,
+  "stressFlag" : false
+}

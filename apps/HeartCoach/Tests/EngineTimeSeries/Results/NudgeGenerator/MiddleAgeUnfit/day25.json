@@ -1,0 +1,16 @@
+{
+  "anomalyScore" : 0.22305239664953447,
+  "confidence" : "high",
+  "multiNudgeCategories" : [
+    "walk",
+    "rest",
+    "hydrate"
+  ],
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "Keep It Light Today",
+  "readinessLevel" : "moderate",
+  "readinessScore" : 40,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

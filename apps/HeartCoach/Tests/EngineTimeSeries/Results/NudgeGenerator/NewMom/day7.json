@@ -1,0 +1,16 @@
+{
+  "anomalyScore" : 1.38330182748692,
+  "confidence" : "low",
+  "multiNudgeCategories" : [
+    "moderate",
+    "rest",
+    "breathe"
+  ],
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Quick Sync Check",
+  "readinessLevel" : "recovering",
+  "readinessScore" : 33,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

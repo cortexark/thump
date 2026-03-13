@@ -41,6 +41,7 @@ targets:
       - path: Shared/
     resources:
       - path: iOS/PrivacyInfo.xcprivacy
+      - path: iOS/Assets.xcassets
     settings:
       base:
         INFOPLIST_FILE: iOS/Info.plist
@@ -49,12 +50,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: false
     dependencies:
-      - framework: HealthKit.framework
-        implicit: true
-      - framework: WatchConnectivity.framework
-        implicit: true
-      - framework: StoreKit.framework
-        implicit: true
+      - sdk: HealthKit.framework
+      - sdk: WatchConnectivity.framework
+      - sdk: StoreKit.framework
     scheme:
       testTargets:
         - ThumpCoreTests
@@ -70,18 +68,18 @@ targets:
     sources:
       - path: Watch/
       - path: Shared/
+    resources:
+      - path: Watch/Assets.xcassets
     settings:
       base:
         INFOPLIST_FILE: Watch/Info.plist
         CODE_SIGN_ENTITLEMENTS: Watch/Watch.entitlements
-        PRODUCT_BUNDLE_IDENTIFIER: com.thump.watch
+        PRODUCT_BUNDLE_IDENTIFIER: com.thump.ios.watchkitapp
         TARGETED_DEVICE_FAMILY: "4"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
     dependencies:
-      - framework: HealthKit.framework
-        implicit: true
-      - framework: WatchConnectivity.framework
-        implicit: true
+      - sdk: HealthKit.framework
+      - sdk: WatchConnectivity.framework
     scheme:
       gatherCoverageData: true
 
@@ -93,10 +91,13 @@ targets:
     platform: iOS
     sources:
       - path: Tests/
+        excludes:
+          - "**/*.json"
     dependencies:
       - target: Thump
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: "YES"
         PRODUCT_BUNDLE_IDENTIFIER: com.thump.tests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Thump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thump"
         BUNDLE_LOADER: "$(TEST_HOST)"

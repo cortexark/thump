@@ -39,22 +39,22 @@ struct ConfidenceBadge: View {
         .padding(.vertical, 4)
         .background(tintColor.opacity(0.15), in: Capsule())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Data confidence: \(confidence.displayName)")
+        .accessibilityLabel("Pattern strength: \(confidence.displayName)")
         .accessibilityValue(confidence.displayName)
     }
 }
 
-#Preview("High Confidence") {
+#Preview("Strong Pattern") {
     ConfidenceBadge(confidence: .high)
         .padding()
 }
 
-#Preview("Medium Confidence") {
+#Preview("Emerging Pattern") {
     ConfidenceBadge(confidence: .medium)
         .padding()
 }
 
-#Preview("Low Confidence") {
+#Preview("Early Signal") {
     ConfidenceBadge(confidence: .low)
         .padding()
 }

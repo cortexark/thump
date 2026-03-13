@@ -1,0 +1,29 @@
+{
+  "analysisScore" : 97,
+  "coachingMessage" : "Excellent zone distribution today! You're hitting your targets across all zones. This kind of balanced training builds real fitness.",
+  "fitnessLevel" : "athletic",
+  "recommendation" : "tooMuchIntensity",
+  "zoneBoundaries" : [
+    {
+      "lower" : 123,
+      "upper" : 137
+    },
+    {
+      "lower" : 137,
+      "upper" : 151
+    },
+    {
+      "lower" : 151,
+      "upper" : 165
+    },
+    {
+      "lower" : 165,
+      "upper" : 179
+    },
+    {
+      "lower" : 179,
+      "upper" : 193
+    }
+  ],
+  "zoneCount" : 5
+}

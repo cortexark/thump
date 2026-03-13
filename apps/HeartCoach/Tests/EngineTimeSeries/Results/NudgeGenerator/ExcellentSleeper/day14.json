@@ -1,0 +1,15 @@
+{
+  "anomalyScore" : 0.7198697487390312,
+  "confidence" : "medium",
+  "multiNudgeCategories" : [
+    "moderate",
+    "hydrate"
+  ],
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Try Something Different Today",
+  "readinessLevel" : "primed",
+  "readinessScore" : 81,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

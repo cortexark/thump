@@ -1,0 +1,15 @@
+{
+  "anomalyScore" : 0.30300773743181725,
+  "confidence" : "high",
+  "multiNudgeCategories" : [
+    "hydrate",
+    "moderate"
+  ],
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "hydrate",
+  "nudgeTitle" : "Keep That Water Bottle Handy",
+  "readinessLevel" : "ready",
+  "readinessScore" : 74,
+  "regressionFlag" : true,
+  "stressFlag" : false
+}

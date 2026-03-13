@@ -51,21 +51,20 @@ struct MetricTileView: View {
         self.isLocked = isLocked
     }
 
-
     // MARK: - Accessibility Helpers
 
     private var trendText: String {
         guard let trend else { return "" }
         switch trend {
-        case .up:   return "trending up"
-        case .down: return "trending down"
-        case .flat: return "no change"
+        case .up:   return "moving up lately"
+        case .down: return "easing down lately"
+        case .flat: return "holding steady"
         }
     }
 
     private var confidenceText: String {
         guard let confidence else { return "" }
-        return "confidence \(confidence.displayName)"
+        return "pattern strength \(confidence.displayName)"
     }
 
     private var accessibilityDescription: String {
@@ -179,11 +178,11 @@ extension MetricTileView {
         isLocked: Bool = false
     ) {
         self.label = label
-        if let v = optionalValue {
+        if let val = optionalValue {
             if decimals == 0 {
-                self.value = "\(Int(v))"
+                self.value = "\(Int(val))"
             } else {
-                self.value = String(format: "%.\(decimals)f", v)
+                self.value = String(format: "%.\(decimals)f", val)
             }
         } else {
             self.value = "--"
