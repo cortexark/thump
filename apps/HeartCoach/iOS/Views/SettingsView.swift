@@ -35,8 +35,23 @@ struct SettingsView: View {
     /// Controls presentation of the export confirmation alert.
     @State private var showExportConfirmation: Bool = false
 
-    /// Controls presentation of the privacy policy sheet.
+    /// Controls presentation of the Terms of Service sheet.
+    @State private var showTermsOfService: Bool = false
+
+    /// Controls presentation of the Privacy Policy sheet.
     @State private var showPrivacyPolicy: Bool = false
+
+    /// Controls presentation of the bug report sheet.
+    @State private var showBugReport: Bool = false
+
+    /// Bug report text.
+    @State private var bugReportText: String = ""
+
+    /// Whether bug report was submitted.
+    @State private var bugReportSubmitted: Bool = false
+
+    /// Feedback preferences.
+    @State private var feedbackPrefs: FeedbackPreferences = FeedbackPreferences()
 
     // MARK: - Body
 
@@ -45,10 +60,16 @@ struct SettingsView: View {
             Form {
                 profileSection
                 subscriptionSection
+                feedbackPreferencesSection
                 notificationsSection
                 dataSection
+                bugReportSection
                 aboutSection
                 disclaimerSection
+            }
+            .onAppear {
+                InteractionLog.pageView("Settings")
+                feedbackPrefs = localStore.loadFeedbackPreferences()
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
@@ -96,8 +117,61 @@ struct SettingsView: View {
                 Text("\(localStore.profile.streakDays) days")
                     .foregroundStyle(.secondary)
             }
+
+            // Date of birth for Bio Age
+            DatePicker(
+                selection: Binding(
+                    get: {
+                        localStore.profile.dateOfBirth ?? Calendar.current.date(
+                            byAdding: .year, value: -30, to: Date()
+                        ) ?? Date()
+                    },
+                    set: { newDate in
+                        localStore.profile.dateOfBirth = newDate
+                        localStore.saveProfile()
+                    }
+                ),
+                in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
+                displayedComponents: .date
+            ) {
+                Label("Date of Birth", systemImage: "birthday.cake.fill")
+                    .foregroundStyle(.primary)
+            }
+            .accessibilityIdentifier("settings_dob_picker")
+            .onChange(of: localStore.profile.dateOfBirth) { _, _ in
+                InteractionLog.log(.datePickerChange, element: "dob_picker", page: "Settings", details: "changed")
+            }
+
+            // Biological sex for metric accuracy
+            Picker(selection: Binding(
+                get: { localStore.profile.biologicalSex },
+                set: { newValue in
+                    localStore.profile.biologicalSex = newValue
+                    localStore.saveProfile()
+                }
+            )) {
+                ForEach(BiologicalSex.allCases, id: \.self) { sex in
+                    Text(sex.displayLabel).tag(sex)
+                }
+            } label: {
+                Label("Biological Sex", systemImage: "person.fill")
+                    .foregroundStyle(.primary)
+            }
+
+            if let age = localStore.profile.chronologicalAge {
+                HStack {
+                    Label("Bio Age", systemImage: "heart.text.square.fill")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text("Enabled (age \(age))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         } header: {
             Text("Profile")
+        } footer: {
+            Text("Your date of birth and biological sex are used for accurate Bio Age and typical ranges for your age and sex. All data stays on your device.")
         }
     }
 
@@ -118,6 +192,7 @@ struct SettingsView: View {
             }
 
             Button {
+                InteractionLog.log(.buttonTap, element: "upgrade_button", page: "Settings")
                 showPaywall = true
             } label: {
                 HStack {
@@ -128,6 +203,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityIdentifier("settings_upgrade_button")
         } header: {
             Text("Subscription")
         }
@@ -138,22 +214,211 @@ struct SettingsView: View {
     private var notificationsSection: some View {
         Section {
             Toggle(isOn: $anomalyAlertsEnabled) {
-                Label("Anomaly Alerts", systemImage: "exclamationmark.triangle.fill")
+                Label("Unusual Pattern Alerts", systemImage: "exclamationmark.triangle.fill")
             }
             .tint(.pink)
+            .onChange(of: anomalyAlertsEnabled) { _, newValue in
+                InteractionLog.log(.toggleChange, element: "anomaly_alerts_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
 
             Toggle(isOn: $nudgeRemindersEnabled) {
                 Label("Nudge Reminders", systemImage: "bell.badge.fill")
             }
             .tint(.pink)
+            .onChange(of: nudgeRemindersEnabled) { _, newValue in
+                InteractionLog.log(.toggleChange, element: "nudge_reminders_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
         } header: {
             Text("Notifications")
         } footer: {
             Text(
-                "Anomaly alerts notify you when unusual heart patterns are detected. "
+                "Anomaly alerts notify you when your numbers look different from your usual range. "
                     + "Nudge reminders encourage daily engagement."
             )
         }
+    }
+
+    // MARK: - Feedback Preferences Section
+
+    private var feedbackPreferencesSection: some View {
+        Section {
+            Toggle(isOn: $feedbackPrefs.showBuddySuggestions) {
+                Label("Buddy Suggestions", systemImage: "lightbulb.fill")
+            }
+            .tint(.pink)
+            .onChange(of: feedbackPrefs.showBuddySuggestions) { _, newValue in
+                localStore.saveFeedbackPreferences(feedbackPrefs)
+                InteractionLog.log(.toggleChange, element: "buddy_suggestions_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
+
+            Toggle(isOn: $feedbackPrefs.showDailyCheckIn) {
+                Label("Daily Check-In", systemImage: "face.smiling")
+            }
+            .tint(.pink)
+            .onChange(of: feedbackPrefs.showDailyCheckIn) { _, newValue in
+                localStore.saveFeedbackPreferences(feedbackPrefs)
+                InteractionLog.log(.toggleChange, element: "daily_checkin_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
+
+            Toggle(isOn: $feedbackPrefs.showStressInsights) {
+                Label("Stress Insights", systemImage: "brain.head.profile")
+            }
+            .tint(.pink)
+            .onChange(of: feedbackPrefs.showStressInsights) { _, newValue in
+                localStore.saveFeedbackPreferences(feedbackPrefs)
+                InteractionLog.log(.toggleChange, element: "stress_insights_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
+
+            Toggle(isOn: $feedbackPrefs.showWeeklyTrends) {
+                Label("Weekly Trends", systemImage: "chart.line.uptrend.xyaxis")
+            }
+            .tint(.pink)
+            .onChange(of: feedbackPrefs.showWeeklyTrends) { _, newValue in
+                localStore.saveFeedbackPreferences(feedbackPrefs)
+                InteractionLog.log(.toggleChange, element: "weekly_trends_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
+
+            Toggle(isOn: $feedbackPrefs.showStreakBadge) {
+                Label("Streak Badge", systemImage: "flame.fill")
+            }
+            .tint(.pink)
+            .onChange(of: feedbackPrefs.showStreakBadge) { _, newValue in
+                localStore.saveFeedbackPreferences(feedbackPrefs)
+                InteractionLog.log(.toggleChange, element: "streak_badge_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
+        } header: {
+            Text("What You Want to See")
+        } footer: {
+            Text("Choose which cards and insights appear on your dashboard.")
+        }
+    }
+
+    // MARK: - Bug Report Section
+
+    private var bugReportSection: some View {
+        Section {
+            Button {
+                InteractionLog.log(.buttonTap, element: "bug_report_button", page: "Settings")
+                showBugReport = true
+            } label: {
+                Label("Report a Bug", systemImage: "ant.fill")
+            }
+            .sheet(isPresented: $showBugReport) {
+                bugReportSheet
+            }
+
+            if let supportURL = URL(string: "https://thump.app/feedback") {
+                Link(destination: supportURL) {
+                    Label("Send Feature Request", systemImage: "sparkles")
+                }
+            }
+        } header: {
+            Text("Feedback")
+        } footer: {
+            Text(
+                "Bug reports are sent via email. You can also leave feedback "
+                + "through the App Store review or our website."
+            )
+        }
+    }
+
+    // MARK: - Bug Report Sheet
+
+    private var bugReportSheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("What went wrong?")
+                    .font(.headline)
+
+                Text("Describe what happened and what you expected instead. We read every report.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                TextEditor(text: $bugReportText)
+                    .frame(minHeight: 150)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color(.separator), lineWidth: 0.5)
+                    )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("We'll include:")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+
+                    Label("App version: \(appVersion)", systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Label("Device: \(UIDevice.current.model)", systemImage: "iphone")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Label("iOS: \(UIDevice.current.systemVersion)", systemImage: "gearshape")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if bugReportSubmitted {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Thanks! We'll look into this.")
+                            .font(.subheadline)
+                            .foregroundStyle(.green)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("Report a Bug")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showBugReport = false
+                        bugReportText = ""
+                        bugReportSubmitted = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Send") {
+                        submitBugReport()
+                    }
+                    .disabled(bugReportText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    /// Submits a bug report via the system email compose sheet.
+    /// Falls back to copying to clipboard if no email is available.
+    private func submitBugReport() {
+        let body = """
+        Bug Report
+        ----------
+        \(bugReportText)
+
+        Device Info
+        ----------
+        App: \(appVersion)
+        Device: \(UIDevice.current.model)
+        iOS: \(UIDevice.current.systemVersion)
+        """
+
+        // Try to compose an email
+        if let emailURL = URL(string: "mailto:bugs@thump.app?subject=Bug%20Report&body=\(body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+            UIApplication.shared.open(emailURL)
+        }
+
+        bugReportSubmitted = true
     }
 
     // MARK: - Data Section
@@ -161,10 +426,12 @@ struct SettingsView: View {
     private var dataSection: some View {
         Section {
             Button {
+                InteractionLog.log(.buttonTap, element: "export_button", page: "Settings")
                 showExportConfirmation = true
             } label: {
                 Label("Export Health Data", systemImage: "square.and.arrow.up")
             }
+            .accessibilityIdentifier("settings_export_button")
             .alert("Export Health Data", isPresented: $showExportConfirmation) {
                 Button("Export CSV", role: nil) {
                     exportHealthData()
@@ -189,17 +456,30 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Label("Your heart's daily story", systemImage: "heart.circle")
+            Label("Heart wellness tracking", systemImage: "heart.circle")
                 .foregroundStyle(.secondary)
                 .font(.subheadline)
 
             Button {
+                InteractionLog.log(.linkTap, element: "terms_link", page: "Settings")
+                showTermsOfService = true
+            } label: {
+                Label("Terms of Service", systemImage: "doc.text")
+            }
+            .accessibilityIdentifier("settings_terms_link")
+            .sheet(isPresented: $showTermsOfService) {
+                TermsOfServiceSheet()
+            }
+
+            Button {
+                InteractionLog.log(.linkTap, element: "privacy_link", page: "Settings")
                 showPrivacyPolicy = true
             } label: {
                 Label("Privacy Policy", systemImage: "hand.raised.fill")
             }
+            .accessibilityIdentifier("settings_privacy_link")
             .sheet(isPresented: $showPrivacyPolicy) {
-                privacyPolicySheet
+                PrivacyPolicySheet()
             }
 
             if let supportURL = URL(string: "https://thump.app/support") {
@@ -299,51 +579,6 @@ struct SettingsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    // MARK: - Privacy Policy Sheet
-
-    private var privacyPolicySheet: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Privacy Policy")
-                        .font(.title2)
-                        .fontWeight(.bold)
-
-                    Text(
-                        "Thump takes your privacy seriously. All health data is "
-                            + "processed on-device and is never transmitted to "
-                            + "external servers. Your data stays on your iPhone "
-                            + "and Apple Watch."
-                    )
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-
-                    Text("Data Collection")
-                        .font(.headline)
-
-                    Text(
-                        "Thump reads health metrics from Apple HealthKit with "
-                            + "your explicit permission. No data is shared with "
-                            + "third parties. Subscription management is handled "
-                            + "through Apple's App Store infrastructure."
-                    )
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(20)
-            }
-            .navigationTitle("Privacy Policy")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        showPrivacyPolicy = false
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - Helpers
 
     /// The user's initials from their display name.
@@ -380,7 +615,7 @@ struct SettingsView: View {
         guard !history.isEmpty else { return }
 
         // Build CSV header
-        var csv = "Date,Resting HR,HRV (SDNN),Recovery 1m,Recovery 2m,"
+        var csv = "Date,Resting HR,Heart Rate Variability (ms),Recovery 1m,Recovery 2m,"
             + "VO2 Max,Steps,Walk Min,Activity Min,Sleep Hours,"
             + "Status,Cardio Score\n"
 

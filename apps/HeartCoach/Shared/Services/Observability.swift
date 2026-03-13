@@ -133,6 +133,93 @@ public struct AppLogger: Sendable {
 
     /// `AppLogger` is a namespace; it should not be instantiated.
     private init() {}
+
+    // MARK: - Category-Scoped Loggers
+
+    /// Category-scoped logger for engine computations.
+    public static let engine = AppLogChannel(category: .engine)
+
+    /// Category-scoped logger for HealthKit queries and authorization.
+    public static let healthKit = AppLogChannel(category: .healthKit)
+
+    /// Category-scoped logger for navigation and page views.
+    public static let navigation = AppLogChannel(category: .navigation)
+
+    /// Category-scoped logger for user interaction events.
+    public static let interaction = AppLogChannel(category: .interaction)
+
+    /// Category-scoped logger for subscription and purchase flows.
+    public static let subscription = AppLogChannel(category: .subscription)
+
+    /// Category-scoped logger for watch connectivity sync.
+    public static let sync = AppLogChannel(category: .sync)
+}
+
+// MARK: - Log Category
+
+/// Categories for scoped os.Logger instances, each appearing as a
+/// separate category in Console.app for targeted filtering.
+public enum LogCategory: String, Sendable {
+    case engine       = "engine"
+    case healthKit    = "healthKit"
+    case navigation   = "navigation"
+    case interaction  = "interaction"
+    case subscription = "subscription"
+    case sync         = "sync"
+    case notification = "notification"
+    case validation   = "validation"
+}
+
+// MARK: - Category-Scoped Log Channel
+
+/// A scoped logging channel that wraps `os.Logger` with a specific category.
+///
+/// Usage:
+/// ```swift
+/// AppLogger.engine.info("Assessment computed in \(ms)ms")
+/// AppLogger.healthKit.warning("RHR query returned nil, using fallback")
+/// ```
+public struct AppLogChannel: Sendable {
+
+    private let logger: Logger
+    private let categoryName: String
+
+    public init(category: LogCategory) {
+        self.logger = Logger(subsystem: "com.thump.app", category: category.rawValue)
+        self.categoryName = category.rawValue
+    }
+
+    public func debug(_ message: @autoclosure () -> String) {
+        let text = message()
+        logger.debug("\(text, privacy: .public)")
+        #if DEBUG
+        print("🔍 [\(categoryName)] \(text)")
+        #endif
+    }
+
+    public func info(_ message: @autoclosure () -> String) {
+        let text = message()
+        logger.info("\(text, privacy: .public)")
+        #if DEBUG
+        print("ℹ️ [\(categoryName)] \(text)")
+        #endif
+    }
+
+    public func warning(_ message: @autoclosure () -> String) {
+        let text = message()
+        logger.warning("\(text, privacy: .public)")
+        #if DEBUG
+        print("⚠️ [\(categoryName)] \(text)")
+        #endif
+    }
+
+    public func error(_ message: @autoclosure () -> String) {
+        let text = message()
+        logger.error("\(text, privacy: .public)")
+        #if DEBUG
+        print("❌ [\(categoryName)] \(text)")
+        #endif
+    }
 }
 
 // MARK: - Analytics Event

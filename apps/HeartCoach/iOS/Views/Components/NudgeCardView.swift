@@ -1,30 +1,28 @@
 // NudgeCardView.swift
 // Thump iOS
 //
-// Your buddy's daily suggestion card. Friendly, warm, action-oriented.
-// Each card has a colorful icon, encouraging copy, and a satisfying
-// completion animation. Feels like a friend giving you a nudge, not
-// a clinical prescription.
+// Displays today's coaching nudge with category icon, title, description,
+// optional duration badge, and a completion action. The card uses the nudge
+// category's tint color for visual branding.
 
 import SwiftUI
 
 struct NudgeCardView: View {
     let nudge: DailyNudge
-    var isAlreadyActive: Bool = false
     let onMarkComplete: () -> Void
 
     @State private var isCompleted = false
 
     private var categoryColor: Color {
         switch nudge.category {
-        case .walk:         return Color(hex: 0x22C55E)
-        case .rest:         return Color(hex: 0x6366F1)
-        case .hydrate:      return Color(hex: 0x06B6D4)
-        case .breathe:      return Color(hex: 0x0D9488)
-        case .moderate:     return Color(hex: 0xF59E0B)
-        case .celebrate:    return Color(hex: 0xFBBF24)
-        case .seekGuidance: return Color(hex: 0xEF4444)
-        case .sunlight:     return Color(hex: 0xFBBF24)
+        case .walk:         return .green
+        case .rest:         return .indigo
+        case .hydrate:      return .cyan
+        case .breathe:      return .teal
+        case .moderate:     return .orange
+        case .celebrate:    return .yellow
+        case .seekGuidance: return .red
+        case .sunlight:     return .orange
         }
     }
 
@@ -32,21 +30,12 @@ struct NudgeCardView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header: icon + title + optional duration
             HStack(alignment: .top, spacing: 12) {
-                // Category icon with gradient background
+                // Category icon
                 Image(systemName: nudge.icon)
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.title2)
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
-                    .background(
-                        LinearGradient(
-                            colors: [categoryColor, categoryColor.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        in: RoundedRectangle(cornerRadius: 12)
-                    )
-                    .shadow(color: categoryColor.opacity(0.3), radius: 4, y: 2)
+                    .background(categoryColor.gradient, in: RoundedRectangle(cornerRadius: 10))
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -61,7 +50,7 @@ struct NudgeCardView: View {
                             .foregroundStyle(categoryColor)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(categoryColor.opacity(0.1), in: Capsule())
+                            .background(categoryColor.opacity(0.12), in: Capsule())
                     }
                 }
 
@@ -72,24 +61,6 @@ struct NudgeCardView: View {
                 "\(nudge.title)"
                     + "\(nudge.durationMinutes.map { ", \($0) minutes" } ?? "")"
             )
-
-            // Already active badge
-            if isAlreadyActive {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(Color(hex: 0x22C55E))
-                    Text("You're already on it! Keep going.")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color(hex: 0x22C55E))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    Color(hex: 0x22C55E).opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
-            }
 
             // Description
             Text(nudge.description)
@@ -107,9 +78,8 @@ struct NudgeCardView: View {
                 HStack(spacing: 6) {
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.body)
-                        .contentTransition(.symbolEffect(.replace))
 
-                    Text(isCompleted ? "Done!" : "Mark Complete")
+                    Text(isCompleted ? "Completed" : "Mark Complete")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                 }
@@ -117,32 +87,17 @@ struct NudgeCardView: View {
                 .padding(.vertical, 10)
                 .foregroundStyle(isCompleted ? .white : categoryColor)
                 .background(
-                    isCompleted
-                        ? AnyShapeStyle(
-                            LinearGradient(
-                                colors: [categoryColor, categoryColor.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        : AnyShapeStyle(categoryColor.opacity(0.1)),
-                    in: RoundedRectangle(cornerRadius: 12)
+                    isCompleted ? AnyShapeStyle(categoryColor) : AnyShapeStyle(categoryColor.opacity(0.12)),
+                    in: RoundedRectangle(cornerRadius: 10)
                 )
             }
             .buttonStyle(.plain)
             .disabled(isCompleted)
             .accessibilityLabel(isCompleted ? "Nudge completed" : "Mark nudge as complete")
-            .accessibilityHint(isCompleted ? "" : "Double tap to mark this suggestion as complete")
+            .accessibilityHint(isCompleted ? "" : "Double tap to mark this coaching nudge as complete")
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .strokeBorder(categoryColor.opacity(0.08), lineWidth: 1)
-        )
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 

@@ -47,10 +47,14 @@ struct PaywallView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
+            .onAppear { InteractionLog.pageView("Paywall") }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button("Close") {
+                        InteractionLog.log(.buttonTap, element: "close", page: "Paywall")
+                        dismiss()
+                    }
                 }
             }
             .alert("Purchase Error", isPresented: Binding<Bool>(
@@ -88,8 +92,8 @@ struct PaywallView: View {
                     .foregroundStyle(.white)
 
                 Text(
-                    "Your Heart Training Buddy — deep analytics, weekly reports, "
-                        + "and personalized wellness insights to help you "
+                    "Your heart training buddy. Deep analytics, weekly reports, "
+                        + "and wellness insights to help you "
                         + "understand your heart health trends."
                 )
                     .font(.subheadline)
@@ -218,6 +222,7 @@ struct PaywallView: View {
 
             // Subscribe button
             Button {
+                InteractionLog.log(.buttonTap, element: "subscribe_\(tier.rawValue)", page: "Paywall", details: "annual=\(isAnnual)")
                 subscribe(to: tier)
             } label: {
                 HStack {
@@ -328,6 +333,7 @@ struct PaywallView: View {
 
             // Subscribe button — always uses annual price
             Button {
+                InteractionLog.log(.buttonTap, element: "subscribe_family", page: "Paywall", details: "annual=true")
                 subscribe(to: .family)
             } label: {
                 HStack {
@@ -465,6 +471,7 @@ struct PaywallView: View {
     private var restoreAndLegal: some View {
         VStack(spacing: 14) {
             Button {
+                InteractionLog.log(.buttonTap, element: "restore_purchases", page: "Paywall")
                 restorePurchases()
             } label: {
                 Text("Restore Purchases")

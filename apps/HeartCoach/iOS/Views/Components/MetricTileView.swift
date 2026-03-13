@@ -1,9 +1,9 @@
 // MetricTileView.swift
 // Thump iOS
 //
-// A warm, modern metric tile for the dashboard grid. Each tile has
-// a subtle gradient accent, rounded corners, and friendly typography.
-// Supports trend direction, confidence indicator, and locked state.
+// A reusable metric tile for the dashboard grid. Displays a health metric's
+// label, formatted value with unit, trend direction, and confidence indicator.
+// Supports a locked state for gating behind subscription tiers.
 
 import SwiftUI
 
@@ -14,7 +14,6 @@ struct MetricTileView: View {
     let trend: TrendDirection?
     let confidence: ConfidenceLevel?
     let isLocked: Bool
-    let lowerIsBetter: Bool
 
     enum TrendDirection {
         case up, down, flat
@@ -27,20 +26,10 @@ struct MetricTileView: View {
             }
         }
 
-        /// Default color (higher is better).
         var color: Color {
             switch self {
-            case .up:   return Color(hex: 0x22C55E)
-            case .down: return Color(hex: 0xEF4444)
-            case .flat: return .secondary
-            }
-        }
-
-        /// Inverted color for metrics where lower is better (e.g. RHR).
-        var invertedColor: Color {
-            switch self {
-            case .up:   return Color(hex: 0xEF4444)
-            case .down: return Color(hex: 0x22C55E)
+            case .up:   return .green
+            case .down: return .red
             case .flat: return .secondary
             }
         }
@@ -52,8 +41,7 @@ struct MetricTileView: View {
         unit: String,
         trend: TrendDirection? = nil,
         confidence: ConfidenceLevel? = nil,
-        isLocked: Bool = false,
-        lowerIsBetter: Bool = false
+        isLocked: Bool = false
     ) {
         self.label = label
         self.value = value
@@ -61,48 +49,12 @@ struct MetricTileView: View {
         self.trend = trend
         self.confidence = confidence
         self.isLocked = isLocked
-        self.lowerIsBetter = lowerIsBetter
     }
 
-    // MARK: - Metric Color
-
-    private var accentColor: Color {
-        switch label {
-        case "Resting Heart Rate": return Color(hex: 0xEF4444)
-        case "HRV":                return Color(hex: 0x3B82F6)
-        case "Recovery":           return Color(hex: 0x22C55E)
-        case "Cardio Fitness":     return Color(hex: 0x8B5CF6)
-        case "Active Minutes":     return Color(hex: 0xF59E0B)
-        case "Sleep":              return Color(hex: 0x6366F1)
-        case "Weight":             return Color(hex: 0x0D9488)
-        default:                   return Color(hex: 0x3B82F6)
-        }
-    }
-
-    private var metricIcon: String {
-        switch label {
-        case "Resting Heart Rate": return "heart.fill"
-        case "HRV":                return "waveform.path.ecg"
-        case "Recovery":           return "arrow.uturn.up"
-        case "Cardio Fitness":     return "lungs.fill"
-        case "Active Minutes":     return "figure.run"
-        case "Sleep":              return "moon.zzz.fill"
-        case "Weight":             return "scalemass.fill"
-        default:                   return "heart.fill"
-        }
-    }
-
-    // MARK: - Accessibility
+    // MARK: - Accessibility Helpers
 
     private var trendText: String {
         guard let trend else { return "" }
-        if lowerIsBetter {
-            switch trend {
-            case .up:   return "moving up lately, which may need attention"
-            case .down: return "easing down lately, which is a good sign"
-            case .flat: return "holding steady"
-            }
-        }
         switch trend {
         case .up:   return "moving up lately"
         case .down: return "easing down lately"
@@ -124,9 +76,6 @@ struct MetricTileView: View {
         if !confidenceText.isEmpty { parts.append(confidenceText) }
         return parts.joined(separator: ", ")
     }
-
-    // MARK: - Body
-
     var body: some View {
         ZStack {
             tileContent
@@ -137,14 +86,7 @@ struct MetricTileView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 100)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(accentColor.opacity(0.08), lineWidth: 1)
-        )
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityDescription)
         .accessibilityValue(isLocked ? "locked" : trendText)
@@ -154,13 +96,9 @@ struct MetricTileView: View {
 
     private var tileContent: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: metricIcon)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(accentColor)
-
+            HStack {
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
@@ -171,26 +109,24 @@ struct MetricTileView: View {
                 }
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .fontDesign(.rounded)
                     .foregroundStyle(.primary)
 
                 Text(unit)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.tertiary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 Spacer()
 
                 if let trend {
-                    let trendColor = lowerIsBetter ? trend.invertedColor : trend.color
                     Image(systemName: trend.icon)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(trendColor)
-                        .padding(4)
-                        .background(
-                            Circle().fill(trendColor.opacity(0.1))
-                        )
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(trend.color)
                 }
             }
         }
@@ -211,16 +147,16 @@ struct MetricTileView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Confidence Dot
 
     private func confidenceDot(for level: ConfidenceLevel) -> some View {
         let color: Color = switch level {
-        case .high:   Color(hex: 0x22C55E)
-        case .medium: Color(hex: 0xF59E0B)
-        case .low:    Color(hex: 0xF97316)
+        case .high:   .green
+        case .medium: .yellow
+        case .low:    .orange
         }
         return Circle()
             .fill(color)
@@ -231,6 +167,7 @@ struct MetricTileView: View {
 // MARK: - Convenience Initializer from Optional Values
 
 extension MetricTileView {
+    /// Creates a tile from an optional Double, formatting it for display.
     init(
         label: String,
         optionalValue: Double?,
@@ -238,8 +175,7 @@ extension MetricTileView {
         decimals: Int = 0,
         trend: TrendDirection? = nil,
         confidence: ConfidenceLevel? = nil,
-        isLocked: Bool = false,
-        lowerIsBetter: Bool = false
+        isLocked: Bool = false
     ) {
         self.label = label
         if let val = optionalValue {
@@ -255,13 +191,12 @@ extension MetricTileView {
         self.trend = trend
         self.confidence = confidence
         self.isLocked = isLocked
-        self.lowerIsBetter = lowerIsBetter
     }
 }
 
 #Preview("Unlocked") {
     MetricTileView(
-        label: "Resting Heart Rate",
+        label: "Resting HR",
         value: "62",
         unit: "bpm",
         trend: .down,

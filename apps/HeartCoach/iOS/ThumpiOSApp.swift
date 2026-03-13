@@ -53,13 +53,30 @@ struct ThumpiOSApp: App {
         }
     }
 
+    // MARK: - Legal Acceptance State
+
+    /// Tracks whether the user has accepted the Terms of Service and Privacy Policy.
+    @AppStorage("thump_legal_accepted_v1") private var legalAccepted: Bool = false
+
     // MARK: - Root View Routing
 
-    /// Routes to either onboarding or the main tab view based on
-    /// the user's onboarding completion state.
+    /// Routes to legal gate, onboarding, or main tab view based on
+    /// the user's acceptance and onboarding state.
+    /// Whether the app is running in UI test mode (launched with `-UITestMode`).
+    private var isUITestMode: Bool {
+        CommandLine.arguments.contains("-UITestMode")
+    }
+
     @ViewBuilder
     private var rootView: some View {
-        if localStore.profile.onboardingComplete {
+        if isUITestMode {
+            // Skip legal gate and onboarding for UI tests
+            MainTabView()
+        } else if !legalAccepted {
+            LegalGateView {
+                legalAccepted = true
+            }
+        } else if localStore.profile.onboardingComplete {
             MainTabView()
         } else {
             OnboardingView()
@@ -74,6 +91,9 @@ struct ThumpiOSApp: App {
     /// - Updates the current subscription status from StoreKit.
     /// - Syncs the subscription tier to the local store.
     private func performStartupTasks() async {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        AppLogger.info("App launch — starting startup tasks")
+
         connectivityService.bind(localStore: localStore)
 
         // Start MetricKit crash reporting and performance monitoring
@@ -97,5 +117,8 @@ struct ThumpiOSApp: App {
             }
             #endif
         }
+
+        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+        AppLogger.info("Startup tasks completed in \(String(format: "%.0f", elapsed))ms")
     }
 }
