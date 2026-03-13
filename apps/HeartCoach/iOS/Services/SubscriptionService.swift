@@ -10,7 +10,6 @@ import Foundation
 import StoreKit
 import Combine
 
-
 // MARK: - Subscription Error
 
 /// Errors specific to subscription operations.
@@ -51,6 +50,9 @@ final class SubscriptionService: ObservableObject {
     /// Whether a purchase is currently in progress.
     @Published var purchaseInProgress: Bool = false
 
+    /// Error from the most recent product-loading attempt, if any.
+    @Published var productLoadError: Error?
+
     // MARK: - Product IDs
 
     /// All Thump subscription product identifiers.
@@ -81,6 +83,11 @@ final class SubscriptionService: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// Preview instance for SwiftUI previews.
+    static var preview: SubscriptionService { SubscriptionService() }
+    #endif
+
     deinit {
         transactionListenerTask?.cancel()
     }
@@ -100,9 +107,13 @@ final class SubscriptionService: ObservableObject {
 
             await MainActor.run {
                 self.availableProducts = sorted
+                self.productLoadError = nil
             }
         } catch {
             debugPrint("[SubscriptionService] Failed to load products: \(error.localizedDescription)")
+            await MainActor.run {
+                self.productLoadError = error
+            }
         }
     }
 
@@ -193,7 +204,7 @@ final class SubscriptionService: ObservableObject {
     /// Iterates through `Transaction.currentEntitlements` to find the highest-tier
     /// active subscription. Falls back to `.free` if no active subscriptions exist.
     func updateSubscriptionStatus() async {
-        var highestTier: SubscriptionTier = .free
+        var resolvedTier: SubscriptionTier = .free
 
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerification(result) else {
@@ -203,14 +214,15 @@ final class SubscriptionService: ObservableObject {
             // Only consider subscription transactions
             if transaction.productType == .autoRenewable {
                 let tier = Self.tierForProductID(transaction.productID)
-                if Self.tierPriority(tier) > Self.tierPriority(highestTier) {
-                    highestTier = tier
+                if Self.tierPriority(tier) > Self.tierPriority(resolvedTier) {
+                    resolvedTier = tier
                 }
             }
         }
 
+        let finalTier = resolvedTier
         await MainActor.run {
-            self.currentTier = highestTier
+            self.currentTier = finalTier
         }
     }
 

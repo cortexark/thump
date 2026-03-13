@@ -36,10 +36,10 @@ enum AnalyticsEventName: String, CaseIterable, Sendable {
     case nudgeSkipped            = "nudge_skipped"
 
     // Watch
-    case watchFeedbackReceived   = "watch_feedback_received"
+    case watchFeedbackReceived = "watch_feedback_received"
 
     // AI / Assessment
-    case assessmentGenerated     = "assessment_generated"
+    case assessmentGenerated = "assessment_generated"
 }
 
 // MARK: - Analytics Tracker

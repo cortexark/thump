@@ -7,7 +7,7 @@
 // Platforms: iOS 17+, watchOS 10+, macOS 14+
 
 import XCTest
-@testable import ThumpCore
+@testable import Thump
 
 // MARK: - HeartTrendEngineTests
 
@@ -16,7 +16,7 @@ final class HeartTrendEngineTests: XCTestCase {
     // MARK: - Properties
 
     /// Default engine instance used across tests.
-    private var engine: HeartTrendEngine!
+    private var engine = HeartTrendEngine()
 
     // MARK: - Lifecycle
 
@@ -26,7 +26,7 @@ final class HeartTrendEngineTests: XCTestCase {
     }
 
     override func tearDown() {
-        engine = nil
+        engine = HeartTrendEngine()
         super.tearDown()
     }
 
@@ -78,8 +78,8 @@ final class HeartTrendEngineTests: XCTestCase {
         // MAD = 2 * 1.4826 = 2.9652
         // Z for value 70: (70 - 64) / 2.9652 = 2.0235...
         let baseline = [60.0, 62.0, 64.0, 66.0, 68.0]
-        let z = engine.robustZ(value: 70.0, baseline: baseline)
-        XCTAssertEqual(z, 6.0 / 2.9652, accuracy: 1e-3)
+        let zScore = engine.robustZ(value: 70.0, baseline: baseline)
+        XCTAssertEqual(zScore, 6.0 / 2.9652, accuracy: 1e-3)
 
         // Value at median should give Z = 0
         let zAtMedian = engine.robustZ(value: 64.0, baseline: baseline)
@@ -206,7 +206,7 @@ final class HeartTrendEngineTests: XCTestCase {
         // Create 7 days of rising RHR: 60, 61, 62, 63, 64, 65, 66
         var history: [HeartSnapshot] = []
         for i in 0..<7 {
-            let date = calendar.date(byAdding: .day, value: -(7 - i), to: baseDate)!
+            guard let date = calendar.date(byAdding: .day, value: -(7 - i), to: baseDate) else { continue }
             history.append(makeSnapshot(
                 date: date,
                 rhr: 60.0 + Double(i),
@@ -418,7 +418,9 @@ extension HeartTrendEngineTests {
         let today = Date()
 
         return (0..<days).map { i in
-            let date = calendar.date(byAdding: .day, value: -(days - i), to: today)!
+            guard let date = calendar.date(byAdding: .day, value: -(days - i), to: today) else {
+                return makeSnapshot(date: today, rhr: baseRHR, hrv: baseHRV)
+            }
             // Deterministic pseudo-variation using sine wave.
             let variation = sin(Double(i) * 0.5) * 2.0
             return makeSnapshot(

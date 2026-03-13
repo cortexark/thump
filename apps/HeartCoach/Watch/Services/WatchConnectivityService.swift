@@ -18,11 +18,8 @@ import Combine
 /// receives ``HeartAssessment`` updates from the phone, and sends
 /// ``WatchFeedbackPayload`` messages back.
 ///
-/// Payloads are serialised via `JSONEncoder` / `JSONDecoder` and embedded
-/// in the WatchConnectivity message dictionary as Base-64 encoded `Data`
-/// under the `"payload"` key. This avoids the fragile
-/// `[String: Any]`-to-model manual mapping that the previous
-/// implementation relied on.
+/// Payloads are serialized through ``ConnectivityMessageCodec`` so both
+/// platforms share one transport contract.
 @MainActor
 final class WatchConnectivityService: NSObject, ObservableObject {
 
@@ -46,23 +43,12 @@ final class WatchConnectivityService: NSObject, ObservableObject {
 
     private var session: WCSession?
 
-    private let encoder: JSONEncoder = {
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        return enc
-    }()
-
-    private let decoder: JSONDecoder = {
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        return dec
-    }()
-
     // MARK: - Initialization
 
     override init() {
         super.init()
         activateSessionIfSupported()
+        injectSimulatorMockDataIfNeeded()
     }
 
     // MARK: - Session Activation
@@ -74,6 +60,47 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         wcSession.delegate = self
         wcSession.activate()
         self.session = wcSession
+    }
+
+    // MARK: - Preview / Test Helpers
+
+    /// Directly sets the latest assessment — used by SwiftUI previews and tests
+    /// that cannot wait for the async simulator injection task.
+    func simulateAssessmentForPreview(_ assessment: HeartAssessment) {
+        latestAssessment = assessment
+        lastSyncDate = Date()
+        isPhoneReachable = true
+    }
+
+    // MARK: - Simulator Mock Data
+
+    /// Injects realistic mock assessment data when running in the iOS/watchOS Simulator.
+    ///
+    /// The Simulator cannot establish a real WCSession between paired simulators,
+    /// so `session.isReachable` is always false and `sendMessage` never delivers.
+    /// This method seeds `latestAssessment` and `isPhoneReachable` directly so
+    /// the watch UI renders with real-looking data during development.
+    private func injectSimulatorMockDataIfNeeded() {
+        #if targetEnvironment(simulator)
+        Task { @MainActor [weak self] in
+            // Brief delay so the view hierarchy is set up before data arrives.
+            try? await Task.sleep(for: .seconds(0.5))
+            guard let self else { return }
+            self.isPhoneReachable = true
+            let history = MockData.mockHistory(days: 21)
+            let engine = ConfigService.makeDefaultEngine()
+            let assessment = engine.assess(
+                history: history,
+                current: MockData.mockTodaySnapshot,
+                feedback: nil
+            )
+            self.latestAssessment = assessment
+            self.lastSyncDate = Date()
+
+            // Seed a mock action plan so watch UI has content in the Simulator.
+            self.latestActionPlan = WatchActionPlan.mock
+        }
+        #endif
     }
 
     // MARK: - Outbound: Send Feedback
@@ -95,7 +122,10 @@ final class WatchConnectivityService: NSObject, ObservableObject {
             source: "watch"
         )
 
-        guard let message = encodeToMessage(payload, type: "feedback") else {
+        guard let message = ConnectivityMessageCodec.encode(
+            payload,
+            type: .feedback
+        ) else {
             return false
         }
 
@@ -103,7 +133,10 @@ final class WatchConnectivityService: NSObject, ObservableObject {
             session.sendMessage(message, replyHandler: nil) { error in
                 // Reachability changed between check and send; fall back to transfer.
                 session.transferUserInfo(message)
-                debugPrint("[WatchConnectivity] sendMessage failed, transferred userInfo: \(error.localizedDescription)")
+                debugPrint(
+                    "[WatchConnectivity] sendMessage failed, "
+                    + "transferred userInfo: \(error.localizedDescription)"
+                )
             }
         } else {
             session.transferUserInfo(message)
@@ -115,8 +148,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     // MARK: - Outbound: Request Assessment
 
     /// Requests the latest assessment from the companion phone app.
-    /// The phone should respond by calling `transferUserInfo` with the
-    /// current ``HeartAssessment``.
+    /// The phone responds synchronously through `replyHandler`.
     func requestLatestAssessment() {
         guard let session = session else {
             connectionError = "Watch Connectivity is not available."
@@ -131,27 +163,58 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         // Clear any previous error on a new attempt.
         connectionError = nil
 
-        let request: [String: Any] = ["type": "requestAssessment"]
-        session.sendMessage(request, replyHandler: { [weak self] reply in
-            self?.handleAssessmentReply(reply)
-        }, errorHandler: { [weak self] error in
-            Task { @MainActor in
-                self?.connectionError = "Sync failed: \(error.localizedDescription)"
+        let request: [String: Any] = [
+            "type": ConnectivityMessageType.requestAssessment.rawValue
+        ]
+        session.sendMessage(
+            request,
+            replyHandler: { [weak self] reply in
+                self?.handleAssessmentReply(reply)
+            },
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    self?.connectionError = "Sync failed: \(error.localizedDescription)"
+                }
+                debugPrint(
+                    "[WatchConnectivity] requestAssessment failed: "
+                    + "\(error.localizedDescription)"
+                )
             }
-            debugPrint("[WatchConnectivity] requestAssessment failed: \(error.localizedDescription)")
-        })
+        )
     }
 
     // MARK: - Inbound Handling
 
     nonisolated private func handleAssessmentReply(_ reply: [String: Any]) {
+        if let type = reply["type"] as? String,
+           type == ConnectivityMessageType.error.rawValue {
+            let reason = (reply["reason"] as? String) ?? "Unable to load the latest assessment."
+            Task { @MainActor [weak self] in
+                self?.connectionError = reason
+            }
+            return
+        }
+
         guard let assessment = decodeAssessment(from: reply) else { return }
 
         Task { @MainActor [weak self] in
             self?.latestAssessment = assessment
             self?.lastSyncDate = Date()
+            self?.connectionError = nil
         }
     }
+
+    // MARK: - Published Prompts
+
+    /// Breath prompt received from the phone (stress rising).
+    @Published var breathPrompt: DailyNudge?
+
+    /// Morning check-in prompt received from the phone.
+    @Published var checkInPromptMessage: String?
+
+    /// The most recent action plan received from the phone.
+    /// Contains daily improvement items + weekly and monthly buddy summaries.
+    @Published private(set) var latestActionPlan: WatchActionPlan?
 
     nonisolated private func handleIncomingMessage(_ message: [String: Any]) {
         guard let type = message["type"] as? String else { return }
@@ -165,33 +228,38 @@ final class WatchConnectivityService: NSObject, ObservableObject {
                 }
             }
 
+        case "breathPrompt":
+            let title = (message["title"] as? String) ?? "Take a Breath"
+            let desc = (message["description"] as? String)
+                ?? "A quick breathing exercise might help you reset."
+            let duration = (message["durationMinutes"] as? Int) ?? 3
+            let nudge = DailyNudge(
+                category: .breathe,
+                title: title,
+                description: desc,
+                durationMinutes: duration,
+                icon: "wind"
+            )
+            Task { @MainActor [weak self] in
+                self?.breathPrompt = nudge
+            }
+
+        case "checkInPrompt":
+            let msg = (message["message"] as? String)
+                ?? "How are you feeling this morning?"
+            Task { @MainActor [weak self] in
+                self?.checkInPromptMessage = msg
+            }
+
+        case "actionPlan":
+            if let plan = ConnectivityMessageCodec.decode(WatchActionPlan.self, from: message) {
+                Task { @MainActor [weak self] in
+                    self?.latestActionPlan = plan
+                }
+            }
+
         default:
             debugPrint("[WatchConnectivity] Unknown message type: \(type)")
-        }
-    }
-
-    // MARK: - Coding Helpers
-
-    /// Encode a `Codable` value into a WatchConnectivity-compatible
-    /// `[String: Any]` message dictionary.
-    ///
-    /// The encoded JSON `Data` is stored as a Base-64 string under
-    /// the `"payload"` key so that the dictionary remains
-    /// property-list compliant (required by `transferUserInfo`).
-    private func encodeToMessage<T: Encodable>(
-        _ value: T,
-        type: String
-    ) -> [String: Any]? {
-        do {
-            let data = try encoder.encode(value)
-            let base64 = data.base64EncodedString()
-            return [
-                "type": type,
-                "payload": base64
-            ]
-        } catch {
-            debugPrint("[WatchConnectivity] Encode failed for \(T.self): \(error.localizedDescription)")
-            return nil
         }
     }
 
@@ -201,21 +269,11 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     /// 1. `"payload"` is a Base-64 encoded JSON string (preferred).
     /// 2. `"assessment"` is a Base-64 encoded JSON string (reply format).
     nonisolated private func decodeAssessment(from message: [String: Any]) -> HeartAssessment? {
-        let localDecoder = JSONDecoder()
-        localDecoder.dateDecodingStrategy = .iso8601
-        // Try "payload" key first (standard push format)
-        if let base64 = message["payload"] as? String,
-           let data = Data(base64Encoded: base64) {
-            return try? localDecoder.decode(HeartAssessment.self, from: data)
-        }
-
-        // Fall back to "assessment" key (reply format)
-        if let base64 = message["assessment"] as? String,
-           let data = Data(base64Encoded: base64) {
-            return try? localDecoder.decode(HeartAssessment.self, from: data)
-        }
-
-        return nil
+        ConnectivityMessageCodec.decode(
+            HeartAssessment.self,
+            from: message,
+            payloadKeys: ["payload", "assessment"]
+        )
     }
 }
 
@@ -233,12 +291,30 @@ extension WatchConnectivityService: WCSessionDelegate {
         }
         if let error = error {
             debugPrint("[WatchConnectivity] Activation failed: \(error.localizedDescription)")
+            return
+        }
+        guard activationState == .activated else { return }
+        // Auto-request the latest assessment shortly after activation so
+        // the watch never sits on the "Syncing..." placeholder on first open.
+        // A brief delay lets WCSession settle its reachability state.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1.5))
+            guard let self, self.latestAssessment == nil else { return }
+            self.requestLatestAssessment()
         }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor [weak self] in
-            self?.isPhoneReachable = session.isReachable
+            guard let self else { return }
+            self.isPhoneReachable = session.isReachable
+            // Auto-retry when the phone becomes reachable and we still
+            // have no assessment (e.g., watch opened away from iPhone,
+            // then iPhone came back into range).
+            if session.isReachable && self.latestAssessment == nil {
+                self.connectionError = nil
+                self.requestLatestAssessment()
+            }
         }
     }
 
@@ -257,7 +333,7 @@ extension WatchConnectivityService: WCSessionDelegate {
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
         handleIncomingMessage(message)
-        replyHandler(["status": "received"])
+        replyHandler(ConnectivityMessageCodec.acknowledgement())
     }
 
     /// Handles background `transferUserInfo` deliveries from the phone.

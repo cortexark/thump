@@ -16,7 +16,7 @@ import Foundation
 /// The engine evaluates four factor pairs:
 /// 1. **Daily Steps** vs. **Resting Heart Rate**
 /// 2. **Walk Minutes** vs. **HRV (SDNN)**
-/// 3. **Workout Minutes** vs. **Recovery HR (1 min)**
+/// 3. **Activity Minutes** vs. **Recovery HR (1 min)**
 /// 4. **Sleep Hours** vs. **HRV (SDNN)**
 ///
 /// A minimum of ``ConfigService/minimumCorrelationPoints`` paired
@@ -50,7 +50,7 @@ public struct CorrelationEngine: Sendable {
         )
         if stepsRHR.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: stepsRHR.x, y: stepsRHR.y)
-            let (interpretation, confidence) = interpretCorrelation(
+            let result = interpretCorrelation(
                 factor: "Daily Steps",
                 metric: "resting heart rate",
                 r: r,
@@ -59,8 +59,9 @@ public struct CorrelationEngine: Sendable {
             results.append(CorrelationResult(
                 factorName: "Daily Steps",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
@@ -72,7 +73,7 @@ public struct CorrelationEngine: Sendable {
         )
         if walkHRV.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: walkHRV.x, y: walkHRV.y)
-            let (interpretation, confidence) = interpretCorrelation(
+            let result = interpretCorrelation(
                 factor: "Walk Minutes",
                 metric: "heart rate variability",
                 r: r,
@@ -81,12 +82,13 @@ public struct CorrelationEngine: Sendable {
             results.append(CorrelationResult(
                 factorName: "Walk Minutes",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
-        // 3. Workout Minutes vs Recovery HR 1m
+        // 3. Activity Minutes vs Recovery HR 1m
         let workoutRec = pairedValues(
             history: history,
             xKeyPath: \.workoutMinutes,
@@ -94,17 +96,18 @@ public struct CorrelationEngine: Sendable {
         )
         if workoutRec.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: workoutRec.x, y: workoutRec.y)
-            let (interpretation, confidence) = interpretCorrelation(
-                factor: "Workout Minutes",
+            let result = interpretCorrelation(
+                factor: "Activity Minutes",
                 metric: "heart rate recovery",
                 r: r,
                 expectedDirection: .positive
             )
             results.append(CorrelationResult(
-                factorName: "Workout Minutes",
+                factorName: "Activity Minutes",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
@@ -116,7 +119,7 @@ public struct CorrelationEngine: Sendable {
         )
         if sleepHRV.x.count >= minimumPoints {
             let r = pearsonCorrelation(x: sleepHRV.x, y: sleepHRV.y)
-            let (interpretation, confidence) = interpretCorrelation(
+            let result = interpretCorrelation(
                 factor: "Sleep Hours",
                 metric: "heart rate variability",
                 r: r,
@@ -125,8 +128,9 @@ public struct CorrelationEngine: Sendable {
             results.append(CorrelationResult(
                 factorName: "Sleep Hours",
                 correlationStrength: r,
-                interpretation: interpretation,
-                confidence: confidence
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
             ))
         }
 
@@ -173,21 +177,22 @@ public struct CorrelationEngine: Sendable {
         case negative  // More activity -> lower metric is good
     }
 
-    /// Generate a human-readable interpretation and confidence level
-    /// from a Pearson coefficient.
+    /// Generate a personal, actionable interpretation from a Pearson
+    /// coefficient. Avoids clinical jargon like "correlation" or
+    /// "associated with" in favour of plain language the user can act on.
     ///
     /// Strength thresholds (absolute |r|):
     /// - 0.0  ..< 0.2  : negligible
-    /// - 0.2  ..< 0.4  : weak
-    /// - 0.4  ..< 0.6  : moderate
+    /// - 0.2  ..< 0.4  : noticeable
+    /// - 0.4  ..< 0.6  : clear
     /// - 0.6  ..< 0.8  : strong
-    /// - 0.8  ... 1.0  : very strong
+    /// - 0.8  ... 1.0  : very consistent
     private func interpretCorrelation(
         factor: String,
         metric: String,
         r: Double,
         expectedDirection: ExpectedDirection
-    ) -> (String, ConfidenceLevel) {
+    ) -> (interpretation: String, confidence: ConfidenceLevel, isBeneficial: Bool) {
         let absR = abs(r)
 
         // Determine strength label and confidence
@@ -196,57 +201,105 @@ public struct CorrelationEngine: Sendable {
 
         switch absR {
         case 0.0..<0.2:
+            let factorDisplay = Self.friendlyFactor(factor)
+            let metricDisplay = Self.friendlyMetric(metric)
             return (
-                "No meaningful relationship was found between \(factor.lowercased()) "
-                    + "and \(metric) in your recent data.",
-                .low
+                "We haven't found a clear link between \(factorDisplay) "
+                    + "and \(metricDisplay) in your data yet. "
+                    + "More days of tracking will sharpen the picture.",
+                .low,
+                true  // neutral — not harmful
             )
         case 0.2..<0.4:
-            strengthLabel = "weak"
+            strengthLabel = "noticeable"
             confidence = .low
         case 0.4..<0.6:
-            strengthLabel = "moderate"
+            strengthLabel = "clear"
             confidence = .medium
         case 0.6..<0.8:
             strengthLabel = "strong"
             confidence = .high
         default: // 0.8 ... 1.0
-            strengthLabel = "very strong"
+            strengthLabel = "very consistent"
             confidence = .high
         }
 
-        // Determine direction description
-        let directionText: String
+        // Check whether the observed direction matches the beneficial one
         let isBeneficial: Bool
-
         switch expectedDirection {
-        case .negative:
-            if r < 0 {
-                directionText = "Higher \(factor.lowercased()) is associated with lower \(metric)"
-                isBeneficial = true
-            } else {
-                directionText = "Higher \(factor.lowercased()) is associated with higher \(metric)"
-                isBeneficial = false
-            }
-        case .positive:
-            if r > 0 {
-                directionText = "More \(factor.lowercased()) is associated with higher \(metric)"
-                isBeneficial = true
-            } else {
-                directionText = "More \(factor.lowercased()) is associated with lower \(metric)"
-                isBeneficial = false
-            }
+        case .negative: isBeneficial = r < 0
+        case .positive: isBeneficial = r > 0
         }
 
-        let benefitNote = isBeneficial
-            ? "This is a positive sign for your cardiovascular health."
-            : "This is worth monitoring over the coming weeks."
+        let interpretation = isBeneficial
+            ? Self.beneficialInterpretation(factor: factor, metric: metric, strength: strengthLabel)
+            : Self.nonBeneficialInterpretation(factor: factor, metric: metric, strength: strengthLabel)
 
-        let interpretation = "\(directionText) "
-            + "(a \(strengthLabel) \(r > 0 ? "positive" : "negative") correlation). "
-            + benefitNote
+        return (interpretation, confidence, isBeneficial)
+    }
 
-        return (interpretation, confidence)
+    // MARK: - Interpretation Templates
+
+    /// Personal, actionable text for factor pairs where the data shows
+    /// a beneficial pattern.
+    private static func beneficialInterpretation(
+        factor: String,
+        metric: String,
+        strength: String
+    ) -> String {
+        switch factor {
+        case "Daily Steps":
+            return "On days you walk more, your resting heart rate tends to be lower. "
+                + "Your data shows this \(strength) pattern \u{2014} keep it up."
+        case "Walk Minutes":
+            return "More walking time tracks with higher HRV in your data. "
+                + "This is a \(strength) pattern worth maintaining."
+        case "Activity Minutes":
+            return "Active days lead to faster heart rate recovery in your data. "
+                + "This \(strength) pattern shows your fitness is paying off."
+        case "Sleep Hours":
+            return "Longer sleep nights are followed by better HRV readings. "
+                + "This is one of the \(strength)est patterns in your data."
+        default:
+            let factorDisplay = friendlyFactor(factor)
+            let metricDisplay = friendlyMetric(metric)
+            return "More \(factorDisplay) lines up with better \(metricDisplay) in your data. "
+                + "This is a \(strength) pattern worth keeping."
+        }
+    }
+
+    /// Personal text for factor pairs where the data doesn't show the
+    /// expected beneficial direction.
+    private static func nonBeneficialInterpretation(
+        factor: String,
+        metric: String,
+        strength: String
+    ) -> String {
+        let factorDisplay = friendlyFactor(factor)
+        let metricDisplay = friendlyMetric(metric)
+        return "Your data shows more \(factorDisplay) hasn't been helping "
+            + "\(metricDisplay) yet. Consider adjusting intensity or timing."
+    }
+
+    /// Convert factor names to casual, user-facing phrasing.
+    private static func friendlyFactor(_ factor: String) -> String {
+        switch factor {
+        case "Daily Steps": return "daily steps"
+        case "Walk Minutes": return "walking time"
+        case "Activity Minutes": return "activity"
+        case "Sleep Hours": return "sleep"
+        default: return factor.lowercased()
+        }
+    }
+
+    /// Convert metric names to casual, user-facing phrasing.
+    private static func friendlyMetric(_ metric: String) -> String {
+        switch metric {
+        case "resting heart rate": return "resting heart rate"
+        case "heart rate variability": return "HRV"
+        case "heart rate recovery": return "heart rate recovery"
+        default: return metric
+        }
     }
 
     // MARK: - Data Pairing Helpers

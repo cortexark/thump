@@ -1,0 +1,103 @@
+# CI Pipeline for Thump (HeartCoach)
+# Builds iOS and watchOS targets and runs unit tests.
+# Triggered on push to main and on pull requests.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_15.2.app/Contents/Developer
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Cache SPM packages ──────────────────────────────────
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            ~/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('apps/HeartCoach/Package.swift') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      # ── Install tools ───────────────────────────────────────
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: |
+          cd apps/HeartCoach
+          xcodegen generate
+
+      # ── Build iOS ───────────────────────────────────────────
+      - name: Build iOS
+        run: |
+          set -o pipefail
+          cd apps/HeartCoach
+          xcodebuild build \
+            -project Thump.xcodeproj \
+            -scheme Thump \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      # ── Build watchOS ───────────────────────────────────────
+      - name: Build watchOS
+        run: |
+          set -o pipefail
+          cd apps/HeartCoach
+          xcodebuild build \
+            -project Thump.xcodeproj \
+            -scheme ThumpWatch \
+            -destination 'platform=watchOS Simulator,name=Apple Watch Series 9 (45mm)' \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      # ── Run unit tests ──────────────────────────────────────
+      - name: Run Tests
+        run: |
+          set -o pipefail
+          cd apps/HeartCoach
+          xcodebuild test \
+            -project Thump.xcodeproj \
+            -scheme Thump \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      # ── Coverage report ─────────────────────────────────────
+      - name: Extract Code Coverage
+        if: success()
+        run: |
+          cd apps/HeartCoach
+          xcrun xccov view --report TestResults.xcresult | head -30 >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: apps/HeartCoach/TestResults.xcresult
+          retention-days: 7

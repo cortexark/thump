@@ -75,7 +75,7 @@ struct WatchDetailView: View {
         if let score = assessment.cardioScore {
             metricRow(
                 icon: "heart.fill",
-                label: "Cardio Score",
+                label: "Cardio Fitness",
                 value: String(format: "%.0f", score),
                 color: scoreColor(score)
             )
@@ -83,8 +83,8 @@ struct WatchDetailView: View {
 
         metricRow(
             icon: "waveform.path.ecg",
-            label: "Anomaly",
-            value: String(format: "%.1f", assessment.anomalyScore),
+            label: "Unusual Activity",
+            value: anomalyLabel(assessment.anomalyScore),
             color: anomalyColor(assessment.anomalyScore)
         )
 
@@ -104,7 +104,7 @@ struct WatchDetailView: View {
         if assessment.regressionFlag {
             flagRow(
                 icon: "chart.line.downtrend.xyaxis",
-                label: "Regression Detected",
+                label: "Pattern Worth Watching",
                 color: .orange
             )
         }
@@ -112,7 +112,7 @@ struct WatchDetailView: View {
         if assessment.stressFlag {
             flagRow(
                 icon: "bolt.heart.fill",
-                label: "Stress Pattern",
+                label: "Stress Pattern Noticed",
                 color: .red
             )
         }
@@ -121,7 +121,7 @@ struct WatchDetailView: View {
             HStack(spacing: 4) {
                 Image(systemName: "checkmark.circle")
                     .font(.caption2)
-                Text("No flags detected")
+                Text("Everything looks good")
                     .font(.caption2)
             }
             .foregroundStyle(.green)
@@ -187,13 +187,15 @@ struct WatchDetailView: View {
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
 
-            Text("No Data Available")
+            Text("Waiting for Data")
                 .font(.headline)
 
             Text("Sync with your iPhone to view detailed metrics.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
         .navigationTitle("Details")
@@ -208,6 +210,16 @@ struct WatchDetailView: View {
         case 70...:   return .green
         case 40..<70: return .orange
         default:      return .red
+        }
+    }
+
+    /// Maps an anomaly score to a human-readable label.
+    private func anomalyLabel(_ score: Double) -> String {
+        let percentage = score * 100
+        switch percentage {
+        case ..<30:  return "Normal"
+        case 30..<60: return "Slightly Unusual"
+        default:      return "Worth Checking"
         }
     }
 
@@ -232,9 +244,9 @@ struct WatchDetailView: View {
     /// Maps a `TrendStatus` to a short label.
     private func statusLabel(_ status: TrendStatus) -> String {
         switch status {
-        case .improving:      return "Improving"
-        case .stable:         return "Stable"
-        case .needsAttention: return "Attention"
+        case .improving:      return "Building Momentum"
+        case .stable:         return "Holding Steady"
+        case .needsAttention: return "Check In"
         }
     }
 
@@ -242,8 +254,8 @@ struct WatchDetailView: View {
     private func confidenceColor(_ confidence: ConfidenceLevel) -> Color {
         switch confidence {
         case .high:   return .green
-        case .medium: return .orange
-        case .low:    return .red
+        case .medium: return .yellow
+        case .low:    return .orange
         }
     }
 }

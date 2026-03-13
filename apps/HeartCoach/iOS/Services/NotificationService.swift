@@ -28,12 +28,8 @@ final class NotificationService: ObservableObject {
     // MARK: - Private Properties
 
     private let center = UNUserNotificationCenter.current()
-
-    /// Default cooldown between anomaly alerts (in hours).
-    private let defaultCooldownHours: Double = 8.0
-
-    /// Default maximum anomaly alerts per calendar day.
-    private let defaultMaxAlertsPerDay: Int = 3
+    private let localStore: LocalStore
+    private let alertPolicy: AlertPolicy
 
     // MARK: - Notification Identifiers
 
@@ -44,9 +40,27 @@ final class NotificationService: ObservableObject {
         static let categoryNudge = "NUDGE_REMINDER"
     }
 
+    // MARK: - Default Delivery Hours
+
+    // BUG-053: These fallback delivery hours are hardcoded defaults.
+    // TODO: Make configurable via Settings UI so users can set preferred
+    // notification windows per nudge category (e.g. "morning activity hour").
+    private enum DefaultDeliveryHour {
+        static let activity = 9        // Walk/moderate fallback: 9 AM
+        static let breathe = 15        // Breathing exercises: 3 PM
+        static let hydrate = 11        // Hydration reminders: 11 AM
+        static let evening = 18        // General fallback: 6 PM
+        static let latestMorning = 12  // Cap for wake-adjusted activity nudges
+    }
+
     // MARK: - Initialization
 
-    init() {
+    init(
+        localStore: LocalStore = LocalStore(),
+        alertPolicy: AlertPolicy = ConfigService.defaultAlertPolicy
+    ) {
+        self.localStore = localStore
+        self.alertPolicy = alertPolicy
         Task {
             await checkCurrentAuthorization()
         }
@@ -80,7 +94,12 @@ final class NotificationService: ObservableObject {
     ///
     /// - Parameter assessment: The `HeartAssessment` that triggered the alert.
     func scheduleAnomalyAlert(assessment: HeartAssessment) {
-        var meta = loadAlertMeta()
+        guard ConfigService.enableAnomalyAlerts,
+              assessment.status == .needsAttention else {
+            return
+        }
+
+        var meta = localStore.alertMeta
 
         guard shouldAlert(meta: &meta) else {
             debugPrint("[NotificationService] Alert suppressed by budget policy.")
@@ -89,14 +108,17 @@ final class NotificationService: ObservableObject {
 
         let content = UNMutableNotificationContent()
         content.title = alertTitle(for: assessment)
-        content.body = assessment.explanation
+        // BUG-034: Do not include health metric values (PHI) in notification payloads.
+        // Notification content is visible on the lock screen and in Notification Center.
+        // Use a generic body instead of assessment.explanation which contains metric values.
+        content.body = "Check your Thump insights for an update on your heart health."
         content.sound = .default
         content.categoryIdentifier = Identifiers.categoryAnomaly
 
-        // Add assessment context to the notification payload
+        // BUG-034: Only include non-PHI routing metadata in userInfo.
+        // Removed anomalyScore which exposes health metric values in the notification payload.
         content.userInfo = [
             "status": assessment.status.rawValue,
-            "anomalyScore": assessment.anomalyScore,
             "regressionFlag": assessment.regressionFlag,
             "stressFlag": assessment.stressFlag
         ]
@@ -119,7 +141,8 @@ final class NotificationService: ObservableObject {
         // Update and persist meta
         meta.lastAlertAt = Date()
         meta.alertsToday += 1
-        saveAlertMeta(meta)
+        localStore.alertMeta = meta
+        localStore.saveAlertMeta()
     }
 
     // MARK: - Nudge Reminders
@@ -172,11 +195,55 @@ final class NotificationService: ObservableObject {
             trigger: trigger
         )
 
-        center.add(request) { error in
-            if let error = error {
-                debugPrint("[NotificationService] Failed to schedule nudge reminder: \(error.localizedDescription)")
-            }
+        do {
+            try await center.add(request)
+        } catch {
+            debugPrint("[NotificationService] Failed to schedule nudge reminder: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Smart Nudge Scheduling
+
+    /// Schedules a nudge reminder using learned sleep patterns for optimal timing.
+    ///
+    /// Uses `SmartNudgeScheduler` to determine the best delivery hour based on
+    /// the user's historical bedtime and wake patterns.
+    ///
+    /// - Parameters:
+    ///   - nudge: The `DailyNudge` to schedule.
+    ///   - history: Historical snapshots for pattern learning.
+    func scheduleSmartNudge(nudge: DailyNudge, history: [HeartSnapshot]) async {
+        let scheduler = SmartNudgeScheduler()
+        let patterns = scheduler.learnSleepPatterns(from: history)
+
+        // Determine optimal hour based on nudge category
+        let hour: Int
+        switch nudge.category {
+        case .rest:
+            // Wind-down nudges go before bedtime
+            hour = scheduler.bedtimeNudgeHour(patterns: patterns, for: Date())
+        case .walk, .moderate:
+            // Activity nudges go mid-morning (or after learned wake time + 2 hours)
+            let calendar = Calendar.current
+            let dayOfWeek = calendar.component(.weekday, from: Date())
+            if let pattern = patterns.first(where: { $0.dayOfWeek == dayOfWeek }),
+               pattern.observationCount >= 3 {
+                hour = min(pattern.typicalWakeHour + 2, DefaultDeliveryHour.latestMorning)
+            } else {
+                hour = DefaultDeliveryHour.activity
+            }
+        case .breathe:
+            // Breathing nudges go mid-afternoon when stress typically peaks
+            hour = DefaultDeliveryHour.breathe
+        case .hydrate:
+            // Hydration nudges go late morning
+            hour = DefaultDeliveryHour.hydrate
+        default:
+            // Default: early evening
+            hour = DefaultDeliveryHour.evening
+        }
+
+        await scheduleNudgeReminder(nudge: nudge, at: hour)
     }
 
     // MARK: - Cancellation
@@ -191,8 +258,8 @@ final class NotificationService: ObservableObject {
     /// Determines whether a new alert should be sent based on cooldown and daily limits.
     ///
     /// Checks two constraints:
-    /// 1. Cooldown: At least `defaultCooldownHours` must have elapsed since the last alert.
-    /// 2. Daily limit: No more than `defaultMaxAlertsPerDay` alerts per calendar day.
+    /// 1. Cooldown: At least `alertPolicy.cooldownHours` must have elapsed since the last alert.
+    /// 2. Daily limit: No more than `alertPolicy.maxAlertsPerDay` alerts per calendar day.
     ///
     /// Resets the daily counter when the day stamp changes.
     ///
@@ -209,14 +276,14 @@ final class NotificationService: ObservableObject {
         }
 
         // Check daily limit
-        guard meta.alertsToday < defaultMaxAlertsPerDay else {
+        guard meta.alertsToday < alertPolicy.maxAlertsPerDay else {
             return false
         }
 
         // Check cooldown period
         if let lastAlert = meta.lastAlertAt {
             let hoursSinceLastAlert = now.timeIntervalSince(lastAlert) / 3600.0
-            guard hoursSinceLastAlert >= defaultCooldownHours else {
+            guard hoursSinceLastAlert >= alertPolicy.cooldownHours else {
                 return false
             }
         }
@@ -266,12 +333,12 @@ final class NotificationService: ObservableObject {
     /// Generates an alert title based on the assessment's signals.
     private func alertTitle(for assessment: HeartAssessment) -> String {
         if assessment.stressFlag {
-            return "Elevated Physiological Load Detected"
+            return "Heart Working Harder Than Usual"
         }
         if assessment.regressionFlag {
             return "Heart Metric Trend Change"
         }
-        if assessment.anomalyScore >= 2.0 {
+        if assessment.anomalyScore >= alertPolicy.anomalyHigh {
             return "Heart Metric Anomaly Detected"
         }
         return "Thump Alert"
@@ -287,34 +354,14 @@ final class NotificationService: ObservableObject {
 
     /// Cached formatter for date stamp generation.
     private static let dayStampFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
     }()
 
     /// Generates a date stamp string (yyyy-MM-dd) for the given date.
     private func dayStamp(for date: Date) -> String {
         Self.dayStampFormatter.string(from: date)
-    }
-
-    // MARK: - AlertMeta Persistence
-
-    private let alertMetaKey = "com.thump.alertMeta"
-
-    /// Loads the persisted `AlertMeta` from UserDefaults.
-    private func loadAlertMeta() -> AlertMeta {
-        guard let data = UserDefaults.standard.data(forKey: alertMetaKey),
-              let meta = try? JSONDecoder().decode(AlertMeta.self, from: data) else {
-            return AlertMeta()
-        }
-        return meta
-    }
-
-    /// Persists the `AlertMeta` to UserDefaults.
-    private func saveAlertMeta(_ meta: AlertMeta) {
-        if let data = try? JSONEncoder().encode(meta) {
-            UserDefaults.standard.set(data, forKey: alertMetaKey)
-        }
     }
 }

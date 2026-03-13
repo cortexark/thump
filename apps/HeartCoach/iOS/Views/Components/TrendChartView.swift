@@ -122,7 +122,7 @@ struct TrendChartView: View {
         }
         .chartYScale(domain: yMin...yMax)
         .chartXAxis {
-            AxisMarks(values: .stride(by: .day, count: axisStride)) { value in
+            AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                 AxisGridLine()
                     .foregroundStyle(Color(.systemGray5))
                 AxisValueLabel(format: .dateTime.month(.abbreviated).day())
@@ -130,7 +130,7 @@ struct TrendChartView: View {
             }
         }
         .chartYAxis {
-            AxisMarks(position: .leading) { value in
+            AxisMarks(position: .leading) { _ in
                 AxisGridLine()
                     .foregroundStyle(Color(.systemGray5))
                 AxisValueLabel()
@@ -140,7 +140,9 @@ struct TrendChartView: View {
         .chartPlotStyle { plotArea in
             plotArea
                 .background(Color.clear)
+                .clipped()
         }
+        .clipped()
     }
 
     // MARK: - Area Gradient
@@ -207,8 +209,14 @@ struct TrendChartView: View {
 /// Generates mock time-series data for chart previews.
 private func mockDataPoints(count: Int, baseValue: Double, variance: Double) -> [(date: Date, value: Double)] {
     let calendar = Calendar.current
-    return (0..<count).map { i in
-        let date = calendar.date(byAdding: .day, value: -count + i + 1, to: Date())!
+    return (0..<count).compactMap { i in
+        guard let date = calendar.date(
+            byAdding: .day,
+            value: -count + i + 1,
+            to: Date()
+        ) else {
+            return nil
+        }
         let jitter = Double.random(in: -variance...variance)
         let trend = Double(i) * 0.3 // slight upward trend
         return (date: date, value: baseValue + jitter + trend)

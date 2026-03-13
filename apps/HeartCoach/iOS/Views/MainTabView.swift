@@ -1,9 +1,9 @@
 // MainTabView.swift
 // Thump iOS
 //
-// Root tab-based navigation for the Thump app. Provides four primary tabs:
-// Dashboard, Trends, Insights, and Settings. Each tab lazily instantiates its
-// destination view. Services are passed through the environment.
+// Root tab-based navigation for the Thump app. Five tabs:
+// Home (Dashboard), Insights, Stress, Trends, Settings.
+// The tint color adapts per tab for visual warmth.
 //
 // Platforms: iOS 17+
 
@@ -11,38 +11,69 @@ import SwiftUI
 
 // MARK: - MainTabView
 
-/// The primary navigation container for Thump.
-///
-/// Uses a `TabView` with four tabs corresponding to the app's core sections.
-/// Service dependencies are expected to be injected as `@EnvironmentObject`
-/// values from the app root.
 struct MainTabView: View {
 
-    // MARK: - State
-
-    /// The currently selected tab index.
-    @State var selectedTab: Int = 0
-
-    // MARK: - Body
+    @State var selectedTab: Int = {
+        // Support launch argument: -startTab N
+        if let idx = CommandLine.arguments.firstIndex(of: "-startTab"),
+           idx + 1 < CommandLine.arguments.count,
+           let tab = Int(CommandLine.arguments[idx + 1]) {
+            return tab
+        }
+        return 0
+    }()
 
     var body: some View {
         TabView(selection: $selectedTab) {
             dashboardTab
-            trendsTab
             insightsTab
+            stressTab
+            trendsTab
             settingsTab
         }
-        .tint(.pink)
+        .tint(tabTint)
+        .onChange(of: selectedTab) { oldTab, newTab in
+            InteractionLog.tabSwitch(from: oldTab, to: newTab)
+        }
+    }
+
+    // MARK: - Dynamic Tab Tint
+
+    private var tabTint: Color {
+        switch selectedTab {
+        case 0: return Color(hex: 0xF97316) // warm coral for home
+        case 1: return Color(hex: 0x8B5CF6) // purple for insights
+        case 2: return Color(hex: 0xEF4444) // red for stress
+        case 3: return Color(hex: 0x3B82F6) // blue for trends
+        case 4: return .secondary            // neutral for settings
+        default: return Color(hex: 0xF97316)
+        }
     }
 
     // MARK: - Tabs
 
     private var dashboardTab: some View {
-        DashboardView()
+        DashboardView(selectedTab: $selectedTab)
             .tabItem {
-                Label("Dashboard", systemImage: "heart.fill")
+                Label("Home", systemImage: "heart.circle.fill")
             }
             .tag(0)
+    }
+
+    private var insightsTab: some View {
+        InsightsView()
+            .tabItem {
+                Label("Insights", systemImage: "sparkles")
+            }
+            .tag(1)
+    }
+
+    private var stressTab: some View {
+        StressView()
+            .tabItem {
+                Label("Stress", systemImage: "bolt.heart.fill")
+            }
+            .tag(2)
     }
 
     private var trendsTab: some View {
@@ -50,23 +81,15 @@ struct MainTabView: View {
             .tabItem {
                 Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
             }
-            .tag(1)
-    }
-
-    private var insightsTab: some View {
-        InsightsView()
-            .tabItem {
-                Label("Insights", systemImage: "lightbulb.fill")
-            }
-            .tag(2)
+            .tag(3)
     }
 
     private var settingsTab: some View {
         SettingsView()
             .tabItem {
-                Label("Settings", systemImage: "gear")
+                Label("Settings", systemImage: "gearshape.fill")
             }
-            .tag(3)
+            .tag(4)
     }
 }
 

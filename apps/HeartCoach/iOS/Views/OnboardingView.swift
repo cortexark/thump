@@ -41,12 +41,19 @@ struct OnboardingView: View {
 
     /// Tracks whether a HealthKit authorization request is in-flight.
     @State private var isRequestingHealthKit: Bool = false
+    @State private var healthKitErrorMessage: String?
 
     /// Tracks whether HealthKit access has been granted (or at least requested).
     @State private var healthKitGranted: Bool = false
 
     /// Whether the user has accepted the health disclaimer.
     @State private var disclaimerAccepted: Bool = false
+
+    /// Selected biological sex for metric personalization.
+    @State private var selectedSex: BiologicalSex = .notSet
+
+    /// A quick first insight shown after HealthKit access is granted.
+    @State private var firstInsight: String?
 
     // MARK: - Body
 
@@ -64,6 +71,9 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
+                .onAppear {
+                    InteractionLog.pageView("Onboarding")
+                }
 
                 pageIndicator
                     .padding(.bottom, 32)
@@ -78,8 +88,8 @@ struct OnboardingView: View {
         let colors: [Color] = switch currentPage {
         case 0: [.pink.opacity(0.7), .purple.opacity(0.5)]
         case 1: [.blue.opacity(0.6), .cyan.opacity(0.4)]
-        case 2: [.orange.opacity(0.6), .yellow.opacity(0.4)]
-        default: [.green.opacity(0.5), .teal.opacity(0.4)]
+        case 2: [Color(red: 0.55, green: 0.22, blue: 0.08), Color(red: 0.72, green: 0.35, blue: 0.10)]
+        default: [.green.opacity(0.65), .teal.opacity(0.55)]
         }
         return LinearGradient(
             colors: colors,
@@ -120,7 +130,10 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text("Your Heart Training Buddy.\nTrack trends, get friendly nudges, and explore your fitness data over time.")
+            Text(
+                "Your Wellness Companion.\nTrack trends, "
+                    + "get friendly nudges, and explore your fitness data over time."
+            )
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.9))
                 .multilineTextAlignment(.center)
@@ -129,8 +142,10 @@ struct OnboardingView: View {
             Spacer()
 
             nextButton(label: "Get Started") {
+                InteractionLog.log(.buttonTap, element: "get_started_button", page: "Onboarding", details: "page=0")
                 withAnimation { currentPage = 1 }
             }
+            .accessibilityIdentifier("onboarding_next_button")
 
             Spacer()
                 .frame(height: 16)
@@ -155,32 +170,64 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text("Thump reads your heart rate, HRV, recovery, activity, and sleep data from Apple Health to generate personalized insights for your training.")
+            Text(
+                "Thump needs read-only access to the following "
+                    + "Apple Health data to generate your "
+                    + "personalized wellness insights."
+            )
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.9))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
-            featureRow(icon: "waveform.path.ecg", text: "Resting Heart Rate & HRV")
-            featureRow(icon: "figure.run", text: "Activity & Workout Minutes")
-            featureRow(icon: "bed.double.fill", text: "Sleep Duration")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("We'll request access to:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 40)
+
+                featureRow(icon: "heart.fill", text: "Heart Rate")
+                featureRow(icon: "waveform.path.ecg", text: "Resting Heart Rate & HRV")
+                featureRow(icon: "lungs.fill", text: "VO2 Max (Cardio Fitness)")
+                featureRow(icon: "figure.walk", text: "Steps & Walking Distance")
+                featureRow(icon: "flame.fill", text: "Active Energy Burned")
+                featureRow(icon: "figure.run", text: "Exercise Minutes")
+                featureRow(icon: "bed.double.fill", text: "Sleep Analysis")
+                featureRow(icon: "scalemass.fill", text: "Body Weight")
+                featureRow(icon: "person.fill", text: "Biological Sex & Date of Birth")
+            }
 
             Spacer()
 
             if healthKitGranted {
                 grantedBadge
+
+                if let insight = firstInsight {
+                    Text(insight)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .transition(.opacity.combined(with: .scale))
+                }
             } else {
                 nextButton(label: "Grant Access") {
+                    InteractionLog.log(.buttonTap, element: "healthkit_grant_button", page: "Onboarding")
                     requestHealthKitAccess()
                 }
+                .accessibilityIdentifier("onboarding_healthkit_grant_button")
                 .disabled(isRequestingHealthKit)
                 .opacity(isRequestingHealthKit ? 0.6 : 1.0)
             }
 
-            if healthKitGranted {
-                nextButton(label: "Continue") {
-                    withAnimation { currentPage = 2 }
-                }
+            if let errorMsg = healthKitErrorMessage {
+                Text(errorMsg)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
             }
 
             Spacer()
@@ -188,7 +235,6 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 24)
     }
-
 
     // MARK: - Page 3: Health Disclaimer
 
@@ -207,23 +253,34 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text("Thump is your heart training buddy — not a medical device. It does not diagnose, treat, cure, or prevent any disease. Always consult a qualified healthcare professional before making changes to your health routine. For medical emergencies, call 911.")
+            Text(
+                "Thump is a wellness tool, not a medical device. "
+                    + "It does not diagnose, treat, cure, or prevent any disease. "
+                    + "Always consult a healthcare professional before "
+                    + "making changes to your health routine. "
+                    + "For emergencies, call 911."
+            )
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.9))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
-            Toggle("I understand and acknowledge", isOn: $disclaimerAccepted)
+            Toggle("I understand this is not medical advice", isOn: $disclaimerAccepted)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundStyle(.white)
                 .tint(.white)
                 .padding(.horizontal, 40)
                 .padding(.vertical, 8)
+                .accessibilityIdentifier("onboarding_disclaimer_toggle")
+                .onChange(of: disclaimerAccepted) { _, newValue in
+                    InteractionLog.log(.toggleChange, element: "disclaimer_toggle", page: "Onboarding", details: "accepted=\(newValue)")
+                }
 
             Spacer()
 
             nextButton(label: "Continue") {
+                InteractionLog.log(.buttonTap, element: "continue_button", page: "Onboarding", details: "page=2")
                 withAnimation { currentPage = 3 }
             }
             .disabled(!disclaimerAccepted)
@@ -238,7 +295,7 @@ struct OnboardingView: View {
     // MARK: - Page 4: Profile
 
     private var profilePage: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             Spacer()
 
             Image(systemName: "person.crop.circle.fill")
@@ -246,7 +303,7 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
 
-            Text("What should we call you?")
+            Text("Tell us about yourself")
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
@@ -267,12 +324,74 @@ struct OnboardingView: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.words)
                 .padding(.horizontal, 40)
+                .accessibilityIdentifier("onboarding_name_field")
+                .onChange(of: userName) { _, newValue in
+                    InteractionLog.log(.textInput, element: "name_field", page: "Onboarding", details: "length=\(newValue.count)")
+                }
+
+            // Biological sex — show auto-detected badge or manual picker as fallback
+            VStack(spacing: 8) {
+                if selectedSex != .notSet && healthKitGranted {
+                    // Already read from HealthKit — just confirm it
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                        Text("Biological sex: \(selectedSex.displayLabel)")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white.opacity(0.9))
+                        Text("(from Apple Health)")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 18)
+                    .background(
+                        Capsule()
+                            .fill(.white.opacity(0.15))
+                    )
+                } else {
+                    // HealthKit didn't provide it — show manual picker
+                    Text("Biological sex (for metric accuracy)")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+
+                    HStack(spacing: 10) {
+                        ForEach(BiologicalSex.allCases, id: \.self) { sex in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedSex = sex
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: sex.icon)
+                                        .font(.system(size: 13))
+                                    Text(sex.displayLabel)
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                }
+                                .foregroundStyle(selectedSex == sex ? .pink : .white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(
+                                    Capsule()
+                                        .fill(selectedSex == sex ? .white : .white.opacity(0.2))
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
 
             Spacer()
 
-            nextButton(label: "Let's Go") {
+            nextButton(label: "Start Using Thump") {
+                InteractionLog.log(.buttonTap, element: "finish_button", page: "Onboarding")
                 completeOnboarding()
             }
+            .accessibilityIdentifier("onboarding_finish_button")
             .disabled(userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .opacity(userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1.0)
 
@@ -341,11 +460,45 @@ struct OnboardingView: View {
                 await MainActor.run {
                     isRequestingHealthKit = false
                     healthKitGranted = true
+
+                    // Auto-read biological sex and DOB from HealthKit
+                    let hkSex = healthKitService.readBiologicalSex()
+                    if hkSex != .notSet {
+                        selectedSex = hkSex
+                    }
+                    if let hkDOB = healthKitService.readDateOfBirth() {
+                        localStore.profile.dateOfBirth = hkDOB
+                        localStore.saveProfile()
+                    }
+                }
+                // Fetch a quick first insight, then auto-advance
+                Task {
+                    do {
+                        let snapshot = try await healthKitService.fetchTodaySnapshot()
+                        await MainActor.run {
+                            if let rhr = snapshot.restingHeartRate {
+                                firstInsight = "Your resting heart rate is \(Int(rhr)) bpm today"
+                            } else if let hrv = snapshot.hrvSDNN {
+                                firstInsight = "Your HRV is \(Int(hrv)) ms today"
+                            } else if let steps = snapshot.steps {
+                                firstInsight = "\(Int(steps)) steps logged today"
+                            }
+                        }
+                    } catch {
+                        // Silently fail — insight is optional
+                    }
+                    // Auto-advance after brief pause to show insight
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    await MainActor.run {
+                        withAnimation { currentPage = 2 }
+                    }
                 }
             } catch {
                 await MainActor.run {
                     isRequestingHealthKit = false
                     healthKitGranted = false
+                    healthKitErrorMessage = "Unable to access Health data. "
+                        + "Please enable it in Settings → Privacy → Health."
                 }
             }
         }
@@ -357,6 +510,7 @@ struct OnboardingView: View {
         profile.displayName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
         profile.joinDate = Date()
         profile.onboardingComplete = true
+        profile.biologicalSex = selectedSex
         localStore.profile = profile
         localStore.saveProfile()
     }

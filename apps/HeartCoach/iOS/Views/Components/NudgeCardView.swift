@@ -22,6 +22,7 @@ struct NudgeCardView: View {
         case .moderate:     return .orange
         case .celebrate:    return .yellow
         case .seekGuidance: return .red
+        case .sunlight:     return .orange
         }
     }
 
@@ -56,7 +57,10 @@ struct NudgeCardView: View {
                 Spacer()
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(nudge.title)\(nudge.durationMinutes != nil ? ", \(nudge.durationMinutes!) minutes" : "")")
+            .accessibilityLabel(
+                "\(nudge.title)"
+                    + "\(nudge.durationMinutes.map { ", \($0) minutes" } ?? "")"
+            )
 
             // Description
             Text(nudge.description)
@@ -102,7 +106,8 @@ struct NudgeCardView: View {
         nudge: DailyNudge(
             category: .walk,
             title: "Take a Gentle Walk",
-            description: "Your HRV is trending up. A 15-minute walk will reinforce the gains you have been making this week.",
+            description: "Your HRV has been looking nice lately. "
+                + "A 15-minute walk could keep that good momentum going.",
             durationMinutes: 15,
             icon: "figure.walk"
         ),

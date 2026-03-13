@@ -129,7 +129,7 @@ public enum CryptoService {
     ///   if the Keychain operation fails.
     public static func deleteKey() throws {
         let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
+            kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
             kSecAttrAccount as String: keychainIdentifier
         ]
@@ -174,11 +174,11 @@ public enum CryptoService {
     ///   unexpected Keychain errors.
     private static func retrieveKey() throws -> SymmetricKey? {
         let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
+            kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
             kSecAttrAccount as String: keychainIdentifier,
-            kSecReturnData as String:  true,
-            kSecMatchLimit as String:  kSecMatchLimitOne
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
         var result: AnyObject?
@@ -205,10 +205,10 @@ public enum CryptoService {
         let keyData = key.withUnsafeBytes { Data(Array($0)) }
 
         let query: [String: Any] = [
-            kSecClass as String:          kSecClassGenericPassword,
-            kSecAttrService as String:    keychainService,
-            kSecAttrAccount as String:    keychainIdentifier,
-            kSecValueData as String:      keyData,
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: keychainIdentifier,
+            kSecValueData as String: keyData,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
 
@@ -227,7 +227,7 @@ public enum CryptoService {
             }
             // Re-read failed (corrupt entry) — overwrite as last resort.
             let updateQuery: [String: Any] = [
-                kSecClass as String:       kSecClassGenericPassword,
+                kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: keychainService,
                 kSecAttrAccount as String: keychainIdentifier
             ]

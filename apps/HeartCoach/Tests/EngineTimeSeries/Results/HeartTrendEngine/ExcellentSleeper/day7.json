@@ -1,0 +1,7 @@
+{
+  "anomalyScore" : 0.90744364368655328,
+  "confidenceLevel" : "low",
+  "regressionFlag" : true,
+  "status" : "needsAttention",
+  "stressFlag" : false
+}
