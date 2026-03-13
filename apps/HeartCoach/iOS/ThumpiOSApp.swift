@@ -38,6 +38,9 @@ struct ThumpiOSApp: App {
     /// UserDefaults-backed local persistence for profile, history, and settings.
     @StateObject var localStore = LocalStore()
 
+    /// Local notification service for anomaly alerts and nudge reminders (CR-001).
+    @StateObject var notificationService = NotificationService()
+
     // MARK: - Scene
 
     var body: some Scene {
@@ -47,6 +50,7 @@ struct ThumpiOSApp: App {
                 .environmentObject(subscriptionService)
                 .environmentObject(connectivityService)
                 .environmentObject(localStore)
+                .environmentObject(notificationService)
                 .task {
                     await performStartupTasks()
                 }
@@ -95,6 +99,13 @@ struct ThumpiOSApp: App {
         AppLogger.info("App launch — starting startup tasks")
 
         connectivityService.bind(localStore: localStore)
+
+        // Request notification authorization (CR-001)
+        do {
+            try await notificationService.requestAuthorization()
+        } catch {
+            AppLogger.info("Notification authorization request failed: \(error.localizedDescription)")
+        }
 
         // Start MetricKit crash reporting and performance monitoring
         MetricKitService.shared.start()

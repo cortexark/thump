@@ -158,7 +158,7 @@ struct PersonaBaseline {
     let zoneMinutes: [Double] // 5 zones
 
     // Daily noise standard deviations
-    var rhrNoise: Double { 3.0 }
+    var rhrNoise: Double { 2.0 }
     var hrvNoise: Double { 8.0 }
     var sleepNoise: Double { 0.5 }
     var stepsNoise: Double { 2000.0 }
@@ -358,10 +358,10 @@ enum TestPersonas {
         zoneMinutes: [40, 25, 20, 8, 3]
     )
 
-    // 4. New mom (32F) — sleep deprived, stressed
+    // 4. New mom (32F) — sleep deprived, stressed, poor autonomic recovery
     static let newMom = PersonaBaseline(
         name: "NewMom", age: 32, sex: .female, weightKg: 70,
-        restingHR: 75, hrvSDNN: 28, vo2Max: 30, recoveryHR1m: 18, recoveryHR2m: 25,
+        restingHR: 75, hrvSDNN: 28, vo2Max: 30, recoveryHR1m: 15, recoveryHR2m: 22,
         sleepHours: 3.5, steps: 4000, walkMinutes: 15, workoutMinutes: 0,
         zoneMinutes: [45, 10, 0, 0, 0]
     )

@@ -231,8 +231,12 @@ final class DashboardViewModel: ObservableObject {
 
     /// Marks today's nudge as completed and updates the local store.
     ///
-    /// Increments the streak counter and persists the profile.
+    /// Records explicit completion for the day and increments the streak
+    /// at most once per calendar day (CR-003 + CR-004).
     func markNudgeComplete() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
         // Record completion by saving feedback
         let completionPayload = WatchFeedbackPayload(
             date: Date(),
@@ -241,15 +245,27 @@ final class DashboardViewModel: ObservableObject {
         )
         localStore.saveLastFeedback(completionPayload)
 
-        // Increment streak
+        // Record explicit nudge completion for this date (CR-003)
+        let dateKey = ISO8601DateFormatter().string(from: today).prefix(10)
+        localStore.profile.nudgeCompletionDates.insert(String(dateKey))
+
+        // Only credit streak once per calendar day (CR-004)
+        if let lastCredit = localStore.profile.lastStreakCreditDate,
+           calendar.isDate(lastCredit, inSameDayAs: today) {
+            // Already credited today — just save the completion record
+            localStore.saveProfile()
+            return
+        }
+
         localStore.profile.streakDays += 1
+        localStore.profile.lastStreakCreditDate = today
         localStore.saveProfile()
     }
 
     /// Marks a specific nudge (by index) as completed.
     func markNudgeComplete(at index: Int) {
         nudgeCompletionStatus[index] = true
-        // Also record as general positive feedback
+        // Also record as general positive feedback (streak guarded per-day)
         markNudgeComplete()
     }
 
@@ -416,12 +432,25 @@ final class DashboardViewModel: ObservableObject {
     // MARK: - Readiness Score
 
     /// Computes the readiness score from today's snapshot and recent history.
+    ///
+    /// Uses the actual StressEngine score when available instead of the
+    /// coarse 70.0 flag value (CR-011).
     private func computeReadiness(snapshot: HeartSnapshot, history: [HeartSnapshot]) {
-        // Get today's stress score from the assessment if available
-        let stressScore: Double? = if let assessment = assessment, assessment.stressFlag {
-            70.0 // Elevated if stress flag is set
+        // Compute stress first so readiness gets the real score
+        let stressEngine = StressEngine()
+        let stress = stressEngine.computeStress(
+            snapshot: snapshot,
+            recentHistory: history
+        )
+
+        // Use actual stress score; fall back to flag-based estimate only when engine returns nil
+        let stressScore: Double?
+        if let stress {
+            stressScore = stress.score
+        } else if let assessment = assessment, assessment.stressFlag {
+            stressScore = 70.0
         } else {
-            nil
+            stressScore = nil
         }
 
         let engine = ReadinessEngine()
@@ -431,7 +460,7 @@ final class DashboardViewModel: ObservableObject {
             recentHistory: history
         )
         if let result = readinessResult {
-            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue)")
+            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressScore.map { String(format: \"%.1f\", $0) } ?? \"nil\")")
         }
     }
 

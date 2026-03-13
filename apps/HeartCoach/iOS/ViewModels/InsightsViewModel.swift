@@ -170,15 +170,14 @@ final class InsightsViewModel: ObservableObject {
             assessments: assessments
         )
 
-        // Compute nudge completion rate from stored snapshot history.
-        // A day counts as "nudge completed" if the user checked in and a
-        // stored snapshot with an assessment exists for that date.
-        let storedHistory = localStore.loadHistory()
-        let weekDates = Set(history.map { calendar.startOfDay(for: $0.date) })
-        let completedCount = storedHistory.filter { stored in
-            stored.assessment != nil
-                && weekDates.contains(calendar.startOfDay(for: stored.snapshot.date))
-        }.count
+        // Compute nudge completion rate from explicit user completion records (CR-003).
+        // Only counts days where the user actually tapped "complete" on a nudge,
+        // not days where an assessment was auto-stored by refresh().
+        let completionDates = localStore.profile.nudgeCompletionDates
+        let weekDates = Set(history.map {
+            String(ISO8601DateFormatter().string(from: calendar.startOfDay(for: $0.date)).prefix(10))
+        })
+        let completedCount = weekDates.intersection(completionDates).count
         let nudgeCompletionRate = weekDates.isEmpty
             ? 0.0
             : min(Double(completedCount) / Double(weekDates.count), 1.0)

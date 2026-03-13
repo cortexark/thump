@@ -38,6 +38,8 @@ let package = Package(
                 "MockProfiles/MockUserProfiles.swift",
                 "MockProfiles/MockProfilePipelineTests.swift",
                 "Validation/DatasetValidationTests.swift",
+                "Validation/Data",
+                "Validation/FREE_DATASETS.md",
                 "EngineTimeSeries/TimeSeriesTestInfra.swift",
                 "EngineTimeSeries/StressEngineTimeSeriesTests.swift",
                 "EngineTimeSeries/HeartTrendEngineTimeSeriesTests.swift",
@@ -48,11 +50,10 @@ let package = Package(
                 "EngineTimeSeries/NudgeGeneratorTimeSeriesTests.swift",
                 "EngineTimeSeries/BuddyRecommendationTimeSeriesTests.swift",
                 "EngineTimeSeries/CoachingEngineTimeSeriesTests.swift",
+                "EngineTimeSeries/Results",
                 "EndToEndBehavioralTests.swift",
                 "UICoherenceTests.swift",
-                "AlgorithmComparisonTests.swift",
-                "Validation/Data/README.md",
-                "Validation/FREE_DATASETS.md"
+                "AlgorithmComparisonTests.swift"
             ]
         )
     ]
