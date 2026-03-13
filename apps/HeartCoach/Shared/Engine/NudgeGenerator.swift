@@ -36,7 +36,13 @@ public struct NudgeGenerator: Sendable {
     ///   - feedback: Optional previous-day user feedback.
     ///   - current: Today's snapshot.
     ///   - history: Recent historical snapshots.
+    ///   - readiness: Optional readiness result from ReadinessEngine.
     /// - Returns: A contextually appropriate `DailyNudge`.
+    ///
+    /// Readiness gate: moderate-intensity nudges are suppressed when readiness
+    /// is recovering (<40) or moderate (<60). Poor sleep drives HRV down and
+    /// RHR up, which lowers readiness — so the daily goal automatically backs
+    /// off to walk/rest/breathe on those days rather than pushing harder.
     public func generate(
         confidence: ConfidenceLevel,
         anomaly: Double,
@@ -44,7 +50,8 @@ public struct NudgeGenerator: Sendable {
         stress: Bool,
         feedback: DailyFeedback?,
         current: HeartSnapshot,
-        history: [HeartSnapshot]
+        history: [HeartSnapshot],
+        readiness: ReadinessResult? = nil
     ) -> DailyNudge {
         // Priority 1: Stress pattern
         if stress {
@@ -66,13 +73,221 @@ public struct NudgeGenerator: Sendable {
             return selectNegativeFeedbackNudge(current: current)
         }
 
-        // Priority 5: Positive / improving
+        // Priority 5: Positive / improving — readiness gates intensity
         if anomaly < 0.5 && confidence != .low {
-            return selectPositiveNudge(current: current, history: history)
+            return selectPositiveNudge(current: current, history: history, readiness: readiness)
         }
 
-        // Priority 6: Default
-        return selectDefaultNudge(current: current)
+        // Priority 6: Default — readiness gates intensity
+        return selectDefaultNudge(current: current, readiness: readiness)
+    }
+
+    // MARK: - Multiple Nudge Generation
+
+    /// Generate multiple data-driven nudges ranked by relevance.
+    ///
+    /// Returns up to 3 nudges from different categories so the user
+    /// sees a variety of actionable suggestions based on their data.
+    /// The first nudge is always the highest-priority one (same as `generate()`).
+    ///
+    /// - Parameters: Same as `generate()`, plus `readiness`.
+    /// - Returns: Array of 1-3 contextually appropriate nudges from different categories.
+    public func generateMultiple(
+        confidence: ConfidenceLevel,
+        anomaly: Double,
+        regression: Bool,
+        stress: Bool,
+        feedback: DailyFeedback?,
+        current: HeartSnapshot,
+        history: [HeartSnapshot],
+        readiness: ReadinessResult? = nil
+    ) -> [DailyNudge] {
+        var nudges: [DailyNudge] = []
+        var usedCategories: Set<NudgeCategory> = []
+
+        // Helper to add a nudge if its category isn't already used
+        func addIfNew(_ nudge: DailyNudge) {
+            guard !usedCategories.contains(nudge.category) else { return }
+            nudges.append(nudge)
+            usedCategories.insert(nudge.category)
+        }
+
+        let dayIndex = Calendar.current.ordinality(
+            of: .day, in: .year, for: current.date
+        ) ?? Calendar.current.component(.day, from: current.date)
+
+        // Always start with the primary nudge
+        let primary = generate(
+            confidence: confidence,
+            anomaly: anomaly,
+            regression: regression,
+            stress: stress,
+            feedback: feedback,
+            current: current,
+            history: history,
+            readiness: readiness
+        )
+        addIfNew(primary)
+
+        // Add data-driven secondary suggestions based on what we know
+
+        // ── Readiness-driven recovery block (highest priority secondary) ──
+        // When readiness is low, the most important second nudge is "here's
+        // what to do TONIGHT to fix tomorrow's metrics". This closes the loop:
+        // poor sleep → HRV down → readiness low → primary backs off → secondary
+        // explains WHY and gives a concrete tonight action.
+        if let r = readiness, (r.level == .recovering || r.level == .moderate) {
+            let hrvPillar = r.pillars.first { $0.type == .hrvTrend }
+            let sleepPillar = r.pillars.first { $0.type == .sleep }
+
+            // Build a specific "tonight" recovery nudge based on which pillar is weakest
+            let weakestPillar = [hrvPillar, sleepPillar]
+                .compactMap { $0 }
+                .min { $0.score < $1.score }
+
+            if weakestPillar?.type == .hrvTrend {
+                // HRV is the bottleneck — sleep is the main lever for HRV recovery
+                addIfNew(DailyNudge(
+                    category: .rest,
+                    title: "Sleep Is Your Recovery Tonight",
+                    description: "Your HRV is below your recent baseline — a sign your body "
+                        + "could use extra rest. The best thing you can do right now: "
+                        + "aim for 8 hours tonight. Good sleep supports better HRV.",
+                    durationMinutes: nil,
+                    icon: "bed.double.fill"
+                ))
+            } else {
+                // Sleep pillar is weak — direct sleep advice with the causal chain
+                let hours = current.sleepHours.map { String(format: "%.1f", $0) } ?? "not enough"
+                addIfNew(DailyNudge(
+                    category: .rest,
+                    title: "Earlier Bedtime = Better Tomorrow",
+                    description: "You got \(hours) hours last night. Less sleep can show up as "
+                        + "a higher resting heart rate and lower HRV the next morning — which is "
+                        + "what your metrics are showing. Aim to be in bed by 10 PM tonight.",
+                    durationMinutes: nil,
+                    icon: "bed.double.fill"
+                ))
+            }
+
+            // If recovering (severe), also add a breathing nudge to actively help HRV
+            if r.level == .recovering && nudges.count < 3 {
+                addIfNew(DailyNudge(
+                    category: .breathe,
+                    title: "4-7-8 Breathing Before Bed",
+                    description: "Slow breathing before sleep helps you relax and "
+                        + "may support better HRV overnight. "
+                        + "Inhale 4 counts, hold 7, exhale 8. Do 4 rounds tonight.",
+                    durationMinutes: 5,
+                    icon: "wind"
+                ))
+            }
+        } else {
+            // Normal secondary nudge logic when readiness is fine
+
+            // Sleep signal: too little or too much sleep
+            if let sleep = current.sleepHours {
+                if sleep < 6.5 {
+                    addIfNew(DailyNudge(
+                        category: .rest,
+                        title: "Catch Up on Sleep",
+                        description: "You logged \(String(format: "%.1f", sleep)) hours last night. "
+                            + "An earlier bedtime tonight could help you feel more refreshed tomorrow.",
+                        durationMinutes: nil,
+                        icon: "bed.double.fill"
+                    ))
+                } else if sleep > 9.5 {
+                    addIfNew(DailyNudge(
+                        category: .walk,
+                        title: "Get Some Fresh Air",
+                        description: "You slept a long time. A gentle morning walk can help "
+                            + "shake off grogginess and energize your day.",
+                        durationMinutes: 10,
+                        icon: "figure.walk"
+                    ))
+                }
+            }
+
+            // Activity signal: low movement day
+            let walkMin = current.walkMinutes ?? 0
+            let workoutMin = current.workoutMinutes ?? 0
+            let totalActive = walkMin + workoutMin
+            if totalActive < 10 && nudges.count < 3 {
+                addIfNew(DailyNudge(
+                    category: .walk,
+                    title: "Move a Little Today",
+                    description: "You haven't logged much activity yet. "
+                        + "Even a 10-minute walk can boost your mood and energy.",
+                    durationMinutes: 10,
+                    icon: "figure.walk"
+                ))
+            }
+
+            // HRV signal: below personal baseline
+            if stress && nudges.count < 3 {
+                addIfNew(DailyNudge(
+                    category: .breathe,
+                    title: "Try a Breathing Exercise",
+                    description: "Your HRV suggests your body is working harder than usual. "
+                        + "A few minutes of slow breathing can help you reset.",
+                    durationMinutes: 3,
+                    icon: "wind"
+                ))
+            }
+        }
+
+        // Hydration reminder (universal, low-effort)
+        if nudges.count < 3 {
+            let hydrateNudges = [
+                DailyNudge(
+                    category: .hydrate,
+                    title: "Stay Hydrated",
+                    description: "A glass of water right now is one of the simplest "
+                        + "things you can do for your energy and focus.",
+                    durationMinutes: nil,
+                    icon: "drop.fill"
+                ),
+                DailyNudge(
+                    category: .hydrate,
+                    title: "Quick Hydration Check",
+                    description: "Have you had enough water today? Keeping a bottle "
+                        + "nearby makes it easier to sip throughout the day.",
+                    durationMinutes: nil,
+                    icon: "drop.fill"
+                )
+            ]
+            addIfNew(hydrateNudges[dayIndex % hydrateNudges.count])
+        }
+
+        // Zone-based recommendation from today's zone data
+        let zones = current.zoneMinutes
+        if zones.count >= 5, nudges.count < 3 {
+            let zoneEngine = HeartRateZoneEngine()
+            let analysis = zoneEngine.analyzeZoneDistribution(zoneMinutes: zones)
+            if let rec = analysis.recommendation, rec != .perfectBalance {
+                addIfNew(DailyNudge(
+                    category: rec == .tooMuchIntensity ? .rest : .moderate,
+                    title: rec.title,
+                    description: rec.description,
+                    durationMinutes: rec == .needsMoreActivity ? 20 : (rec == .needsMoreAerobic ? 15 : nil),
+                    icon: rec.icon
+                ))
+            }
+        }
+
+        // Positive reinforcement if doing well
+        if anomaly < 0.3 && confidence != .low && nudges.count < 3 {
+            addIfNew(DailyNudge(
+                category: .celebrate,
+                title: "You're Doing Great",
+                description: "Your metrics are looking solid. Keep up whatever "
+                    + "you've been doing — it's working!",
+                durationMinutes: nil,
+                icon: "star.fill"
+            ))
+        }
+
+        return Array(nudges.prefix(3))
     }
 
     // MARK: - Stress Nudges
@@ -80,7 +295,7 @@ public struct NudgeGenerator: Sendable {
     private func selectStressNudge(current: HeartSnapshot) -> DailyNudge {
         let stressNudges = stressNudgeLibrary()
         // Use day-of-year for deterministic but varied selection
-        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? 0
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? Calendar.current.component(.day, from: current.date)
         return stressNudges[dayIndex % stressNudges.count]
     }
 
@@ -127,7 +342,7 @@ public struct NudgeGenerator: Sendable {
 
     private func selectRegressionNudge(current: HeartSnapshot) -> DailyNudge {
         let nudges = regressionNudgeLibrary()
-        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? 0
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? Calendar.current.component(.day, from: current.date)
         return nudges[dayIndex % nudges.count]
     }
 
@@ -214,7 +429,7 @@ public struct NudgeGenerator: Sendable {
 
     private func selectNegativeFeedbackNudge(current: HeartSnapshot) -> DailyNudge {
         let nudges = negativeFeedbackNudgeLibrary()
-        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? 0
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? Calendar.current.component(.day, from: current.date)
         return nudges[dayIndex % nudges.count]
     }
 
@@ -224,8 +439,8 @@ public struct NudgeGenerator: Sendable {
                 category: .rest,
                 title: "Let's Take It Easy Today",
                 description: "Thanks for letting us know how you felt. " +
-                    "Today might be a nice day for gentle movement and just " +
-                    "listening to what your body needs.",
+                    "Today might be a nice day for gentle movement and " +
+                    "taking things at your own pace.",
                 durationMinutes: nil,
                 icon: "bed.double.fill"
             ),
@@ -254,10 +469,17 @@ public struct NudgeGenerator: Sendable {
 
     private func selectPositiveNudge(
         current: HeartSnapshot,
-        history: [HeartSnapshot]
+        history: [HeartSnapshot],
+        readiness: ReadinessResult? = nil
     ) -> DailyNudge {
+        // If readiness is low (recovering/moderate), suppress moderate and
+        // return the gentler walk nudge regardless of how good the trend looks.
+        // Poor sleep → low HRV → low readiness → body isn't ready to push harder.
+        if let r = readiness, r.level == .recovering || r.level == .moderate {
+            return selectReadinessBackoffNudge(current: current, readiness: r)
+        }
         let nudges = positiveNudgeLibrary()
-        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? 0
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? Calendar.current.component(.day, from: current.date)
         return nudges[dayIndex % nudges.count]
     }
 
@@ -295,9 +517,71 @@ public struct NudgeGenerator: Sendable {
 
     // MARK: - Default Nudges
 
-    private func selectDefaultNudge(current: HeartSnapshot) -> DailyNudge {
+    private func selectDefaultNudge(
+        current: HeartSnapshot,
+        readiness: ReadinessResult? = nil
+    ) -> DailyNudge {
+        // Readiness gate: recovering or moderate readiness = body needs a lighter day.
+        if let r = readiness, r.level == .recovering || r.level == .moderate {
+            return selectReadinessBackoffNudge(current: current, readiness: r)
+        }
         let nudges = defaultNudgeLibrary()
-        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? 0
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? Calendar.current.component(.day, from: current.date)
+        return nudges[dayIndex % nudges.count]
+    }
+
+    // MARK: - Readiness Backoff Nudges
+
+    /// Returns a light-intensity nudge when readiness is too low to safely push moderate effort.
+    /// Triggered when poor sleep → HRV drops → RHR rises → readiness score falls below 60.
+    private func selectReadinessBackoffNudge(
+        current: HeartSnapshot,
+        readiness: ReadinessResult
+    ) -> DailyNudge {
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? Calendar.current.component(.day, from: current.date)
+
+        // Recovering (<40): full rest or breathing — body is genuinely depleted
+        if readiness.level == .recovering {
+            let nudges: [DailyNudge] = [
+                DailyNudge(
+                    category: .rest,
+                    title: "Rest and Recharge Today",
+                    description: "Your HRV and sleep suggest a lighter day may help. "
+                        + "Taking it easy now could help you bounce back faster.",
+                    durationMinutes: nil,
+                    icon: "bed.double.fill"
+                ),
+                DailyNudge(
+                    category: .breathe,
+                    title: "A Breathing Reset",
+                    description: "Your metrics suggest you could use some downtime. Slow breathing "
+                        + "can help you relax and wind down.",
+                    durationMinutes: 5,
+                    icon: "wind"
+                )
+            ]
+            return nudges[dayIndex % nudges.count]
+        }
+
+        // Moderate (40–59): gentle walk only — movement helps but intensity hurts
+        let nudges: [DailyNudge] = [
+            DailyNudge(
+                category: .walk,
+                title: "An Easy Walk Today",
+                description: "Your heart metrics suggest you're still bouncing back. "
+                    + "A gentle walk keeps you moving without overdoing it.",
+                durationMinutes: 15,
+                icon: "figure.walk"
+            ),
+            DailyNudge(
+                category: .walk,
+                title: "Keep It Light Today",
+                description: "Your HRV is a bit below your baseline — a sign your body "
+                    + "is still catching up. An easy stroll is the right call.",
+                durationMinutes: 20,
+                icon: "figure.walk"
+            )
+        ]
         return nudges[dayIndex % nudges.count]
     }
 

@@ -101,22 +101,52 @@ public struct HeartTrendEngine: Sendable {
         let regression = detectRegression(history: relevantHistory, current: current)
         let stress = detectStressPattern(current: current, history: relevantHistory)
         let cardio = computeCardioScore(current: current, history: relevantHistory)
+
+        // New signals: week-over-week, consecutive elevation, recovery, scenario
+        let wowTrend = weekOverWeekTrend(history: relevantHistory, current: current)
+        let consecutiveAlert = detectConsecutiveElevation(
+            history: relevantHistory, current: current
+        )
+        let recovery = recoveryTrend(history: relevantHistory, current: current)
+        let scenario = detectScenario(history: relevantHistory, current: current)
+
         let status = determineStatus(
             anomaly: anomaly,
             regression: regression,
             stress: stress,
-            confidence: confidence
+            confidence: confidence,
+            consecutiveAlert: consecutiveAlert,
+            weekTrend: wowTrend
+        )
+
+        // Compute readiness so NudgeGenerator can gate intensity by HRV/RHR/sleep state.
+        // Poor sleep → HRV drops + RHR rises → readiness falls → goal backs off to walk/rest.
+        let readiness = ReadinessEngine().compute(
+            snapshot: current,
+            stressScore: stress ? 70.0 : (anomaly > 0.5 ? 50.0 : 25.0),
+            recentHistory: relevantHistory
         )
 
         let nudgeGenerator = NudgeGenerator()
-        let nudge = nudgeGenerator.generate(
+        let allNudges = nudgeGenerator.generateMultiple(
             confidence: confidence,
             anomaly: anomaly,
             regression: regression,
             stress: stress,
             feedback: feedback,
             current: current,
-            history: relevantHistory
+            history: relevantHistory,
+            readiness: readiness
+        )
+        let primaryNudge = allNudges.first ?? nudgeGenerator.generate(
+            confidence: confidence,
+            anomaly: anomaly,
+            regression: regression,
+            stress: stress,
+            feedback: feedback,
+            current: current,
+            history: relevantHistory,
+            readiness: readiness
         )
 
         let explanation = buildExplanation(
@@ -125,8 +155,45 @@ public struct HeartTrendEngine: Sendable {
             anomaly: anomaly,
             regression: regression,
             stress: stress,
-            cardio: cardio
+            cardio: cardio,
+            wowTrend: wowTrend,
+            consecutiveAlert: consecutiveAlert,
+            scenario: scenario,
+            recovery: recovery
         )
+
+        // Build recovery context when readiness is below threshold (recovering or moderate).
+        // This flows to DashboardView (inline banner), StressView (bedtime action),
+        // and the sleep goal tile — closing the loop: bad sleep → low HRV → lighter goal →
+        // here's what to do TONIGHT to fix tomorrow.
+        let recoveryCtx: RecoveryContext? = readiness.flatMap { r in
+            guard r.level == .recovering || r.level == .moderate else { return nil }
+
+            let hrvPillar  = r.pillars.first { $0.type == .hrvTrend }
+            let sleepPillar = r.pillars.first { $0.type == .sleep }
+            let weakest = [hrvPillar, sleepPillar]
+                .compactMap { $0 }
+                .min { $0.score < $1.score }
+
+            if weakest?.type == .hrvTrend {
+                return RecoveryContext(
+                    driver: "HRV",
+                    reason: "Your HRV is below your recent baseline — a sign your body could use extra rest.",
+                    tonightAction: "Aim for 8 hours of sleep tonight. Every hour directly rebuilds HRV.",
+                    bedtimeTarget: "10 PM",
+                    readinessScore: r.score
+                )
+            } else {
+                let hrs = current.sleepHours.map { String(format: "%.1f", $0) } ?? "not enough"
+                return RecoveryContext(
+                    driver: "Sleep",
+                    reason: "You got \(hrs) hours last night — less sleep can show up as higher RHR and lower HRV.",
+                    tonightAction: "Get to bed by 10 PM tonight for a full recovery cycle.",
+                    bedtimeTarget: "10 PM",
+                    readinessScore: r.score
+                )
+            }
+        }
 
         return HeartAssessment(
             status: status,
@@ -135,8 +202,14 @@ public struct HeartTrendEngine: Sendable {
             regressionFlag: regression,
             stressFlag: stress,
             cardioScore: cardio,
-            dailyNudge: nudge,
-            explanation: explanation
+            dailyNudge: primaryNudge,
+            dailyNudges: allNudges,
+            explanation: explanation,
+            weekOverWeekTrend: wowTrend,
+            consecutiveAlert: consecutiveAlert,
+            scenario: scenario,
+            recoveryTrend: recovery,
+            recoveryContext: recoveryCtx
         )
     }
 
@@ -368,6 +441,310 @@ public struct HeartTrendEngine: Sendable {
         return rhrElevated && hrvDepressed && recoveryDepressed
     }
 
+    // MARK: - Week-Over-Week Trend
+
+    /// Compute week-over-week RHR trend using a 28-day baseline.
+    ///
+    /// Compares the current 7-day mean RHR against a 28-day rolling baseline.
+    /// Z-score thresholds: < -1.5 significant improvement, > 1.5 significant elevation.
+    func weekOverWeekTrend(
+        history: [HeartSnapshot],
+        current: HeartSnapshot
+    ) -> WeekOverWeekTrend? {
+        let allSnapshots = history + [current]
+        let rhrSnapshots = allSnapshots
+            .filter { $0.restingHeartRate != nil }
+            .sorted { $0.date < $1.date }
+
+        // Need at least 14 days for a meaningful baseline
+        guard rhrSnapshots.count >= 14 else { return nil }
+
+        // 28-day baseline (or all available if less)
+        let baselineWindow = min(28, rhrSnapshots.count)
+        let baselineSnapshots = Array(rhrSnapshots.suffix(baselineWindow))
+        let baselineValues = baselineSnapshots.compactMap(\.restingHeartRate)
+        guard baselineValues.count >= 14 else { return nil }
+
+        let baselineMean = baselineValues.reduce(0, +) / Double(baselineValues.count)
+        let baselineStd = standardDeviation(baselineValues)
+        guard baselineStd > 0.5 else {
+            // Essentially no variance — everything is stable
+            let recentMean = currentWeekRHRMean(rhrSnapshots)
+            return WeekOverWeekTrend(
+                zScore: 0,
+                direction: .stable,
+                baselineMean: baselineMean,
+                baselineStd: baselineStd,
+                currentWeekMean: recentMean
+            )
+        }
+
+        // Current 7-day mean
+        let recentMean = currentWeekRHRMean(rhrSnapshots)
+        let z = (recentMean - baselineMean) / baselineStd
+
+        let direction: WeeklyTrendDirection
+        if z < -1.5 {
+            direction = .significantImprovement
+        } else if z < -0.5 {
+            direction = .improving
+        } else if z > 1.5 {
+            direction = .significantElevation
+        } else if z > 0.5 {
+            direction = .elevated
+        } else {
+            direction = .stable
+        }
+
+        return WeekOverWeekTrend(
+            zScore: z,
+            direction: direction,
+            baselineMean: baselineMean,
+            baselineStd: baselineStd,
+            currentWeekMean: recentMean
+        )
+    }
+
+    /// Mean RHR of the most recent 7 snapshots with RHR data.
+    private func currentWeekRHRMean(_ sortedSnapshots: [HeartSnapshot]) -> Double {
+        let recent = sortedSnapshots.suffix(7)
+        let values = recent.compactMap(\.restingHeartRate)
+        guard !values.isEmpty else { return 0 }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    // MARK: - Consecutive Elevation Alert
+
+    /// Detect when RHR exceeds personal_mean + 2σ for 3+ consecutive days.
+    ///
+    /// Research (ARIC study) shows this pattern precedes illness onset by 1-3 days.
+    func detectConsecutiveElevation(
+        history: [HeartSnapshot],
+        current: HeartSnapshot
+    ) -> ConsecutiveElevationAlert? {
+        let allSnapshots = (history + [current])
+            .sorted { $0.date < $1.date }
+        let rhrValues = allSnapshots.compactMap(\.restingHeartRate)
+        guard rhrValues.count >= 7 else { return nil }
+
+        let mean = rhrValues.reduce(0, +) / Double(rhrValues.count)
+        let std = standardDeviation(rhrValues)
+        guard std > 0.5 else { return nil }
+
+        let threshold = mean + 2.0 * std
+
+        // Count consecutive calendar days from the most recent snapshot backwards.
+        // Uses actual date gaps (not array positions) to avoid false counts
+        // when a user misses a day of wearing the device.
+        var consecutiveDays = 0
+        var elevatedRHRs: [Double] = []
+        let reversedSnapshots = allSnapshots.reversed()
+        var previousDate: Date?
+        for snapshot in reversedSnapshots {
+            if let rhr = snapshot.restingHeartRate, rhr > threshold {
+                // Check calendar continuity — gap of more than 1.5 days breaks the streak
+                if let prev = previousDate {
+                    let gap = prev.timeIntervalSince(snapshot.date) / 86400.0
+                    if gap > 1.5 { break }
+                }
+                consecutiveDays += 1
+                elevatedRHRs.append(rhr)
+                previousDate = snapshot.date
+            } else {
+                break
+            }
+        }
+
+        guard consecutiveDays >= 3 else { return nil }
+
+        let elevatedMean = elevatedRHRs.reduce(0, +) / Double(elevatedRHRs.count)
+
+        return ConsecutiveElevationAlert(
+            consecutiveDays: consecutiveDays,
+            threshold: threshold,
+            elevatedMean: elevatedMean,
+            personalMean: mean
+        )
+    }
+
+    // MARK: - Recovery Trend
+
+    /// Analyze heart rate recovery trend (post-exercise HR drop).
+    ///
+    /// Compares 7-day recovery mean against 28-day baseline. Improving recovery
+    /// indicates better cardiovascular fitness; declining recovery may signal
+    /// overtraining or fatigue.
+    func recoveryTrend(
+        history: [HeartSnapshot],
+        current: HeartSnapshot
+    ) -> RecoveryTrend? {
+        let allSnapshots = (history + [current])
+            .sorted { $0.date < $1.date }
+        let recSnapshots = allSnapshots.filter { $0.recoveryHR1m != nil }
+
+        guard recSnapshots.count >= 5 else {
+            return RecoveryTrend(
+                direction: .insufficientData,
+                currentWeekMean: nil,
+                baselineMean: nil,
+                zScore: nil,
+                dataPoints: recSnapshots.count
+            )
+        }
+
+        let allRecValues = recSnapshots.compactMap(\.recoveryHR1m)
+        let baselineMean = allRecValues.reduce(0, +) / Double(allRecValues.count)
+        let baselineStd = standardDeviation(allRecValues)
+
+        // Current week (last 7 data points with recovery data)
+        let recentRec = Array(recSnapshots.suffix(7))
+        let recentValues = recentRec.compactMap(\.recoveryHR1m)
+        guard !recentValues.isEmpty else {
+            return RecoveryTrend(
+                direction: .insufficientData,
+                currentWeekMean: nil,
+                baselineMean: baselineMean,
+                zScore: nil,
+                dataPoints: 0
+            )
+        }
+
+        let recentMean = recentValues.reduce(0, +) / Double(recentValues.count)
+
+        let direction: RecoveryTrendDirection
+        if baselineStd > 0.5 {
+            let z = (recentMean - baselineMean) / baselineStd
+            // For recovery, higher is better (more HR drop post-exercise)
+            if z > 1.0 {
+                direction = .improving
+            } else if z < -1.0 {
+                direction = .declining
+            } else {
+                direction = .stable
+            }
+            return RecoveryTrend(
+                direction: direction,
+                currentWeekMean: recentMean,
+                baselineMean: baselineMean,
+                zScore: z,
+                dataPoints: recentValues.count
+            )
+        } else {
+            direction = .stable
+            return RecoveryTrend(
+                direction: direction,
+                currentWeekMean: recentMean,
+                baselineMean: baselineMean,
+                zScore: 0,
+                dataPoints: recentValues.count
+            )
+        }
+    }
+
+    // MARK: - Scenario Detection
+
+    /// Detect which coaching scenario best matches today's metrics.
+    ///
+    /// Scenarios are mutually exclusive — returns the highest priority match.
+    /// Priority: overtraining > high stress > great recovery > missing activity > trends.
+    func detectScenario(
+        history: [HeartSnapshot],
+        current: HeartSnapshot
+    ) -> CoachingScenario? {
+        let allSnapshots = history + [current]
+        let rhrValues = history.compactMap(\.restingHeartRate)
+        let hrvValues = history.compactMap(\.hrvSDNN)
+
+        // --- Overtraining signals ---
+        // RHR +7bpm for 3+ days AND HRV -20% persistent
+        if rhrValues.count >= 7 && hrvValues.count >= 7 {
+            let rhrMean = rhrValues.reduce(0, +) / Double(rhrValues.count)
+            let hrvMean = hrvValues.reduce(0, +) / Double(hrvValues.count)
+
+            // Check last 3 days for elevated RHR
+            let recentSnapshots = Array(allSnapshots.suffix(3))
+            let recentRHR = recentSnapshots.compactMap(\.restingHeartRate)
+            let recentHRV = recentSnapshots.compactMap(\.hrvSDNN)
+
+            if recentRHR.count >= 3 && recentHRV.count >= 3 {
+                let allElevated = recentRHR.allSatisfy { $0 > rhrMean + 7.0 }
+                let hrvDepressed = recentHRV.allSatisfy { $0 < hrvMean * 0.80 }
+                if allElevated && hrvDepressed {
+                    return .overtrainingSignals
+                }
+            }
+        }
+
+        // --- High stress day ---
+        // HRV >15% below avg AND/OR RHR >5bpm above avg
+        if let currentHRV = current.hrvSDNN, let currentRHR = current.restingHeartRate {
+            let hrvMean = hrvValues.isEmpty ? currentHRV :
+                hrvValues.reduce(0, +) / Double(hrvValues.count)
+            let rhrMean = rhrValues.isEmpty ? currentRHR :
+                rhrValues.reduce(0, +) / Double(rhrValues.count)
+
+            let hrvBelow = currentHRV < hrvMean * 0.85
+            let rhrAbove = currentRHR > rhrMean + 5.0
+
+            if hrvBelow && rhrAbove {
+                return .highStressDay
+            }
+        }
+
+        // --- Great recovery day ---
+        // HRV >10% above avg, RHR at/below baseline
+        if let currentHRV = current.hrvSDNN, let currentRHR = current.restingHeartRate {
+            let hrvMean = hrvValues.isEmpty ? currentHRV :
+                hrvValues.reduce(0, +) / Double(hrvValues.count)
+            let rhrMean = rhrValues.isEmpty ? currentRHR :
+                rhrValues.reduce(0, +) / Double(rhrValues.count)
+
+            if currentHRV > hrvMean * 1.10 && currentRHR <= rhrMean {
+                return .greatRecoveryDay
+            }
+        }
+
+        // --- Missing activity ---
+        // No workout for 2+ consecutive days
+        let recentTwo = Array(allSnapshots.suffix(2))
+        if recentTwo.count >= 2 {
+            let noActivity = recentTwo.allSatisfy {
+                ($0.workoutMinutes ?? 0) < 5 && ($0.steps ?? 0) < 2000
+            }
+            if noActivity {
+                return .missingActivity
+            }
+        }
+
+        // --- Improving trend ---
+        // 7-day rolling avg improving for 2+ weeks (need 14+ days)
+        if let wowTrend = weekOverWeekTrend(history: history, current: current) {
+            if wowTrend.direction == .significantImprovement || wowTrend.direction == .improving {
+                // Verify it's a sustained multi-week improvement using slope
+                let rhrRecent14 = allSnapshots.suffix(14).compactMap(\.restingHeartRate)
+                if rhrRecent14.count >= 10 {
+                    let slope = linearSlope(values: rhrRecent14)
+                    if slope < -0.15 { // RHR declining at > 0.15 bpm/day
+                        return .improvingTrend
+                    }
+                }
+            }
+
+            // --- Declining trend ---
+            if wowTrend.direction == .significantElevation || wowTrend.direction == .elevated {
+                let rhrRecent14 = allSnapshots.suffix(14).compactMap(\.restingHeartRate)
+                if rhrRecent14.count >= 10 {
+                    let slope = linearSlope(values: rhrRecent14)
+                    if slope > 0.15 { // RHR increasing at > 0.15 bpm/day
+                        return .decliningTrend
+                    }
+                }
+            }
+        }
+
+        return nil
+    }
+
     // MARK: - Status Determination
 
     /// Map computed signals into a single TrendStatus.
@@ -375,13 +752,28 @@ public struct HeartTrendEngine: Sendable {
         anomaly: Double,
         regression: Bool,
         stress: Bool,
-        confidence: ConfidenceLevel
+        confidence: ConfidenceLevel,
+        consecutiveAlert: ConsecutiveElevationAlert? = nil,
+        weekTrend: WeekOverWeekTrend? = nil
     ) -> TrendStatus {
-        // Needs attention: high anomaly, regression, or stress
+        // Needs attention: high anomaly, regression, stress, consecutive alert,
+        // or significant weekly elevation
         if anomaly >= policy.anomalyHigh || regression || stress {
             return .needsAttention
         }
-        // Improving: low anomaly and reasonable confidence
+        if consecutiveAlert != nil {
+            return .needsAttention
+        }
+        if let wt = weekTrend, wt.direction == .significantElevation {
+            return .needsAttention
+        }
+        // Improving: low anomaly and reasonable confidence,
+        // or significant weekly improvement
+        if let wt = weekTrend,
+           (wt.direction == .significantImprovement || wt.direction == .improving),
+           confidence != .low {
+            return .improving
+        }
         if anomaly < 0.5 && confidence != .low {
             return .improving
         }
@@ -397,7 +789,11 @@ public struct HeartTrendEngine: Sendable {
         anomaly: Double,
         regression: Bool,
         stress: Bool,
-        cardio: Double?
+        cardio: Double?,
+        wowTrend: WeekOverWeekTrend? = nil,
+        consecutiveAlert: ConsecutiveElevationAlert? = nil,
+        scenario: CoachingScenario? = nil,
+        recovery: RecoveryTrend? = nil
     ) -> String {
         var parts: [String] = []
 
@@ -424,9 +820,46 @@ public struct HeartTrendEngine: Sendable {
 
         if stress {
             parts.append(
-                "A pattern consistent with elevated physiological load was detected today. " +
-                "Consider prioritizing rest and recovery."
+                "A pattern suggesting your heart is working harder than usual was noticed today. " +
+                "A lighter day might help you feel better."
             )
+        }
+
+        // Week-over-week insight
+        if let wt = wowTrend {
+            switch wt.direction {
+            case .significantImprovement, .improving:
+                parts.append(wt.direction.displayText + ".")
+            case .significantElevation, .elevated:
+                parts.append(wt.direction.displayText + ".")
+            case .stable:
+                break // Don't clutter with "stable" when already said "normal range"
+            }
+        }
+
+        // Consecutive elevation alert
+        if let alert = consecutiveAlert {
+            parts.append(
+                "Your resting heart rate has been elevated for \(alert.consecutiveDays) " +
+                "consecutive days. This sometimes precedes feeling under the weather."
+            )
+        }
+
+        // Recovery trend
+        if let rec = recovery {
+            switch rec.direction {
+            case .improving:
+                parts.append(rec.direction.displayText + ".")
+            case .declining:
+                parts.append(rec.direction.displayText + ".")
+            case .stable, .insufficientData:
+                break
+            }
+        }
+
+        // Coaching scenario
+        if let scenario = scenario {
+            parts.append(scenario.coachingMessage)
         }
 
         if let score = cardio {
@@ -521,5 +954,14 @@ public struct HeartTrendEngine: Sendable {
         let med = median(values)
         let deviations = values.map { abs($0 - med) }
         return median(deviations) * 1.4826
+    }
+
+    /// Compute sample standard deviation.
+    func standardDeviation(_ values: [Double]) -> Double {
+        let n = Double(values.count)
+        guard n >= 2 else { return 0.0 }
+        let mean = values.reduce(0, +) / n
+        let sumSquares = values.map { ($0 - mean) * ($0 - mean) }.reduce(0, +)
+        return (sumSquares / (n - 1)).squareRoot()
     }
 }

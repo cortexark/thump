@@ -203,8 +203,8 @@ public struct SmartNudgeScheduler: Sendable {
            todayStress.score >= journalStressThreshold {
             return .journalPrompt(
                 JournalPrompt(
-                    question: "It seems like a full day — "
-                        + "what's been on your mind?",
+                    question: "It's been a full day. "
+                        + "What's been on your mind?",
                     context: "Your stress has been running higher "
                         + "than usual today. Writing things down "
                         + "can sometimes help.",
@@ -233,7 +233,7 @@ public struct SmartNudgeScheduler: Sendable {
            isLateWake(todaySnapshot: snapshot, patterns: patterns),
            currentHour < 12 {
             return .morningCheckIn(
-                "You slept in a bit today — how are you feeling?"
+                "You slept in a bit today. How are you feeling?"
             )
         }
 
@@ -259,6 +259,142 @@ public struct SmartNudgeScheduler: Sendable {
         // 5. Default
         return .standardNudge
     }
+
+    // MARK: - Multiple Actions
+
+    /// Generate multiple context-aware actions ranked by relevance.
+    ///
+    /// Unlike `recommendAction()` which returns only the top-priority
+    /// action, this method collects all applicable actions so the UI
+    /// can present several data-driven suggestions at once.
+    ///
+    /// - Parameters: Same as `recommendAction()`.
+    /// - Returns: Array of 1-3 applicable ``SmartNudgeAction`` values,
+    ///   ordered by priority (highest first). Never empty — at minimum
+    ///   returns `.standardNudge`.
+    public func recommendActions(
+        stressPoints: [StressDataPoint],
+        trendDirection: StressTrendDirection,
+        todaySnapshot: HeartSnapshot?,
+        patterns: [SleepPattern],
+        currentHour: Int
+    ) -> [SmartNudgeAction] {
+        var actions: [SmartNudgeAction] = []
+
+        // 1. High stress → journal prompt
+        if let todayStress = stressPoints.last,
+           todayStress.score >= journalStressThreshold {
+            actions.append(
+                .journalPrompt(
+                    JournalPrompt(
+                        question: "It's been a full day. "
+                            + "What's been on your mind?",
+                        context: "Your stress has been running higher "
+                            + "than usual today. Writing things down "
+                            + "can sometimes help.",
+                        icon: "book.fill"
+                    )
+                )
+            )
+        }
+
+        // 2. Stress rising → breath prompt on watch
+        if trendDirection == .rising {
+            actions.append(
+                .breatheOnWatch(
+                    DailyNudge(
+                        category: .breathe,
+                        title: "Take a Breath",
+                        description: "Your stress has been climbing. "
+                            + "A quick breathing exercise on your "
+                            + "Apple Watch might help you reset.",
+                        durationMinutes: 3,
+                        icon: "wind"
+                    )
+                )
+            )
+        }
+
+        // 3. Late wake → morning check-in
+        if let snapshot = todaySnapshot,
+           isLateWake(todaySnapshot: snapshot, patterns: patterns),
+           currentHour < 12 {
+            actions.append(
+                .morningCheckIn(
+                    "You slept in a bit today. How are you feeling?"
+                )
+            )
+        }
+
+        // 4. Near bedtime → wind-down
+        let calendar = Calendar.current
+        let dayOfWeek = calendar.component(.weekday, from: Date())
+        if let pattern = patterns.first(where: { $0.dayOfWeek == dayOfWeek }),
+           currentHour >= pattern.typicalBedtimeHour - 1,
+           currentHour <= pattern.typicalBedtimeHour {
+            actions.append(
+                .bedtimeWindDown(
+                    DailyNudge(
+                        category: .rest,
+                        title: "Time to Wind Down",
+                        description: "Your usual bedtime is coming up. "
+                            + "Maybe start putting screens away and "
+                            + "do something relaxing.",
+                        durationMinutes: nil,
+                        icon: "moon.fill"
+                    )
+                )
+            )
+        }
+
+        // 5. Activity-based suggestions from today's data
+        if let snapshot = todaySnapshot, actions.count < 3 {
+            let walkMin = snapshot.walkMinutes ?? 0
+            let workoutMin = snapshot.workoutMinutes ?? 0
+            if walkMin + workoutMin < 10 {
+                actions.append(
+                    .activitySuggestion(
+                        DailyNudge(
+                            category: .walk,
+                            title: "Get Moving",
+                            description: "You haven't logged much activity today. "
+                                + "Even a short walk can lift your mood and "
+                                + "ease tension.",
+                            durationMinutes: 10,
+                            icon: "figure.walk"
+                        )
+                    )
+                )
+            }
+        }
+
+        // 6. Sleep-based suggestion
+        if let snapshot = todaySnapshot,
+           let sleep = snapshot.sleepHours,
+           sleep < 6.5,
+           actions.count < 3 {
+            actions.append(
+                .restSuggestion(
+                    DailyNudge(
+                        category: .rest,
+                        title: "Prioritize Sleep Tonight",
+                        description: "You logged \(String(format: "%.1f", sleep)) "
+                            + "hours last night. An earlier bedtime could "
+                            + "help your body recover.",
+                        durationMinutes: nil,
+                        icon: "bed.double.fill"
+                    )
+                )
+            )
+        }
+
+        // Always return at least standard nudge
+        if actions.isEmpty {
+            actions.append(.standardNudge)
+        }
+
+        return Array(actions.prefix(3))
+    }
 }
 
 // MARK: - Smart Nudge Action
@@ -276,6 +412,12 @@ public enum SmartNudgeAction: Sendable {
 
     /// Send a wind-down nudge before bedtime.
     case bedtimeWindDown(DailyNudge)
+
+    /// Suggest an activity based on low movement data.
+    case activitySuggestion(DailyNudge)
+
+    /// Suggest rest/sleep based on low sleep data.
+    case restSuggestion(DailyNudge)
 
     /// Use the standard nudge selection logic.
     case standardNudge

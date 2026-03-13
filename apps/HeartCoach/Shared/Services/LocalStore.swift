@@ -19,6 +19,8 @@ private enum StorageKey: String {
     case alertMeta         = "com.thump.alertMeta"
     case subscriptionTier  = "com.thump.subscriptionTier"
     case lastFeedback      = "com.thump.lastFeedback"
+    case lastCheckIn       = "com.thump.lastCheckIn"
+    case feedbackPrefs     = "com.thump.feedbackPrefs"
 }
 
 // MARK: - Local Store
@@ -80,7 +82,12 @@ public final class LocalStore: ObservableObject {
             decoder: dec
         ) ?? UserProfile()
 
-        self.tier = Self.loadTier(defaults: defaults) ?? .free
+        self.tier = Self.load(
+            SubscriptionTier.self,
+            key: .subscriptionTier,
+            defaults: defaults,
+            decoder: dec
+        ) ?? Self.migrateLegacyTier(defaults: defaults) ?? .free
 
         self.alertMeta = Self.load(
             AlertMeta.self,
@@ -166,14 +173,19 @@ public final class LocalStore: ObservableObject {
 
     // MARK: - Subscription Tier
 
-    /// Persist the current ``tier`` to disk.
+    /// Persist the current ``tier`` to disk (encrypted).
     public func saveTier() {
-        defaults.set(tier.rawValue, forKey: StorageKey.subscriptionTier.rawValue)
+        save(tier, key: .subscriptionTier)
     }
 
     /// Reload ``tier`` from disk.
     public func reloadTier() {
-        if let loaded = Self.loadTier(defaults: defaults) {
+        if let loaded = Self.load(
+            SubscriptionTier.self,
+            key: .subscriptionTier,
+            defaults: defaults,
+            decoder: decoder
+        ) {
             tier = loaded
         }
     }
@@ -195,9 +207,49 @@ public final class LocalStore: ObservableObject {
         )
     }
 
+    // MARK: - Check-In
+
+    /// Persist a mood check-in response.
+    public func saveCheckIn(_ response: CheckInResponse) {
+        save(response, key: .lastCheckIn)
+    }
+
+    /// Load today's check-in, if the user has already checked in.
+    public func loadTodayCheckIn() -> CheckInResponse? {
+        guard let response = Self.load(
+            CheckInResponse.self,
+            key: .lastCheckIn,
+            defaults: defaults,
+            decoder: decoder
+        ) else { return nil }
+
+        let calendar = Calendar.current
+        if calendar.isDateInToday(response.date) {
+            return response
+        }
+        return nil
+    }
+
+    // MARK: - Feedback Preferences
+
+    /// Persist the user's feedback display preferences.
+    public func saveFeedbackPreferences(_ prefs: FeedbackPreferences) {
+        save(prefs, key: .feedbackPrefs)
+    }
+
+    /// Load feedback preferences, defaulting to all enabled.
+    public func loadFeedbackPreferences() -> FeedbackPreferences {
+        Self.load(
+            FeedbackPreferences.self,
+            key: .feedbackPrefs,
+            defaults: defaults,
+            decoder: decoder
+        ) ?? FeedbackPreferences()
+    }
+
     // MARK: - Danger Zone
 
-    /// Remove all Thump data from UserDefaults.
+    /// Remove all Thump data from UserDefaults and the Keychain encryption key.
     /// Intended for account-reset / sign-out flows.
     public func clearAll() {
         for key in [
@@ -205,10 +257,17 @@ public final class LocalStore: ObservableObject {
             .storedSnapshots,
             .alertMeta,
             .subscriptionTier,
-            .lastFeedback
+            .lastFeedback,
+            .lastCheckIn,
+            .feedbackPrefs
         ] {
             defaults.removeObject(forKey: key.rawValue)
         }
+
+        // Remove the encryption key from the Keychain so no leftover
+        // ciphertext can be decrypted after account reset.
+        try? CryptoService.deleteKey()
+
         profile = UserProfile()
         tier = .free
         alertMeta = AlertMeta()
@@ -217,19 +276,24 @@ public final class LocalStore: ObservableObject {
     // MARK: - Private Helpers
 
     /// Encode a `Codable` value, encrypt it, and write it to UserDefaults as `Data`.
+    /// Refuses to store health data in plaintext — drops the write if encryption fails.
+    /// Unit tests should mock CryptoService or use an unencrypted test store.
     private func save<T: Encodable>(_ value: T, key: StorageKey) {
         do {
             let jsonData = try encoder.encode(value)
-            let encrypted = try CryptoService.encrypt(jsonData)
-            defaults.set(encrypted, forKey: key.rawValue)
+            if let encrypted = try? CryptoService.encrypt(jsonData) {
+                defaults.set(encrypted, forKey: key.rawValue)
+            } else {
+                // Encryption unavailable — do NOT fall back to plaintext for health data.
+                // Data is dropped rather than stored unencrypted. The next successful
+                // save will restore it. This protects PHI at the cost of temporary data loss.
+                print("[LocalStore] ERROR: Encryption unavailable for key \(key.rawValue). Data NOT saved to protect health data privacy.")
+                #if DEBUG
+                assertionFailure("CryptoService.encrypt() returned nil for key \(key.rawValue). Fix Keychain access or mock CryptoService in tests.")
+                #endif
+            }
         } catch {
-            // Log the error so data loss is visible in production builds.
-            // assertionFailure is a no-op in release, which silently swallows
-            // the failure and leaves the user unaware of data corruption.
-            print("[LocalStore] ERROR: Failed to encode/encrypt \(T.self) for key save: \(error)")
-            #if DEBUG
-            assertionFailure("[LocalStore] Failed to encode/encrypt \(T.self): \(error)")
-            #endif
+            print("[LocalStore] ERROR: Failed to encode \(T.self) for key \(key.rawValue): \(error)")
         }
     }
 
@@ -263,26 +327,34 @@ public final class LocalStore: ObservableObject {
             return value
         }
 
-        // Log the error so data corruption is visible in production builds.
-        // assertionFailure is a no-op in release, which silently swallows
-        // the failure and leaves the user unaware of unreadable data.
+        // Both encrypted and plain-text decoding failed — data is corrupted
+        // or from an incompatible schema version. Remove the bad entry so the
+        // app can start fresh instead of crashing on every launch.
         print(
-            "[LocalStore] ERROR: Failed to decrypt/decode \(T.self) "
-            + "from key \(key.rawValue). Stored data may be corrupted."
+            "[LocalStore] WARNING: Removing unreadable \(T.self) "
+            + "from key \(key.rawValue). Stored data was corrupted or incompatible."
         )
-        #if DEBUG
-        assertionFailure("[LocalStore] Failed to decrypt/decode \(T.self)")
-        #endif
+        defaults.removeObject(forKey: key.rawValue)
         return nil
     }
 
-    /// Load the subscription tier stored as a raw string.
-    private static func loadTier(defaults: UserDefaults) -> SubscriptionTier? {
+    /// Migrate a legacy subscription tier that was stored as a plain raw string
+    /// (before the encryption layer was introduced). If found, the value is
+    /// re-saved encrypted and the legacy entry is replaced in-place.
+    private static func migrateLegacyTier(defaults: UserDefaults) -> SubscriptionTier? {
         guard let raw = defaults.string(
             forKey: StorageKey.subscriptionTier.rawValue
         ) else {
             return nil
         }
-        return SubscriptionTier(rawValue: raw)
+        guard let tier = SubscriptionTier(rawValue: raw) else { return nil }
+
+        // Re-save encrypted so subsequent reads go through the normal path.
+        let encoder = JSONEncoder()
+        if let jsonData = try? encoder.encode(tier),
+           let encrypted = try? CryptoService.encrypt(jsonData) {
+            defaults.set(encrypted, forKey: StorageKey.subscriptionTier.rawValue)
+        }
+        return tier
     }
 }

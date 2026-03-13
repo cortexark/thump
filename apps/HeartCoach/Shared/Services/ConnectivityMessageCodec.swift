@@ -14,6 +14,7 @@ public enum ConnectivityMessageType: String, Sendable {
     case assessment
     case feedback
     case requestAssessment
+    case actionPlan
     case error
     case acknowledgement
 }
