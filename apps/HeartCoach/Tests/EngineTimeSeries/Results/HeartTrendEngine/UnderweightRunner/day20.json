@@ -1,0 +1,9 @@
+{
+  "anomalyScore" : 0.22698646846706033,
+  "confidenceLevel" : "high",
+  "regressionFlag" : false,
+  "scenario" : "greatRecoveryDay",
+  "status" : "improving",
+  "stressFlag" : false,
+  "weekOverWeekTrendDirection" : "stable"
+}

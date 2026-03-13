@@ -1,0 +1,16 @@
+{
+  "anomalyScore" : 0.31362902221837874,
+  "confidence" : "medium",
+  "multiNudgeCategories" : [
+    "walk",
+    "rest",
+    "hydrate"
+  ],
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "An Easy Walk Today",
+  "readinessLevel" : "moderate",
+  "readinessScore" : 56,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

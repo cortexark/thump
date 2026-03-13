@@ -1,0 +1,16 @@
+{
+  "anomalyScore" : 0.87574251824923099,
+  "confidence" : "low",
+  "multiNudgeCategories" : [
+    "moderate",
+    "hydrate",
+    "rest"
+  ],
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Quick Sync Check",
+  "readinessLevel" : "primed",
+  "readinessScore" : 91,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

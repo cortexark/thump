@@ -1,0 +1,15 @@
+{
+  "anomalyScore" : 0.38367260761467836,
+  "confidence" : "high",
+  "multiNudgeCategories" : [
+    "moderate",
+    "hydrate"
+  ],
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Feeling Up for a Little Extra?",
+  "readinessLevel" : "ready",
+  "readinessScore" : 77,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

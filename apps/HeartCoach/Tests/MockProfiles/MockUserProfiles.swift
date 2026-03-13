@@ -16,41 +16,8 @@ struct MockUserProfile {
     let snapshots: [HeartSnapshot]
 }
 
-// MARK: - Seeded RNG
-
-/// A simple seeded linear congruential generator for deterministic noise.
-struct SeededRNG {
-    private var state: UInt64
-
-    init(seed: UInt64) {
-        state = seed
-    }
-
-    mutating func next() -> Double {
-        // LCG parameters (Numerical Recipes)
-        state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
-        let shifted = state >> 33
-        return Double(shifted) / Double(UInt64(1) << 31)
-    }
-
-    /// Returns a value in [lo, hi].
-    mutating func uniform(_ lo: Double, _ hi: Double) -> Double {
-        lo + next() * (hi - lo)
-    }
-
-    /// Returns true with the given probability [0,1].
-    mutating func chance(_ probability: Double) -> Bool {
-        next() < probability
-    }
-
-    /// Gaussian approximation via Box-Muller (uses two uniforms).
-    mutating func gaussian(mean: Double, sd: Double) -> Double {
-        let u1 = max(next(), 1e-10)
-        let u2 = next()
-        let normal = (-2.0 * log(u1)).squareRoot() * cos(2.0 * .pi * u2)
-        return mean + normal * sd
-    }
-}
+// SeededRNG is defined in EngineTimeSeries/TimeSeriesTestInfra.swift
+// and shared across the test target — no duplicate needed here.
 
 // MARK: - Generator Helpers
 

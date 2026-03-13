@@ -591,7 +591,7 @@ final class PipelineValidationTests: XCTestCase {
         )
 
         let validCategories: Set<NudgeCategory> = [
-            .rest, .moderate, .walk, .hydrate
+            .rest, .moderate, .walk, .hydrate, .breathe
         ]
         XCTAssertTrue(
             validCategories.contains(assessment.dailyNudge.category),

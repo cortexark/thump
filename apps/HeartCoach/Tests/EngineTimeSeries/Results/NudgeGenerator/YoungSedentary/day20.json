@@ -1,0 +1,16 @@
+{
+  "anomalyScore" : 0.32116130816243083,
+  "confidence" : "high",
+  "multiNudgeCategories" : [
+    "walk",
+    "hydrate",
+    "moderate"
+  ],
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "Keep That Walking Groove Going",
+  "readinessLevel" : "ready",
+  "readinessScore" : 61,
+  "regressionFlag" : false,
+  "stressFlag" : false
+}

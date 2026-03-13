@@ -1,0 +1,29 @@
+{
+  "analysisScore" : 26,
+  "coachingMessage" : "You've been active but mostly in easy zones. Adding a few minutes in zone 3 (brisk walk or jog) would boost your cardio fitness.",
+  "fitnessLevel" : "beginner",
+  "recommendation" : "needsMoreAerobic",
+  "zoneBoundaries" : [
+    {
+      "lower" : 125,
+      "upper" : 135
+    },
+    {
+      "lower" : 135,
+      "upper" : 145
+    },
+    {
+      "lower" : 145,
+      "upper" : 155
+    },
+    {
+      "lower" : 155,
+      "upper" : 165
+    },
+    {
+      "lower" : 165,
+      "upper" : 174
+    }
+  ],
+  "zoneCount" : 5
+}

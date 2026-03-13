@@ -147,7 +147,10 @@ final class LocalStoreEncryptionTests: XCTestCase {
 
         store.clearAll()
 
-        XCTAssertEqual(store.profile, UserProfile())
+        // After clearAll, profile should be reset to defaults (joinDate will differ by ms)
+        XCTAssertEqual(store.profile.displayName, "")
+        XCTAssertFalse(store.profile.onboardingComplete)
+        XCTAssertEqual(store.profile.streakDays, 0)
         XCTAssertEqual(store.tier, .free)
         XCTAssertEqual(store.alertMeta, AlertMeta())
         XCTAssertTrue(store.loadHistory().isEmpty)
