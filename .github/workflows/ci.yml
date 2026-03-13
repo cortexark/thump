@@ -56,7 +56,10 @@ jobs:
             -configuration Debug \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            2>&1 | xcpretty --report junit
+            2>&1 | tee /tmp/xcodebuild-ios.log | xcpretty
+      - name: Show Build Errors (if failed)
+        if: failure()
+        run: grep -A2 "error:" /tmp/xcodebuild-ios.log || echo "No error lines found"
 
       # ── Build watchOS ───────────────────────────────────────
       - name: Build watchOS
