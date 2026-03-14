@@ -81,13 +81,12 @@ struct ThumpBuddyAura: View {
 
     private var thrivingAura: some View {
         ZStack {
-            // Soft ambient glow
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color(hex: 0x22C55E).opacity(0.15),
-                            Color(hex: 0x10B981).opacity(0.05),
+                            mood.glowColor.opacity(0.15),
+                            mood.glowColor.opacity(0.05),
                             .clear
                         ],
                         center: .center,
@@ -98,16 +97,15 @@ struct ThumpBuddyAura: View {
                 .frame(width: size * 1.5, height: size * 1.5)
                 .scaleEffect(anim.glowPulse)
 
-            // Rotating angular gradient ring
             Circle()
                 .stroke(
                     AngularGradient(
                         colors: [
-                            Color(hex: 0x22C55E).opacity(0.5),
-                            Color(hex: 0x10B981).opacity(0.15),
-                            Color(hex: 0x22C55E).opacity(0.5),
-                            Color(hex: 0x34D399).opacity(0.15),
-                            Color(hex: 0x22C55E).opacity(0.5),
+                            mood.glowColor.opacity(0.5),
+                            mood.bodyColors[0].opacity(0.15),
+                            mood.glowColor.opacity(0.5),
+                            mood.bodyColors[0].opacity(0.15),
+                            mood.glowColor.opacity(0.5),
                         ],
                         center: .center
                     ),
@@ -115,7 +113,6 @@ struct ThumpBuddyAura: View {
                 )
                 .frame(width: size * 1.18, height: size * 1.18)
                 .scaleEffect(anim.energyPulse)
-                .rotationEffect(.degrees(anim.haloPhase))
         }
     }
 
@@ -127,9 +124,9 @@ struct ThumpBuddyAura: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color(hex: 0xF59E0B).opacity(0.28),
-                            Color(hex: 0xFBBF24).opacity(0.1),
-                            Color(hex: 0xFDE047).opacity(0.03),
+                            mood.glowColor.opacity(0.28),
+                            mood.glowColor.opacity(0.1),
+                            mood.glowColor.opacity(0.03),
                             .clear
                         ],
                         center: .center,
@@ -145,18 +142,17 @@ struct ThumpBuddyAura: View {
                 .stroke(
                     AngularGradient(
                         colors: [
-                            Color(hex: 0xFDE047).opacity(0.35),
+                            mood.bodyColors[0].opacity(0.35),
                             .clear,
-                            Color(hex: 0xF59E0B).opacity(0.25),
+                            mood.glowColor.opacity(0.25),
                             .clear,
-                            Color(hex: 0xFDE047).opacity(0.35),
+                            mood.bodyColors[0].opacity(0.35),
                         ],
                         center: .center
                     ),
                     lineWidth: 1.5
                 )
                 .frame(width: size * 1.25, height: size * 1.25)
-                .rotationEffect(.degrees(anim.sparkleRotation))
         }
     }
 
@@ -243,9 +239,8 @@ struct ThumpBuddyAura: View {
                 )
                 .frame(width: size * 1.4, height: size * 1.4)
                 .scaleEffect(anim.breatheScale * 1.06)
-                .rotationEffect(.degrees(anim.haloPhase))
 
-            // Trophy shimmer ring
+            // Trophy shimmer ring — static
             Circle()
                 .stroke(
                     AngularGradient(
@@ -260,7 +255,6 @@ struct ThumpBuddyAura: View {
                     lineWidth: 2
                 )
                 .frame(width: size * 1.3, height: size * 1.3)
-                .rotationEffect(.degrees(-anim.haloPhase * 0.5))
         }
     }
 

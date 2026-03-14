@@ -1,17 +1,25 @@
 // ThumpBuddyFace.swift
 // ThumpCore
 //
-// Premium face rendering for ThumpBuddy — eyes, mouth, eyebrows,
-// cheeks, and expression accessories. Eyes are the hero element
-// with iris rings, gradient pupils, dual specular highlights,
-// and eyelid shadows for realistic depth.
+// Baymax-inspired minimal face. Two soft eyes. Nothing else.
+// No mouth, no eyebrows, no cheeks, no accessories.
+//
+// Mood is communicated through:
+//   1. Eye shape — round (alert), relaxed (content), heavy-lidded (tired),
+//      slightly tense (stressed), narrowed (focused)
+//   2. Pupil position — subtle micro-saccades for life
+//   3. Blink — natural rhythm
+//   4. Sphere color — already mood-driven via BuddyMood.premiumPalette
+//
+// At 82px on a watch face, less is more. Complexity below 50px
+// becomes noise, not expression.
+//
 // Platforms: iOS 17+, watchOS 10+
 
 import SwiftUI
 
 // MARK: - Face Layout
 
-/// Complete face composition for the buddy sphere.
 struct ThumpBuddyFace: View {
 
     let mood: BuddyMood
@@ -20,88 +28,66 @@ struct ThumpBuddyFace: View {
 
     var body: some View {
         ZStack {
-            faceContent
+            // Baymax signature: thin line connecting the two eyes
+            Capsule()
+                .fill(Color.white.opacity(0.35))
+                .frame(width: size * (eyeSpacing + 0.22), height: size * 0.018)
+                .offset(y: size * eyeVerticalOffset)
 
-            // Cheek blush for happy moods
-            if mood == .thriving || mood == .celebrating || mood == .content || mood == .conquering {
-                cheekBlush
-            }
-
-            // Zzz bubble for tired
-            if mood == .tired {
-                zzzBubble
-                    .offset(x: size * 0.35, y: -size * 0.3)
-            }
-        }
-    }
-
-    private var faceContent: some View {
-        VStack(spacing: size * 0.04) {
-            // Stressed / active eyebrows
-            if mood == .stressed || mood == .active {
-                stressedEyebrows
-            }
-
-            // Eyes — the hero of the character
-            HStack(spacing: size * 0.24) {
+            HStack(spacing: size * eyeSpacing) {
                 buddyEye(isLeft: true)
                 buddyEye(isLeft: false)
             }
-
-            // Mouth
-            buddyMouth
+            .offset(y: size * eyeVerticalOffset)
         }
-        .offset(y: size * 0.02)
     }
 
-    // MARK: - Premium Eyes
+    // MARK: - Eye
 
     @ViewBuilder
     private func buddyEye(isLeft: Bool) -> some View {
         if anim.eyeBlink {
+            // Blink — curved line
             blinkEye
+        } else if anim.eyeSquint {
+            // Happy squint — ^_^ Baymax smile-eyes
+            squintEye
         } else {
-            switch mood {
-            case .thriving:
-                squintEye
-            case .celebrating:
-                sparkleEye
-            case .tired:
-                droopyEye(isLeft: isLeft)
-            case .active:
-                focusedEye(isLeft: isLeft)
-            case .conquering:
-                starEye
-            default:
-                premiumOpenEye(isLeft: isLeft)
-            }
+            // Open eye — shape varies by mood
+            openEye(isLeft: isLeft)
         }
     }
 
-    // MARK: - Blink
+    // MARK: - Happy Squint Eye
+    //
+    // Baymax's happy expression: eyes become upward-curved arcs.
+    // Like ^_^ — conveys joy without a mouth.
 
-    private var blinkEye: some View {
-        BuddyBlinkShape()
-            .stroke(.white, lineWidth: size * 0.03)
-            .frame(width: size * 0.16, height: size * 0.07)
+    private var squintEye: some View {
+        BuddySquintShape()
+            .stroke(.white, style: StrokeStyle(lineWidth: size * 0.042, lineCap: .round))
+            .frame(width: size * 0.195, height: size * 0.105)
     }
 
-    // MARK: - Premium Open Eye
+    // MARK: - Open Eye
+    //
+    // Soft oval with a dark pupil and one specular highlight.
+    // Shape and proportions shift per mood — that's the entire
+    // expression system.
 
-    /// Full premium eye: white sclera with subtle gradient, iris ring,
-    /// gradient pupil, dual specular highlights, eyelid shadow.
-    private func premiumOpenEye(isLeft: Bool) -> some View {
+    private func openEye(isLeft: Bool) -> some View {
         let w = eyeWidth
         let h = eyeHeight
+
         return ZStack {
-            // Sclera — subtle gradient instead of flat white
+            // Sclera — soft white with subtle depth gradient
             Ellipse()
                 .fill(
                     RadialGradient(
                         colors: [
                             .white,
-                            Color(white: 0.96),
-                            Color(white: 0.92)
+                            Color(white: 0.95),
+                            Color(white: 0.90)
                         ],
                         center: UnitPoint(x: 0.45, y: 0.35),
                         startRadius: 0,
@@ -110,361 +96,150 @@ struct ThumpBuddyFace: View {
                 )
                 .frame(width: w, height: h)
 
-            // Iris ring — mood colored
-            Circle()
-                .stroke(mood.glowColor.opacity(0.35), lineWidth: size * 0.012)
-                .frame(width: size * 0.105)
-                .offset(
-                    x: pupilOffset(isLeft: isLeft) + anim.pupilLookX,
-                    y: pupilYOffset
-                )
+            // Eyelid — for tired/stressed, a semi-circle clips the top
+            if mood == .tired || mood == .stressed {
+                eyelidOverlay(width: w, height: h)
+            }
 
-            // Pupil — gradient instead of flat black
+            // Pupil — dark circle, slightly off-center for life
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color(white: 0.02),
-                            Color(white: 0.12),
-                            Color(white: 0.08)
+                            Color(white: 0.04),
+                            Color(white: 0.14),
                         ],
                         center: UnitPoint(x: 0.4, y: 0.35),
                         startRadius: 0,
-                        endRadius: size * 0.05
+                        endRadius: size * 0.045
                     )
                 )
-                .frame(width: size * 0.085)
+                .frame(width: pupilSize)
                 .offset(
-                    x: pupilOffset(isLeft: isLeft) + anim.pupilLookX,
-                    y: pupilYOffset
+                    x: anim.pupilLookX + pupilXShift(isLeft: isLeft),
+                    y: anim.pupilLookY + pupilYShift
                 )
 
-            // Primary specular highlight — crisp
+            // Primary specular highlight — bright dot, upper area
             Circle()
-                .fill(.white.opacity(0.95))
-                .frame(width: size * 0.038)
+                .fill(.white.opacity(0.92))
+                .frame(width: size * 0.048)
                 .offset(
-                    x: isLeft ? -size * 0.018 : size * 0.006,
-                    y: -size * 0.022
+                    x: isLeft ? -size * 0.021 : size * 0.012,
+                    y: -size * 0.027
                 )
 
-            // Secondary specular — smaller, softer
+            // Secondary tiny sparkle — lower-left for depth
             Circle()
-                .fill(.white.opacity(0.5))
-                .frame(width: size * 0.018)
+                .fill(.white.opacity(0.65))
+                .frame(width: size * 0.02)
                 .offset(
-                    x: isLeft ? size * 0.02 : -size * 0.014,
-                    y: size * 0.018
+                    x: isLeft ? size * 0.015 : -size * 0.01,
+                    y: size * 0.025
                 )
-
-            // Eyelid shadow — adds depth to the eye socket
-            Ellipse()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            mood.premiumPalette.mid.opacity(0.18),
-                            .clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .center
-                    )
-                )
-                .frame(width: w * 1.05, height: h * 0.35)
-                .offset(y: -h * 0.35)
         }
     }
 
-    // MARK: - Squint Eye (Thriving)
+    // MARK: - Eyelid Overlay
+    //
+    // A half-lid that droops from the top. More droop = more tired.
+    // Stressed gets a slight lid tension (less droop than tired).
 
-    private var squintEye: some View {
-        BuddySquintShape()
-            .stroke(.white, style: StrokeStyle(lineWidth: size * 0.035, lineCap: .round))
-            .frame(width: size * 0.17, height: size * 0.11)
-    }
-
-    // MARK: - Sparkle Eye (Celebrating)
-
-    private var sparkleEye: some View {
-        Image(systemName: "sparkle")
-            .font(.system(size: size * 0.17, weight: .bold))
-            .foregroundStyle(.white)
-            .symbolEffect(.pulse, isActive: true)
-    }
-
-    // MARK: - Droopy Eye (Tired)
-
-    private func droopyEye(isLeft: Bool) -> some View {
-        ZStack {
-            Ellipse()
-                .fill(.white)
-                .frame(width: size * 0.17, height: size * 0.12)
-
-            // Heavy eyelid
+    private func eyelidOverlay(width: CGFloat, height: CGFloat) -> some View {
+        let lidCoverage: CGFloat = mood == .tired ? 0.4 : 0.22
+        return VStack(spacing: 0) {
+            // The lid — matches sphere body color so it blends
             Ellipse()
                 .fill(mood.premiumPalette.mid)
-                .frame(width: size * 0.18, height: size * 0.12)
-                .offset(y: -size * 0.035)
-
-            // Sleepy pupil
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(white: 0.05), Color(white: 0.15)],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: size * 0.04
-                    )
-                )
-                .frame(width: size * 0.07)
-                .offset(y: size * 0.01)
-
-            // Tiny glint
-            Circle()
-                .fill(.white.opacity(0.7))
-                .frame(width: size * 0.02)
-                .offset(x: -size * 0.008, y: -size * 0.005)
+                .frame(width: width * 1.08, height: height * lidCoverage * 2)
+                .offset(y: -height * (1 - lidCoverage) * 0.5)
+            Spacer(minLength: 0)
         }
+        .frame(width: width, height: height)
+        .clipped()
     }
 
-    // MARK: - Focused Eye (Active)
+    // MARK: - Blink
 
-    private func focusedEye(isLeft: Bool) -> some View {
-        ZStack {
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [.white, Color(white: 0.94)],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: size * 0.1
-                    )
-                )
-                .frame(width: size * 0.19, height: size * 0.13)
-
-            Circle()
-                .fill(Color(white: 0.08))
-                .frame(width: size * 0.08)
-
-            Circle()
-                .fill(.white.opacity(0.9))
-                .frame(width: size * 0.028)
-                .offset(x: isLeft ? -size * 0.01 : size * 0.01, y: -size * 0.015)
-        }
+    private var blinkEye: some View {
+        BuddyBlinkShape()
+            .stroke(.white, lineWidth: size * 0.038)
+            .frame(width: size * 0.21, height: size * 0.09)
     }
 
-    // MARK: - Star Eye (Conquering)
-
-    @ViewBuilder
-    private var starEye: some View {
-        if #available(macOS 15, iOS 17, watchOS 10, *) {
-            Image(systemName: "star.fill")
-                .font(.system(size: size * 0.16, weight: .bold))
-                .foregroundStyle(.white)
-                .symbolEffect(.pulse, isActive: true)
-        } else {
-            Image(systemName: "star.fill")
-                .font(.system(size: size * 0.16, weight: .bold))
-                .foregroundStyle(.white)
-        }
-    }
-
-    // MARK: - Eye Sizing
+    // MARK: - Eye Dimensions Per Mood
+    //
+    // The eye shape IS the expression:
+    //   thriving:    relaxed, slightly narrowed (content squint)
+    //   content:     round, open, calm
+    //   nudging:     standard, alert
+    //   stressed:    slightly wider + eyelid tension
+    //   tired:       narrow height + heavy eyelid
+    //   active:      wider, focused
+    //   celebrating: round, wide
+    //   conquering:  round, satisfied
 
     private var eyeWidth: CGFloat {
         switch mood {
-        case .thriving, .celebrating: return size * 0.18
-        case .stressed:               return size * 0.2
-        case .tired:                  return size * 0.15
-        case .active:                 return size * 0.19
-        case .conquering:             return size * 0.18
-        default:                      return size * 0.17
+        case .thriving:                return size * 0.24
+        case .content:                 return size * 0.225
+        case .nudging:                 return size * 0.225
+        case .stressed:                return size * 0.255
+        case .tired:                   return size * 0.225
+        case .active:                  return size * 0.255
+        case .celebrating, .conquering: return size * 0.24
         }
     }
 
     private var eyeHeight: CGFloat {
         switch mood {
-        case .thriving, .celebrating: return size * 0.19
-        case .stressed:               return size * 0.24
-        case .tired:                  return size * 0.09
-        case .active:                 return size * 0.13
-        case .conquering:             return size * 0.22
-        default:                      return size * 0.18
+        case .thriving:                return size * 0.21
+        case .content:                 return size * 0.24
+        case .nudging:                 return size * 0.225
+        case .stressed:                return size * 0.27
+        case .tired:                   return size * 0.18
+        case .active:                  return size * 0.225
+        case .celebrating, .conquering: return size * 0.255
         }
     }
 
-    private func pupilOffset(isLeft: Bool) -> CGFloat {
+    private var pupilSize: CGFloat {
         switch mood {
-        case .nudging: return size * 0.012
-        case .tired:   return isLeft ? -size * 0.01 : size * 0.01
+        case .tired:    return size * 0.098
+        case .stressed: return size * 0.105
+        case .active:   return size * 0.112
+        default:        return size * 0.105
+        }
+    }
+
+    private var eyeSpacing: CGFloat {
+        switch mood {
+        case .stressed: return 0.20  // slightly closer = concerned
+        case .active:   return 0.22  // slightly closer = focused
+        default:        return 0.24  // normal spacing
+        }
+    }
+
+    private var eyeVerticalOffset: CGFloat {
+        switch mood {
+        case .tired: return 0.04   // eyes sit lower = heavy
+        default:     return 0.0
+        }
+    }
+
+    private func pupilXShift(isLeft: Bool) -> CGFloat {
+        switch mood {
+        case .nudging: return size * 0.01
+        case .tired:   return isLeft ? -size * 0.005 : size * 0.005
         default:       return 0
         }
     }
 
-    private var pupilYOffset: CGFloat {
+    private var pupilYShift: CGFloat {
         switch mood {
-        case .tired:    return size * 0.012
-        case .thriving: return -size * 0.01
-        default:        return 0
+        case .tired:  return size * 0.01   // looking down slightly
+        case .active: return -size * 0.005 // looking slightly up
+        default:      return 0
         }
-    }
-
-    // MARK: - Mouth
-
-    private var buddyMouth: some View {
-        Canvas { context, canvasSize in
-            let w = canvasSize.width
-            let h = canvasSize.height
-
-            switch mood {
-            case .thriving:
-                // Wide aggressive grin
-                var path = Path()
-                path.move(to: CGPoint(x: w * 0.05, y: h * 0.1))
-                path.addQuadCurve(
-                    to: CGPoint(x: w * 0.95, y: h * 0.1),
-                    control: CGPoint(x: w * 0.5, y: h * 1.15)
-                )
-                path.closeSubpath()
-                context.fill(path, with: .color(Color(white: 0.1)))
-
-                var tongue = Path()
-                tongue.addEllipse(in: CGRect(x: w * 0.3, y: h * 0.4, width: w * 0.4, height: h * 0.55))
-                context.fill(tongue, with: .color(Color(hex: 0xF97316).opacity(0.55)))
-
-            case .celebrating:
-                // Excited "O"
-                var path = Path()
-                path.addEllipse(in: CGRect(x: w * 0.22, y: 0, width: w * 0.56, height: h * 0.9))
-                context.fill(path, with: .color(Color(white: 0.1)))
-                var tongue = Path()
-                tongue.addEllipse(in: CGRect(x: w * 0.3, y: h * 0.35, width: w * 0.4, height: h * 0.5))
-                context.fill(tongue, with: .color(Color(hex: 0xF97316).opacity(0.45)))
-
-            case .content:
-                // Serene smile
-                var path = Path()
-                path.move(to: CGPoint(x: w * 0.18, y: h * 0.28))
-                path.addQuadCurve(
-                    to: CGPoint(x: w * 0.82, y: h * 0.28),
-                    control: CGPoint(x: w * 0.5, y: h * 0.8)
-                )
-                context.stroke(path, with: .color(.white), lineWidth: w * 0.075)
-
-            case .nudging:
-                // Determined smirk
-                var path = Path()
-                path.move(to: CGPoint(x: w * 0.15, y: h * 0.32))
-                path.addQuadCurve(
-                    to: CGPoint(x: w * 0.85, y: h * 0.2),
-                    control: CGPoint(x: w * 0.55, y: h * 0.85)
-                )
-                context.stroke(path, with: .color(.white), lineWidth: w * 0.075)
-
-            case .stressed:
-                // Worried wobbly mouth
-                var path = Path()
-                path.move(to: CGPoint(x: w * 0.1, y: h * 0.48))
-                path.addCurve(
-                    to: CGPoint(x: w * 0.9, y: h * 0.42),
-                    control1: CGPoint(x: w * 0.33, y: h * 0.12),
-                    control2: CGPoint(x: w * 0.67, y: h * 0.88)
-                )
-                context.stroke(path, with: .color(.white), lineWidth: w * 0.07)
-
-            case .tired:
-                // Little yawn "o"
-                var path = Path()
-                path.addEllipse(in: CGRect(x: w * 0.32, y: h * 0.12, width: w * 0.36, height: h * 0.58))
-                context.fill(path, with: .color(Color(white: 0.1).opacity(0.8)))
-
-            case .active:
-                // Gritted determined teeth
-                var jaw = Path()
-                jaw.move(to: CGPoint(x: w * 0.1, y: h * 0.25))
-                jaw.addQuadCurve(
-                    to: CGPoint(x: w * 0.9, y: h * 0.25),
-                    control: CGPoint(x: w * 0.5, y: h * 0.9)
-                )
-                jaw.closeSubpath()
-                context.fill(jaw, with: .color(Color(white: 0.08)))
-                var teeth = Path()
-                teeth.move(to: CGPoint(x: w * 0.12, y: h * 0.27))
-                teeth.addLine(to: CGPoint(x: w * 0.88, y: h * 0.27))
-                context.stroke(teeth, with: .color(.white.opacity(0.7)), lineWidth: w * 0.055)
-
-            case .conquering:
-                // Massive triumph grin
-                var path = Path()
-                path.move(to: CGPoint(x: w * 0.02, y: h * 0.15))
-                path.addQuadCurve(
-                    to: CGPoint(x: w * 0.98, y: h * 0.15),
-                    control: CGPoint(x: w * 0.5, y: h * 1.2)
-                )
-                path.closeSubpath()
-                context.fill(path, with: .color(Color(white: 0.08)))
-                var tongue = Path()
-                tongue.addEllipse(in: CGRect(x: w * 0.28, y: h * 0.38, width: w * 0.44, height: h * 0.56))
-                context.fill(tongue, with: .color(Color(hex: 0xEF4444).opacity(0.5)))
-            }
-        }
-        .frame(width: size * 0.4, height: size * 0.24)
-    }
-
-    // MARK: - Cheek Blush
-
-    private var cheekBlush: some View {
-        HStack(spacing: size * 0.4) {
-            cheekDot
-            cheekDot
-        }
-        .offset(y: size * 0.12)
-    }
-
-    private var cheekDot: some View {
-        Ellipse()
-            .fill(
-                RadialGradient(
-                    colors: [
-                        mood.premiumPalette.light.opacity(0.35),
-                        mood.premiumPalette.light.opacity(0.0)
-                    ],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: size * 0.09
-                )
-            )
-            .frame(width: size * 0.18, height: size * 0.12)
-    }
-
-    // MARK: - Eyebrows
-
-    private var stressedEyebrows: some View {
-        HStack(spacing: size * 0.2) {
-            Capsule()
-                .fill(.white.opacity(0.85))
-                .frame(width: size * 0.14, height: size * 0.028)
-                .rotationEffect(.degrees(15))
-            Capsule()
-                .fill(.white.opacity(0.85))
-                .frame(width: size * 0.14, height: size * 0.028)
-                .rotationEffect(.degrees(-15))
-        }
-        .offset(y: -size * 0.015)
-    }
-
-    // MARK: - Zzz Bubble
-
-    private var zzzBubble: some View {
-        HStack(spacing: size * 0.01) {
-            Text("z")
-                .font(.system(size: size * 0.09, weight: .heavy, design: .rounded))
-                .offset(y: anim.breatheScale > 1.01 ? -2 : 0)
-            Text("z")
-                .font(.system(size: size * 0.11, weight: .heavy, design: .rounded))
-                .offset(y: anim.breatheScale > 1.01 ? -1 : 0)
-            Text("z")
-                .font(.system(size: size * 0.13, weight: .heavy, design: .rounded))
-        }
-        .foregroundStyle(.white.opacity(0.7))
     }
 }

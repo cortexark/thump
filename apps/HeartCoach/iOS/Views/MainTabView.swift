@@ -20,7 +20,7 @@ struct MainTabView: View {
            let tab = Int(CommandLine.arguments[idx + 1]) {
             return tab
         }
-        return 0
+        return 0  // Start on Home (Dashboard)
     }()
 
     var body: some View {
@@ -90,6 +90,16 @@ struct MainTabView: View {
                 Label("Settings", systemImage: "gearshape.fill")
             }
             .tag(4)
+    }
+
+    // MARK: - Buddy Style Gallery (temporary — remove after style selection)
+
+    private var buddyGalleryTab: some View {
+        BuddyStyleGalleryScreen()
+            .tabItem {
+                Label("Buddy", systemImage: "sparkle")
+            }
+            .tag(10)
     }
 }
 

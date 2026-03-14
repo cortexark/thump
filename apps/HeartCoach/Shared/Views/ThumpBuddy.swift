@@ -63,12 +63,12 @@ enum BuddyMood: String, Equatable, Sendable {
     /// Rich gradient for OLED — top highlight -> mid -> deep shadow.
     var bodyColors: [Color] {
         switch self {
-        case .thriving:    return [Color(hex: 0x6EE7B7), Color(hex: 0x22C55E), Color(hex: 0x15803D)]
-        case .content:     return [Color(hex: 0x93C5FD), Color(hex: 0x3B82F6), Color(hex: 0x1D4ED8)]
+        case .thriving:    return [Color(hex: 0xFEF08A), Color(hex: 0xEAB308), Color(hex: 0x854D0E)]
+        case .content:     return [Color(hex: 0x6EE7B7), Color(hex: 0x22C55E), Color(hex: 0x15803D)]
         case .nudging:     return [Color(hex: 0xFDE68A), Color(hex: 0xFBBF24), Color(hex: 0xD97706)]
         case .stressed:    return [Color(hex: 0xFDBA74), Color(hex: 0xF97316), Color(hex: 0xC2410C)]
         case .tired:       return [Color(hex: 0xC4B5FD), Color(hex: 0x8B5CF6), Color(hex: 0x6D28D9)]
-        case .celebrating: return [Color(hex: 0xFDE68A), Color(hex: 0xF59E0B), Color(hex: 0xB45309)]
+        case .celebrating: return [Color(hex: 0x6EE7B7), Color(hex: 0x22C55E), Color(hex: 0x15803D)]
         case .active:      return [Color(hex: 0xFCA5A5), Color(hex: 0xEF4444), Color(hex: 0xB91C1C)]
         case .conquering:  return [Color(hex: 0xFEF08A), Color(hex: 0xEAB308), Color(hex: 0x854D0E)]
         }
@@ -80,12 +80,12 @@ enum BuddyMood: String, Equatable, Sendable {
     /// Specular highlight — lighter, more glass-like.
     var highlightColor: Color {
         switch self {
-        case .thriving:    return Color(hex: 0xD1FAE5)
-        case .content:     return Color(hex: 0xDBEAFE)
+        case .thriving:    return Color(hex: 0xFEFCBF)
+        case .content:     return Color(hex: 0xD1FAE5)
         case .nudging:     return Color(hex: 0xFEF3C7)
         case .stressed:    return Color(hex: 0xFFEDD5)
         case .tired:       return Color(hex: 0xEDE9FE)
-        case .celebrating: return Color(hex: 0xFEF3C7)
+        case .celebrating: return Color(hex: 0xD1FAE5)
         case .active:      return Color(hex: 0xFEE2E2)
         case .conquering:  return Color(hex: 0xFEFCBF)
         }
@@ -149,9 +149,10 @@ struct ThumpBuddy: View {
                 ThumpBuddyAura(mood: mood, size: size, anim: anim)
             }
 
-            // Celebration confetti
+            // Celebration confetti (id forces recreation for repeating bursts)
             if mood == .celebrating || mood == .conquering {
                 ThumpBuddyConfetti(size: size, active: anim.confettiActive)
+                    .id(anim.confettiGeneration)
             }
 
             // Conquering: waving flag raised above buddy
@@ -159,29 +160,63 @@ struct ThumpBuddy: View {
                 ThumpBuddyFlag(size: size, anim: anim)
             }
 
+            // Content: monk-style aurora halo ring orbiting the head
+            if mood == .content {
+                BuddyMonkHalo(mood: mood, size: size, anim: anim)
+            }
+
             // Floating heart for thriving
             if mood == .thriving {
                 ThumpBuddyFloatingHeart(size: size, anim: anim)
             }
 
-            // Main sphere body with face
+            // Thriving: flexing arms BEHIND the sphere (Duolingo wing trick)
+            if mood == .thriving {
+                BuddyFlexArms(mood: mood, size: size, anim: anim)
+                    .offset(
+                        x: anim.horizontalDrift,
+                        y: anim.bounceOffset + anim.fidgetOffsetY + anim.moodOffsetY
+                    )
+            }
+
+            // Main sphere body with face + mood body shape
             ZStack {
                 ThumpBuddySphere(mood: mood, size: size, anim: anim)
                 ThumpBuddyFace(mood: mood, size: size, anim: anim)
+
+                // Stressed: sweat drop
+                if anim.sweatDrop {
+                    BuddySweatDrop(size: size)
+                }
             }
-            .scaleEffect(anim.breatheScale)
-            .offset(y: anim.bounceOffset)
-            .rotationEffect(.degrees(anim.wiggleAngle))
+            .scaleEffect(
+                x: anim.breatheScaleX * anim.moodScaleX,
+                y: anim.breatheScaleY * anim.moodScaleY
+            )
+            .offset(
+                x: anim.horizontalDrift,
+                y: anim.bounceOffset + anim.fidgetOffsetY + anim.moodOffsetY
+            )
+            .rotationEffect(.degrees(
+                anim.wiggleAngle + anim.fidgetRotation + anim.marchTilt + anim.moodTilt
+            ))
 
             // Celebration sparkles
             if mood == .celebrating {
                 ThumpBuddySparkles(size: size, anim: anim)
             }
+
+            // Tired: cot with legs — rendered outside rotation so it stays level
+            if mood == .tired {
+                BuddySleepCot(size: size, coverage: anim.blanketCoverage)
+                BuddySleepZzz(size: size)
+            }
         }
-        .frame(width: size * 1.4, height: size * 1.4)
+        .scaleEffect(anim.entranceScale)
+        .frame(width: size * 2.0, height: size * 2.0)
         .onAppear { anim.startAnimations(mood: mood, size: size) }
         .onChange(of: mood) { _, _ in anim.startAnimations(mood: mood, size: size) }
-        .animation(.easeInOut(duration: 0.6), value: mood)
+        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: mood)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Thump buddy feeling \(mood.label)")
     }
@@ -447,6 +482,339 @@ struct BreathBuddyOverlay: View {
     }
 }
 
+// MARK: - Flexing Arms (Thriving mood)
+
+/// Bodybuilder flex — two simple Capsule arms that stay attached to the body.
+/// Upper arm extends from body, forearm curls up at the elbow.
+/// No fists, no dots, no detached parts. Everything connects seamlessly.
+struct BuddyFlexArms: View {
+    let mood: BuddyMood
+    let size: CGFloat
+    let anim: BuddyAnimationState
+
+    /// Maps flexAngle (0–35) to visible forearm curl (0–87°)
+    private var curlDeg: Double { anim.flexAngle * 2.5 }
+
+    var body: some View {
+        ZStack {
+            flexArm(side: -1)
+            flexArm(side: 1)
+        }
+    }
+
+    @ViewBuilder
+    private func flexArm(side: CGFloat) -> some View {
+        let s = side
+
+        // Upper arm — starts overlapping with body, extends outward
+        Capsule()
+            .fill(
+                LinearGradient(
+                    colors: [mood.bodyColors[1], mood.bodyColors[0]],
+                    startPoint: s < 0 ? .trailing : .leading,
+                    endPoint: s < 0 ? .leading : .trailing
+                )
+            )
+            .frame(width: size * 0.38, height: size * 0.15)
+            .offset(x: s * size * 0.38, y: size * 0.0)
+
+        // Forearm — curls upward from end of upper arm
+        Capsule()
+            .fill(
+                LinearGradient(
+                    colors: [mood.bodyColors[0], mood.bodyColors[1]],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .frame(width: size * 0.14, height: size * 0.30)
+            .offset(x: s * size * 0.55, y: -size * 0.15)
+            .rotationEffect(
+                .degrees(s < 0 ? (-90 + curlDeg) : (90 - curlDeg)),
+                anchor: UnitPoint(x: 0.5, y: 1.0)
+            )
+    }
+}
+
+// MARK: - Blanket Prop (Tired mood)
+
+/// White blanket that drapes over Baymax from top, covering the body downward.
+/// Also includes a bed underneath for the sleeping scene.
+struct BuddyBlanket: View {
+    let mood: BuddyMood
+    let size: CGFloat
+    let coverage: CGFloat
+
+    var body: some View {
+        // Cot is NOT inside the rotated body group — it stays level in world space.
+        // It sits below the sphere as a stable surface Baymax rests on.
+        EmptyView()
+    }
+}
+
+/// Sleep scene — geometrically placed for 75° tilt.
+/// Mattress at y=size*0.51 catches the deflated sphere's lowest point.
+/// Pillow at head-end, blanket tilted -15° along body axis.
+struct BuddySleepCot: View {
+    let size: CGFloat
+    let coverage: CGFloat
+
+    var body: some View {
+        ZStack {
+            // MARK: Mattress — horizontal platform (shifted left)
+            RoundedRectangle(cornerRadius: size * 0.06)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(white: 0.38), Color(white: 0.20)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .frame(width: size * 0.88, height: size * 0.12)
+                .shadow(color: .black.opacity(0.5), radius: 5, y: 3)
+                .offset(x: -size * 0.05, y: size * 0.51)
+
+            // MARK: Bed legs
+            RoundedRectangle(cornerRadius: size * 0.02)
+                .fill(Color(white: 0.22))
+                .frame(width: size * 0.055, height: size * 0.15)
+                .offset(x: -size * 0.46, y: size * 0.62)
+
+            RoundedRectangle(cornerRadius: size * 0.02)
+                .fill(Color(white: 0.22))
+                .frame(width: size * 0.055, height: size * 0.15)
+                .offset(x: size * 0.38, y: size * 0.62)
+
+            // MARK: Pillow — at right side (feet-end)
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.95), Color(white: 0.82)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .frame(width: size * 0.22, height: size * 0.15)
+                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                .offset(x: size * 0.30, y: size * 0.45)
+
+            // Blanket removed
+        }
+    }
+}
+
+// MARK: - Sweat Drop (Stressed mood)
+
+struct BuddySweatDrop: View {
+    let size: CGFloat
+
+    @State private var dropOffset: CGFloat = 0
+    @State private var dropOpacity: Double = 0
+
+    var body: some View {
+        SweatDropShape()
+            .fill(
+                LinearGradient(
+                    colors: [Color(hex: 0xBFDBFE), Color(hex: 0x60A5FA)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .frame(width: size * 0.1, height: size * 0.16)
+            .shadow(color: Color(hex: 0x3B82F6).opacity(0.4), radius: 3, y: 1)
+            .offset(x: size * 0.28, y: -size * 0.22 + dropOffset)
+            .opacity(dropOpacity)
+            .onAppear { animateDrop() }
+    }
+
+    private func animateDrop() {
+        withAnimation(.easeIn(duration: 0.3)) { dropOpacity = 0.9 }
+
+        Task { @MainActor in
+            while !Task.isCancelled {
+                dropOffset = 0
+                withAnimation(.easeIn(duration: 0.3)) { dropOpacity = 0.9 }
+                withAnimation(.easeIn(duration: 1.2)) {
+                    dropOffset = size * 0.2
+                }
+                try? await Task.sleep(for: .seconds(1.0))
+                withAnimation(.easeOut(duration: 0.2)) { dropOpacity = 0 }
+                try? await Task.sleep(for: .seconds(Double.random(in: 1.2...2.5)))
+            }
+        }
+    }
+}
+
+struct SweatDropShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { p in
+            p.move(to: CGPoint(x: rect.midX, y: 0))
+            p.addQuadCurve(
+                to: CGPoint(x: rect.midX, y: rect.maxY),
+                control: CGPoint(x: rect.maxX, y: rect.midY)
+            )
+            p.addQuadCurve(
+                to: CGPoint(x: rect.midX, y: 0),
+                control: CGPoint(x: 0, y: rect.midY)
+            )
+        }
+    }
+}
+
+// MARK: - Sleep Zzz Particles
+
+/// Floating "Z" letters that drift upward — universal sleep shorthand.
+struct BuddySleepZzz: View {
+    let size: CGFloat
+
+    @State private var offsets: [CGFloat] = [0, 0, 0]
+    @State private var opacities: [Double] = [0, 0, 0]
+
+    private let zSizes: [CGFloat] = [0.14, 0.11, 0.08]
+    private let xPositions: [CGFloat] = [-0.35, -0.45, -0.52]
+    private let delays: [Double] = [0, 0.6, 1.2]
+
+    var body: some View {
+        ForEach(0..<3, id: \.self) { i in
+            Text("z")
+                .font(.system(size: size * zSizes[i], weight: .bold, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.7))
+                .offset(
+                    x: size * xPositions[i],
+                    y: -size * 0.15 + offsets[i]
+                )
+                .opacity(opacities[i])
+        }
+        .onAppear { animateZzz() }
+    }
+
+    private func animateZzz() {
+        Task { @MainActor in
+            while !Task.isCancelled {
+                for i in 0..<3 {
+                    try? await Task.sleep(for: .seconds(delays[i]))
+                    offsets[i] = 0
+                    withAnimation(.easeIn(duration: 0.3)) { opacities[i] = 0.85 }
+                    withAnimation(.easeOut(duration: 2.0)) { offsets[i] = -size * 0.4 }
+                    try? await Task.sleep(for: .seconds(1.4))
+                    withAnimation(.easeOut(duration: 0.4)) { opacities[i] = 0 }
+                }
+                try? await Task.sleep(for: .seconds(1.0))
+            }
+        }
+    }
+}
+
+// MARK: - Monk Halo Ring (Content mood)
+
+/// Golden/white aurora ring that orbits the head like a monk's halo.
+/// Rotates slowly, tilted at an angle for 3D feel.
+struct BuddyMonkHalo: View {
+    let mood: BuddyMood
+    let size: CGFloat
+    let anim: BuddyAnimationState
+
+    var body: some View {
+        ZStack {
+            // Huge outer glow — very bright and unmissable
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(0.7),
+                            Color.yellow.opacity(0.4),
+                            Color.white.opacity(0.15),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: size * 0.7
+                    )
+                )
+                .frame(width: size * 1.2, height: size * 0.4)
+                .blur(radius: 8)
+
+            // Main halo ring — HUGE, golden-white, unmissable
+            Ellipse()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white,
+                            Color.yellow.opacity(0.7),
+                            Color.white
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    lineWidth: size * 0.055
+                )
+                .frame(width: size * 1.0, height: size * 0.28)
+                .rotation3DEffect(.degrees(18), axis: (x: 1, y: 0, z: 0))
+                .shadow(color: Color.yellow.opacity(0.8), radius: 8)
+                .shadow(color: Color.white.opacity(0.5), radius: 4)
+
+            // Inner bright fill
+            Ellipse()
+                .fill(Color.yellow.opacity(0.08))
+                .frame(width: size * 0.9, height: size * 0.22)
+                .rotation3DEffect(.degrees(18), axis: (x: 1, y: 0, z: 0))
+
+            // Inner glow ring
+            Ellipse()
+                .stroke(Color.white.opacity(0.6), lineWidth: size * 0.025)
+                .frame(width: size * 0.88, height: size * 0.24)
+                .rotation3DEffect(.degrees(18), axis: (x: 1, y: 0, z: 0))
+                .blur(radius: 3)
+        }
+        .offset(y: -size * 0.48)
+        .scaleEffect(anim.glowPulse)
+    }
+}
+
+// MARK: - Nude Buddy (animation debug view)
+
+/// Stripped-down buddy that shows only wireframe outline + eyes.
+/// No sphere fill, no effects — pure animation mechanics visible.
+struct ThumpBuddyNude: View {
+
+    let mood: BuddyMood
+    let size: CGFloat
+
+    @State private var anim = BuddyAnimationState()
+
+    var body: some View {
+        ZStack {
+            // Wireframe sphere outline
+            SphereShape()
+                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                .frame(width: size, height: size * 1.03)
+
+            // Squash/stretch guide lines
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: size * 1.2, height: 0.5)
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: 0.5, height: size * 1.2)
+
+            // Face (eyes are the expression)
+            ThumpBuddyFace(mood: mood, size: size, anim: anim)
+        }
+        .scaleEffect(
+            x: anim.breatheScaleX * anim.moodScaleX,
+            y: anim.breatheScaleY * anim.moodScaleY
+        )
+        .offset(
+            x: anim.horizontalDrift,
+            y: anim.bounceOffset + anim.fidgetOffsetY + anim.moodOffsetY
+        )
+        .rotationEffect(.degrees(
+            anim.wiggleAngle + anim.fidgetRotation + anim.marchTilt + anim.moodTilt
+        ))
+        .scaleEffect(anim.entranceScale)
+        .frame(width: size * 2.0, height: size * 2.0)
+        .onAppear { anim.startAnimations(mood: mood, size: size) }
+        .onChange(of: mood) { _, _ in anim.startAnimations(mood: mood, size: size) }
+        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: mood)
+    }
+}
+
 // Color(hex:) extension is defined in Shared/Theme/ColorExtensions.swift
 
 // MARK: - Preview
@@ -465,6 +833,47 @@ struct BreathBuddyOverlay: View {
         }
         .padding()
     }
+}
+
+#Preview("Nude Animation Debug") {
+    ScrollView {
+        VStack(spacing: 16) {
+            ForEach([BuddyMood.thriving, .content, .nudging, .stressed, .tired, .celebrating, .active, .conquering], id: \.rawValue) { mood in
+                HStack(spacing: 20) {
+                    ThumpBuddyNude(mood: mood, size: 80)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(mood.rawValue)
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white)
+                        Text(mood.label)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+    .background(.black)
+}
+
+#Preview("Side by Side: Nude vs Full") {
+    HStack(spacing: 24) {
+        VStack(spacing: 8) {
+            ThumpBuddyNude(mood: .stressed, size: 80)
+            Text("Nude")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        VStack(spacing: 8) {
+            ThumpBuddy(mood: .stressed, size: 80)
+            Text("Full")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+    .padding()
+    .background(.black)
 }
 
 #Preview("Premium Sizes") {
