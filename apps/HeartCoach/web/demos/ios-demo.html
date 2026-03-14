@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thump — iOS App Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300..700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #0B0E13;
+  --bg-surface: #12161D;
+  --bg-card: #181D26;
+  --bg-elevated: #1E2430;
+  --border-subtle: rgba(255,255,255,0.06);
+  --coral: #FF6B5A;
+  --coral-light: #FF8E7A;
+  --amber: #FFB347;
+  --gold: #FFD93D;
+  --mint: #4ECDC4;
+  --lavender: #B8A9E8;
+  --rose: #FF6B8A;
+  --text-primary: #F0F2F5;
+  --text-secondary: #9BA3B0;
+  --text-muted: #5C6370;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, sans-serif;
+}
+
+body {
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+/* iPhone 15 Pro Frame */
+.phone-frame {
+  width: 393px;
+  height: 852px;
+  background: var(--bg-deep);
+  border-radius: 55px;
+  border: 3px solid #2A2A2E;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8), inset 0 0 1px rgba(255,255,255,0.1);
+}
+
+/* Dynamic Island */
+.dynamic-island {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 126px;
+  height: 37px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 100;
+}
+
+/* Status Bar */
+.status-bar {
+  position: absolute;
+  top: 14px;
+  left: 30px;
+  right: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 99;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Screen Container */
+.screen-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  padding: 60px 20px 90px;
+  overflow: hidden;
+}
+
+/* Screen Animations */
+.screen-1 { animation: screenShow 5s 0.5s forwards; }
+.screen-2 { animation: screenShow 5s 5.5s forwards; }
+.screen-3 { animation: screenShow 5s 10.5s forwards; }
+.screen-4 { animation: screenShow 5s 15.5s forwards; }
+.screen-5 { animation: screenShow 5s 20.5s forwards; }
+.screen-6 { animation: screenShow 6s 25.5s forwards; }
+
+@keyframes screenShow {
+  0% { opacity: 0; transform: translateY(20px); }
+  8% { opacity: 1; transform: translateY(0); }
+  88% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Tab Bar */
+.tab-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 85px;
+  background: rgba(18,22,29,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  padding-top: 8px;
+  z-index: 50;
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.tab-item.active { color: var(--coral); }
+.tab-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* ═══ SCREEN 1: Dashboard ═══ */
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.dashboard-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+.dashboard-header p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.buddy-section {
+  text-align: center;
+  margin: 10px 0 16px;
+}
+.buddy-orb {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--coral-light), var(--coral), #D4503F);
+  margin: 0 auto 8px;
+  animation: buddyPulse 3s ease-in-out infinite;
+  box-shadow: 0 0 30px rgba(255,107,90,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+@keyframes buddyPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(255,107,90,0.3); }
+  50% { transform: scale(1.05); box-shadow: 0 0 50px rgba(255,107,90,0.5); }
+}
+.buddy-mood {
+  font-size: 12px;
+  color: var(--mint);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.score-card {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.score-number {
+  font-family: var(--font-display);
+  font-size: 64px;
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  animation: scoreCount 1.5s 1s ease-out forwards;
+  opacity: 0;
+}
+@keyframes scoreCount {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.score-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+}
+.score-subtitle {
+  color: var(--mint);
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.metric-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px;
+  animation: tileSlide 0.4s ease-out backwards;
+}
+.metric-tile:nth-child(1) { animation-delay: 1.8s; }
+.metric-tile:nth-child(2) { animation-delay: 2.0s; }
+.metric-tile:nth-child(3) { animation-delay: 2.2s; }
+.metric-tile:nth-child(4) { animation-delay: 2.4s; }
+@keyframes tileSlide {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.metric-icon { font-size: 18px; margin-bottom: 6px; }
+.metric-value { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+.metric-name { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ═══ SCREEN 2: Stress ═══ */
+.stress-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.stress-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+}
+.stress-banner {
+  background: linear-gradient(135deg, rgba(78,205,196,0.15), rgba(78,205,196,0.05));
+  border: 1px solid rgba(78,205,196,0.2);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.stress-level {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--mint);
+}
+.stress-score {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.heatmap-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.heatmap-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  opacity: 0;
+  animation: cellFill 0.2s ease-out forwards;
+}
+.heatmap-day-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: center;
+  padding-bottom: 4px;
+}
+.heat-green { background: rgba(78,205,196,0.6); }
+.heat-yellow { background: rgba(255,211,61,0.6); }
+.heat-orange { background: rgba(255,179,71,0.5); }
+.heat-red { background: rgba(255,107,90,0.6); }
+.heat-empty { background: rgba(255,255,255,0.04); }
+
+.stress-actions {
+  display: flex;
+  gap: 8px;
+}
+.stress-action {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.stress-action-icon { font-size: 20px; margin-bottom: 4px; }
+.stress-action-label { font-size: 11px; color: var(--text-secondary); }
+
+/* ═══ SCREEN 3: Insights ═══ */
+.insights-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.insights-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+}
+.insight-focus {
+  background: linear-gradient(135deg, rgba(184,169,232,0.12), rgba(184,169,232,0.04));
+  border: 1px solid rgba(184,169,232,0.2);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.insight-focus-label {
+  font-size: 11px;
+  color: var(--lavender);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.insight-focus-text {
+  font-size: 15px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.correlation-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  opacity: 0;
+  animation: cardSlideIn 0.5s ease-out forwards;
+}
+.correlation-card:nth-child(2) { animation-delay: 11.5s; }
+.correlation-card:nth-child(3) { animation-delay: 12.0s; }
+.correlation-card:nth-child(4) { animation-delay: 12.5s; }
+
+.corr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.corr-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.corr-badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.badge-high { background: rgba(78,205,196,0.15); color: var(--mint); }
+.badge-medium { background: rgba(255,211,61,0.15); color: var(--gold); }
+
+.corr-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.corr-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  animation: barGrow 1s ease-out forwards;
+  transform-origin: left;
+}
+@keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.corr-bar-positive { background: linear-gradient(90deg, var(--mint), #6EEEE4); }
+.corr-bar-negative { background: linear-gradient(90deg, var(--rose), #FF8DA6); }
+
+.corr-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+@keyframes cardSlideIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ═══ SCREEN 4: Trends ═══ */
+.trends-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.trends-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+}
+.trend-pill-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+.trend-pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+}
+.trend-pill.active {
+  background: rgba(255,107,90,0.15);
+  color: var(--coral);
+  border-color: rgba(255,107,90,0.3);
+}
+
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.chart-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.chart-svg {
+  width: 100%;
+  height: 160px;
+}
+.chart-line {
+  stroke: var(--coral);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: drawLine 2s 16.5s ease-out forwards;
+}
+.chart-area {
+  fill: url(#chartGradient);
+  opacity: 0;
+  animation: fadeIn 1s 18s ease-out forwards;
+}
+.chart-avg-line {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fadeIn {
+  to { opacity: 0.4; }
+}
+
+.trend-callout {
+  background: linear-gradient(135deg, rgba(78,205,196,0.12), rgba(78,205,196,0.04));
+  border: 1px solid rgba(78,205,196,0.2);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  animation: fadeInUp 0.5s 18.5s ease-out forwards;
+}
+.trend-callout-icon { font-size: 24px; }
+.trend-callout-text { font-size: 14px; color: var(--text-primary); font-weight: 600; }
+.trend-callout-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stats-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.stat-box {
+  flex: 1;
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.stat-value { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* ═══ SCREEN 5: Nudge ═══ */
+.nudge-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.nudge-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+}
+.nudge-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 24px;
+  text-align: center;
+  opacity: 0;
+  animation: nudgeSlideUp 0.6s 21.5s ease-out forwards;
+  margin-bottom: 16px;
+}
+@keyframes nudgeSlideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.nudge-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--mint), #3BB5AD);
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+.nudge-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.nudge-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+.nudge-duration {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.nudge-btn {
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 14px 40px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+.streak-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  opacity: 0;
+  animation: fadeInUp 0.5s 22.5s ease-out forwards;
+}
+.streak-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.streak-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ═══ SCREEN 6: Feature Overlay ═══ */
+.overlay-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(11,14,19,0.92);
+  backdrop-filter: blur(20px);
+}
+.overlay-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding-top: 80px;
+}
+.overlay-logo {
+  font-family: var(--font-display);
+  font-size: 42px;
+  background: linear-gradient(135deg, var(--coral), var(--amber), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.overlay-tagline {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 36px;
+}
+.feature-list {
+  text-align: left;
+  padding: 0 20px;
+}
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  opacity: 0;
+  animation: featureFade 0.4s ease-out forwards;
+}
+.feature-item:nth-child(1) { animation-delay: 26.5s; }
+.feature-item:nth-child(2) { animation-delay: 27.0s; }
+.feature-item:nth-child(3) { animation-delay: 27.5s; }
+.feature-item:nth-child(4) { animation-delay: 28.0s; }
+.feature-item:nth-child(5) { animation-delay: 28.5s; }
+.feature-item:nth-child(6) { animation-delay: 29.0s; }
+.feature-item:nth-child(7) { animation-delay: 29.5s; }
+@keyframes featureFade {
+  from { opacity: 0; transform: translateX(-15px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.feature-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.feature-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="dynamic-island"></div>
+  <div class="status-bar">
+    <span>9:41</span>
+    <span style="letter-spacing: 2px;">|||</span>
+  </div>
+
+  <div class="screen-container">
+
+    <!-- SCREEN 1: Dashboard -->
+    <div class="screen screen-1">
+      <div class="dashboard-header">
+        <h2>Good morning</h2>
+        <p>Thursday, March 13</p>
+      </div>
+      <div class="buddy-section">
+        <div class="buddy-orb">:-)</div>
+        <div class="buddy-mood">Thriving</div>
+      </div>
+      <div class="score-card">
+        <div class="score-number">78</div>
+        <div class="score-label">Cardio Fitness Score</div>
+        <div class="score-subtitle">Ready to train</div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-tile">
+          <div class="metric-icon">&#x1F49A;</div>
+          <div class="metric-value" style="color: var(--mint);">42 ms</div>
+          <div class="metric-name">HRV</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-icon">&#x2764;&#xFE0F;</div>
+          <div class="metric-value" style="color: var(--coral);">58 bpm</div>
+          <div class="metric-name">Resting HR</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-icon">&#x1F4A4;</div>
+          <div class="metric-value" style="color: var(--lavender);">7.2 hr</div>
+          <div class="metric-name">Sleep</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-icon">&#x1F3C3;</div>
+          <div class="metric-value" style="color: var(--gold);">8,421</div>
+          <div class="metric-name">Steps</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: Stress -->
+    <div class="screen screen-2">
+      <div class="stress-header">
+        <h2>Stress</h2>
+      </div>
+      <div class="stress-banner">
+        <div class="stress-level">Relaxed</div>
+        <div class="stress-score">Score: 24 / 100</div>
+      </div>
+      <div class="heatmap-card">
+        <div class="heatmap-title">This Week</div>
+        <div style="display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 6px;">
+          <div class="heatmap-day-label">M</div>
+          <div class="heatmap-day-label">T</div>
+          <div class="heatmap-day-label">W</div>
+          <div class="heatmap-day-label">T</div>
+          <div class="heatmap-day-label">F</div>
+          <div class="heatmap-day-label">S</div>
+          <div class="heatmap-day-label">S</div>
+        </div>
+        <div class="heatmap-grid">
+          <div class="heatmap-cell heat-green" style="animation-delay: 6.0s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 6.2s;"></div>
+          <div class="heatmap-cell heat-yellow" style="animation-delay: 6.4s;"></div>
+          <div class="heatmap-cell heat-orange" style="animation-delay: 6.6s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 6.8s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 7.0s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 7.2s;"></div>
+
+          <div class="heatmap-cell heat-green" style="animation-delay: 7.4s;"></div>
+          <div class="heatmap-cell heat-yellow" style="animation-delay: 7.6s;"></div>
+          <div class="heatmap-cell heat-red" style="animation-delay: 7.8s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 8.0s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 8.2s;"></div>
+          <div class="heatmap-cell heat-yellow" style="animation-delay: 8.4s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 8.6s;"></div>
+
+          <div class="heatmap-cell heat-green" style="animation-delay: 8.8s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 9.0s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 9.2s;"></div>
+          <div class="heatmap-cell heat-orange" style="animation-delay: 9.4s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 9.6s;"></div>
+          <div class="heatmap-cell heat-empty" style="animation-delay: 9.8s;"></div>
+          <div class="heatmap-cell heat-empty" style="animation-delay: 10.0s;"></div>
+
+          <div class="heatmap-cell heat-yellow" style="animation-delay: 7.0s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 7.2s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 7.4s;"></div>
+          <div class="heatmap-cell heat-red" style="animation-delay: 7.6s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 7.8s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 8.0s;"></div>
+          <div class="heatmap-cell heat-green" style="animation-delay: 8.2s;"></div>
+        </div>
+      </div>
+      <div class="stress-actions">
+        <div class="stress-action">
+          <div class="stress-action-icon">&#x1F32C;</div>
+          <div class="stress-action-label">Breathe</div>
+        </div>
+        <div class="stress-action">
+          <div class="stress-action-icon">&#x1F4DD;</div>
+          <div class="stress-action-label">Journal</div>
+        </div>
+        <div class="stress-action">
+          <div class="stress-action-icon">&#x1F6B6;</div>
+          <div class="stress-action-label">Walk</div>
+        </div>
+        <div class="stress-action">
+          <div class="stress-action-icon">&#x2705;</div>
+          <div class="stress-action-label">Check In</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: Insights -->
+    <div class="screen screen-3">
+      <div class="insights-header">
+        <h2>Insights</h2>
+      </div>
+      <div class="insight-focus">
+        <div class="insight-focus-label">Your Focus This Week</div>
+        <div class="insight-focus-text">Your HRV improves on days you walk 8,000+ steps. Try to keep that up!</div>
+      </div>
+      <div>
+        <div class="correlation-card" style="animation-delay: 11.5s;">
+          <div class="corr-header">
+            <span class="corr-name">Daily Steps &harr; HRV</span>
+            <span class="corr-badge badge-high">High</span>
+          </div>
+          <div class="corr-bar-track">
+            <div class="corr-bar-fill corr-bar-positive" style="width: 72%;"></div>
+          </div>
+          <div class="corr-desc">More steps correlate with better HRV the next day</div>
+        </div>
+        <div class="correlation-card" style="animation-delay: 12.0s;">
+          <div class="corr-header">
+            <span class="corr-name">Sleep Hours &harr; RHR</span>
+            <span class="corr-badge badge-high">High</span>
+          </div>
+          <div class="corr-bar-track">
+            <div class="corr-bar-fill corr-bar-negative" style="width: 65%; margin-left: auto;"></div>
+          </div>
+          <div class="corr-desc">More sleep lowers your resting heart rate</div>
+        </div>
+        <div class="correlation-card" style="animation-delay: 12.5s;">
+          <div class="corr-header">
+            <span class="corr-name">Exercise &harr; Sleep Quality</span>
+            <span class="corr-badge badge-medium">Medium</span>
+          </div>
+          <div class="corr-bar-track">
+            <div class="corr-bar-fill corr-bar-positive" style="width: 48%;"></div>
+          </div>
+          <div class="corr-desc">Active days tend to bring deeper, more restful sleep</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: Trends -->
+    <div class="screen screen-4">
+      <div class="trends-header">
+        <h2>Trends</h2>
+      </div>
+      <div class="trend-pill-row">
+        <div class="trend-pill">7D</div>
+        <div class="trend-pill active">30D</div>
+        <div class="trend-pill">90D</div>
+        <div class="trend-pill">1Y</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">Heart Rate Variability (ms)</div>
+        <svg class="chart-svg" viewBox="0 0 320 140">
+          <defs>
+            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--coral)" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="var(--coral)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line class="chart-avg-line" x1="0" y1="80" x2="320" y2="80"/>
+          <polyline class="chart-area" points="0,120 20,110 40,105 60,100 80,95 100,102 120,88 140,85 160,90 180,78 200,72 220,75 240,68 260,62 280,58 300,55 320,50 320,140 0,140"/>
+          <polyline class="chart-line" points="0,120 20,110 40,105 60,100 80,95 100,102 120,88 140,85 160,90 180,78 200,72 220,75 240,68 260,62 280,58 300,55 320,50"/>
+        </svg>
+      </div>
+      <div class="trend-callout">
+        <div class="trend-callout-icon">&#x2197;&#xFE0F;</div>
+        <div>
+          <div class="trend-callout-text">HRV improving +12%</div>
+          <div class="trend-callout-sub">30-day trend vs. previous period</div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-value" style="color: var(--mint);">52</div>
+          <div class="stat-label">High</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">38</div>
+          <div class="stat-label">Average</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" style="color: var(--rose);">24</div>
+          <div class="stat-label">Low</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 5: Nudge -->
+    <div class="screen screen-5">
+      <div class="nudge-header">
+        <h2>Today's Coaching</h2>
+      </div>
+      <div class="nudge-card">
+        <div class="nudge-icon">&#x1F6B6;</div>
+        <div class="nudge-title">Take a 10-minute walk</div>
+        <div class="nudge-desc">Your HRV has been trending up on days with afternoon walks. A short walk now could boost recovery tonight.</div>
+        <div class="nudge-duration">&#x23F1; 10 minutes</div>
+        <button class="nudge-btn">Start Now</button>
+      </div>
+      <div class="streak-card">
+        <div class="streak-number">12</div>
+        <div class="streak-label">Day coaching streak</div>
+      </div>
+    </div>
+
+    <!-- SCREEN 6: Feature Overlay -->
+    <div class="screen screen-6">
+      <div class="overlay-bg"></div>
+      <div class="overlay-content">
+        <div class="overlay-logo">Thump</div>
+        <div class="overlay-tagline">Your Heart Training Buddy</div>
+        <div class="feature-list">
+          <div class="feature-item">
+            <div class="feature-dot" style="background: rgba(255,107,90,0.15); color: var(--coral);">&#x2764;</div>
+            <span class="feature-text">Real-time Cardio Fitness Score</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot" style="background: rgba(78,205,196,0.15); color: var(--mint);">&#x1F9E0;</div>
+            <span class="feature-text">HRV-Based Stress Detection</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot" style="background: rgba(184,169,232,0.15); color: var(--lavender);">&#x1F4CA;</div>
+            <span class="feature-text">Activity-Health Correlations</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot" style="background: rgba(255,211,61,0.15); color: var(--gold);">&#x1F4C8;</div>
+            <span class="feature-text">30-Day Health Trends</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot" style="background: rgba(255,107,138,0.15); color: var(--rose);">&#x1F3AF;</div>
+            <span class="feature-text">Personalized Daily Coaching</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot" style="background: rgba(78,205,196,0.15); color: var(--mint);">&#x231A;</div>
+            <span class="feature-text">Apple Watch Integration</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot" style="background: rgba(184,169,232,0.15); color: var(--lavender);">&#x1F916;</div>
+            <span class="feature-text">Mood-Aware ThumpBuddy</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item active">
+      <div class="tab-icon">&#x1F3E0;</div>
+      <span>Home</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">&#x2728;</div>
+      <span>Insights</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">&#x1F9E0;</div>
+      <span>Stress</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">&#x1F4C8;</div>
+      <span>Trends</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">&#x2699;</div>
+      <span>Settings</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
