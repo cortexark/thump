@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thump — Apple Watch Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300..700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #0B0E13;
+  --bg-card: #181D26;
+  --bg-elevated: #1E2430;
+  --border-subtle: rgba(255,255,255,0.06);
+  --coral: #FF6B5A;
+  --coral-light: #FF8E7A;
+  --amber: #FFB347;
+  --gold: #FFD93D;
+  --mint: #4ECDC4;
+  --lavender: #B8A9E8;
+  --rose: #FF6B8A;
+  --text-primary: #F0F2F5;
+  --text-secondary: #9BA3B0;
+  --text-muted: #5C6370;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, sans-serif;
+}
+
+body {
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+/* Apple Watch Frame */
+.watch-frame {
+  width: 198px;
+  height: 242px;
+  background: var(--bg-deep);
+  border-radius: 48px;
+  border: 3px solid #3A3A3E;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 1px rgba(255,255,255,0.08);
+}
+
+/* Digital Crown */
+.crown {
+  position: absolute;
+  right: -8px;
+  top: 70px;
+  width: 6px;
+  height: 28px;
+  background: linear-gradient(180deg, #4A4A4E, #3A3A3E);
+  border-radius: 3px;
+  z-index: 10;
+}
+.side-btn {
+  position: absolute;
+  right: -7px;
+  top: 110px;
+  width: 5px;
+  height: 16px;
+  background: #3A3A3E;
+  border-radius: 2px;
+  z-index: 10;
+}
+
+.screen-container {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.w-screen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px;
+}
+
+.w-screen-1 { animation: wScreenShow 5s 0.5s forwards; }
+.w-screen-2 { animation: wScreenShow 5s 5.5s forwards; }
+.w-screen-3 { animation: wScreenShow 5s 10.5s forwards; }
+.w-screen-4 { animation: wScreenShow 5s 15.5s forwards; }
+
+@keyframes wScreenShow {
+  0% { opacity: 0; transform: scale(0.95); }
+  8% { opacity: 1; transform: scale(1); }
+  88% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
+/* ═══ SCREEN 1: Watch Face — Cardio Score ═══ */
+.watch-buddy {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--coral-light), var(--coral), #D4503F);
+  margin-bottom: 8px;
+  animation: wBuddyPulse 3s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(255,107,90,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+@keyframes wBuddyPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255,107,90,0.3); }
+  50% { transform: scale(1.08); box-shadow: 0 0 35px rgba(255,107,90,0.5); }
+}
+
+.watch-score {
+  font-family: var(--font-display);
+  font-size: 52px;
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  opacity: 0;
+  animation: wScoreIn 1s 1s ease-out forwards;
+}
+@keyframes wScoreIn {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.watch-score-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.watch-status {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--mint);
+  font-weight: 600;
+  padding: 3px 10px;
+  background: rgba(78,205,196,0.12);
+  border-radius: 8px;
+}
+
+/* ═══ SCREEN 2: Insight Flow ═══ */
+.watch-insight-card {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 6px;
+  opacity: 0;
+}
+.watch-insight-card:nth-child(1) { animation: wCardIn 0.4s 6.0s ease-out forwards; }
+.watch-insight-card:nth-child(2) { animation: wCardIn 0.4s 6.5s ease-out forwards; }
+.watch-insight-card:nth-child(3) { animation: wCardIn 0.4s 7.0s ease-out forwards; }
+
+@keyframes wCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.wcard-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wcard-icon { font-size: 16px; }
+.wcard-label { font-size: 11px; color: var(--text-secondary); }
+.wcard-value { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+
+/* ═══ SCREEN 3: Nudge ═══ */
+.watch-nudge {
+  text-align: center;
+  width: 100%;
+}
+.watch-nudge-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--mint), #3BB5AD);
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.watch-nudge-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.watch-nudge-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.watch-nudge-btn {
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 24px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+
+/* ═══ SCREEN 4: Complication / Watch Face ═══ */
+.watch-face {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.watch-time {
+  font-family: var(--font-display);
+  font-size: 48px;
+  color: var(--text-primary);
+  line-height: 1;
+  font-weight: 400;
+}
+.watch-date-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
+.complication-row {
+  display: flex;
+  gap: 10px;
+}
+.complication {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: compIn 0.4s ease-out forwards;
+}
+.complication:nth-child(1) { animation-delay: 16.5s; }
+.complication:nth-child(2) { animation-delay: 16.8s; }
+.complication:nth-child(3) { animation-delay: 17.1s; }
+@keyframes compIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+.comp-value {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+.comp-label {
+  font-size: 7px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  text-transform: uppercase;
+}
+.comp-thump {
+  border-color: rgba(255,107,90,0.3);
+  background: rgba(255,107,90,0.08);
+}
+</style>
+</head>
+<body>
+
+<div class="watch-frame">
+  <div class="crown"></div>
+  <div class="side-btn"></div>
+
+  <div class="screen-container">
+
+    <!-- SCREEN 1: Cardio Score -->
+    <div class="w-screen w-screen-1">
+      <div class="watch-buddy">:-)</div>
+      <div class="watch-score">78</div>
+      <div class="watch-score-label">Cardio Score</div>
+      <div class="watch-status">Ready</div>
+    </div>
+
+    <!-- SCREEN 2: Insight Flow -->
+    <div class="w-screen w-screen-2" style="justify-content: flex-start; padding-top: 24px;">
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600;">Today's Plan</div>
+      <div class="watch-insight-card">
+        <div class="wcard-row">
+          <span class="wcard-icon">&#x1F3AF;</span>
+          <div>
+            <div class="wcard-label">Stress</div>
+            <div class="wcard-value" style="color: var(--mint);">Relaxed</div>
+          </div>
+        </div>
+      </div>
+      <div class="watch-insight-card">
+        <div class="wcard-row">
+          <span class="wcard-icon">&#x1F4A4;</span>
+          <div>
+            <div class="wcard-label">Sleep</div>
+            <div class="wcard-value" style="color: var(--lavender);">7.2 hr</div>
+          </div>
+        </div>
+      </div>
+      <div class="watch-insight-card">
+        <div class="wcard-row">
+          <span class="wcard-icon">&#x1F3C3;</span>
+          <div>
+            <div class="wcard-label">Steps</div>
+            <div class="wcard-value" style="color: var(--gold);">8,421</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: Nudge -->
+    <div class="w-screen w-screen-3">
+      <div class="watch-nudge">
+        <div class="watch-nudge-icon">&#x1F6B6;</div>
+        <div class="watch-nudge-title">Morning stretch</div>
+        <div class="watch-nudge-time">5 min</div>
+        <button class="watch-nudge-btn">Start</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: Complication Watch Face -->
+    <div class="w-screen w-screen-4">
+      <div class="watch-face">
+        <div class="watch-time">9:41</div>
+        <div class="watch-date-text">Thursday, Mar 13</div>
+        <div class="complication-row">
+          <div class="complication comp-thump">
+            <div class="comp-value" style="color: var(--coral);">78</div>
+            <div class="comp-label">Thump</div>
+          </div>
+          <div class="complication">
+            <div class="comp-value" style="color: var(--mint);">42</div>
+            <div class="comp-label">HRV</div>
+          </div>
+          <div class="complication">
+            <div class="comp-value" style="color: var(--lavender);">58</div>
+            <div class="comp-label">RHR</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

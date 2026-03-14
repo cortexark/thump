@@ -2,6 +2,17 @@
 
 A native iOS 17+ and watchOS 10+ app that helps users understand their heart health trends through Apple Watch data, personalized insights, and gentle wellness nudges.
 
+## Demo
+
+### iOS App
+https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/ios-demo.mp4
+
+### Apple Watch
+https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/watch-demo.mp4
+
+### Website
+https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/website-demo.mp4
+
 ## What It Does
 
 Thump reads 9 key heart and fitness metrics from Apple Watch via HealthKit, runs trend analysis and correlation detection, then delivers personalized wellness nudges — all without storing health data on any server.
