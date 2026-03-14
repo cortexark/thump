@@ -7,5 +7,9 @@
 	<key>com.apple.developer.healthkit.access</key>
 	<array>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.thump.shared</string>
+	</array>
 </dict>
 </plist>

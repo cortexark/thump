@@ -1,7 +1,7 @@
 // ThumpBuddyFace.swift
 // ThumpCore
 //
-// Baymax-inspired minimal face. Two soft eyes. Nothing else.
+// ThumpBuddy-inspired minimal face. Two soft eyes. Nothing else.
 // No mouth, no eyebrows, no cheeks, no accessories.
 //
 // Mood is communicated through:
@@ -28,7 +28,7 @@ struct ThumpBuddyFace: View {
 
     var body: some View {
         ZStack {
-            // Baymax signature: thin line connecting the two eyes
+            // ThumpBuddy signature: thin line connecting the two eyes
             Capsule()
                 .fill(Color.white.opacity(0.35))
                 .frame(width: size * (eyeSpacing + 0.22), height: size * 0.018)
@@ -50,7 +50,7 @@ struct ThumpBuddyFace: View {
             // Blink — curved line
             blinkEye
         } else if anim.eyeSquint {
-            // Happy squint — ^_^ Baymax smile-eyes
+            // Happy squint — ^_^ ThumpBuddy smile-eyes
             squintEye
         } else {
             // Open eye — shape varies by mood
@@ -60,13 +60,51 @@ struct ThumpBuddyFace: View {
 
     // MARK: - Happy Squint Eye
     //
-    // Baymax's happy expression: eyes become upward-curved arcs.
-    // Like ^_^ — conveys joy without a mouth.
+    // ThumpBuddy's signature happy expression: eyes squeeze into upward
+    // crescent arcs — the universal ^_^ that says "I'm happy for you."
+    //
+    // Unlike the previous stroke-only arc, this version:
+    //   1. Fills a crescent shape (white sclera still visible)
+    //   2. Shows a pupil peeking below the crescent lid
+    //   3. Keeps the specular highlight for life
+    // This matches how ThumpBuddy's eyes narrow into warm crescents
+    // while the dark pupil remains visible underneath.
 
     private var squintEye: some View {
-        BuddySquintShape()
-            .stroke(.white, style: StrokeStyle(lineWidth: size * 0.042, lineCap: .round))
-            .frame(width: size * 0.195, height: size * 0.105)
+        let w = size * 0.21
+        let h = size * 0.15
+        return ZStack {
+            // Sclera — same soft white as open eye, but squished into crescent
+            BuddyHappyEyeShape()
+                .fill(
+                    RadialGradient(
+                        colors: [.white, Color(white: 0.93)],
+                        center: UnitPoint(x: 0.5, y: 0.6),
+                        startRadius: 0,
+                        endRadius: w * 0.5
+                    )
+                )
+                .frame(width: w, height: h)
+
+            // Pupil — peeking below the crescent, slightly visible
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(white: 0.04), Color(white: 0.18)],
+                        center: UnitPoint(x: 0.4, y: 0.3),
+                        startRadius: 0,
+                        endRadius: size * 0.04
+                    )
+                )
+                .frame(width: size * 0.075, height: size * 0.055)
+                .offset(y: h * 0.22)
+
+            // Specular highlight — keeps the eye alive
+            Circle()
+                .fill(.white.opacity(0.85))
+                .frame(width: size * 0.035)
+                .offset(x: -size * 0.015, y: -h * 0.05)
+        }
     }
 
     // MARK: - Open Eye

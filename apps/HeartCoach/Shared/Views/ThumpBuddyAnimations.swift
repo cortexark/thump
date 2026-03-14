@@ -99,7 +99,7 @@ final class BuddyAnimationState {
     /// Vertical offset from idle fidgets (tiny hops).
     var fidgetOffsetY: CGFloat = 0
 
-    // MARK: - Mood Body Shape (Baymax inflate/deflate)
+    // MARK: - Mood Body Shape (ThumpBuddy inflate/deflate)
 
     /// Mood-driven scale — thriving=tall/muscular, tired=wide/deflated.
     var moodScaleX: CGFloat = 1.0
@@ -168,10 +168,10 @@ final class BuddyAnimationState {
         startBlinking(mood: mood)
         startMicroExpressions(size: size)
         startIdleFidgets(size: size)
-        startInnerLightRotation()
+        // innerLightPhase rotation removed — caused flickering ring artifact
         startGlowPulse(mood: mood)
 
-        // Mood body shape — Baymax inflate/deflate
+        // Mood body shape — ThumpBuddy inflate/deflate
         applyMoodBodyShape(mood: mood, size: size)
 
         // Mood-specific ACTION sequences
@@ -181,7 +181,6 @@ final class BuddyAnimationState {
             startFloatingHeart(size: size)
             startEnergyPulse()
             startHaloRotation()
-            eyeSquint = true  // happy eyes during flex
 
         case .content:
             startPeacefulSway(size: size)
@@ -200,7 +199,6 @@ final class BuddyAnimationState {
             startDancing(size: size)
             startSparkleRotation()
             startConfetti()
-            eyeSquint = true
 
         case .active:
             startRunning(size: size)
@@ -211,7 +209,6 @@ final class BuddyAnimationState {
             startSparkleRotation()
             startConfetti()
             startHaloRotation()
-            eyeSquint = true
         }
 
         // Elastic entrance (only on first appear)
@@ -241,14 +238,14 @@ final class BuddyAnimationState {
 
     // MARK: - Mood Body Shape
     //
-    // Like Baymax inflating/deflating. Each mood gets a distinct
+    // Like ThumpBuddy inflating/deflating. Each mood gets a distinct
     // body proportion that tells the story at a glance.
 
     private func applyMoodBodyShape(mood: BuddyMood, size: CGFloat) {
         withAnimation(.spring(response: 0.6, dampingFraction: 0.65)) {
             switch mood {
             case .thriving:
-                // Tall, proud, chest-out — "muscular Baymax"
+                // Tall, proud, chest-out — "muscular ThumpBuddy"
                 moodScaleX = 0.95
                 moodScaleY = 1.08
                 moodOffsetY = -size * 0.02
@@ -764,10 +761,10 @@ final class BuddyAnimationState {
         animationTasks.append(shakeTask)
     }
 
-    // MARK: - Tired: Sleeping (Baymax Lying in Bed)
-    // Baymax tips over to lie flat, sinks down, blanket pulls over.
+    // MARK: - Tired: Sleeping (ThumpBuddy Lying in Bed)
+    // ThumpBuddy tips over to lie flat, sinks down, blanket pulls over.
     // Blanket is same color as body — like a warm comforter.
-    // The most dramatic transformation — "low battery Baymax."
+    // The most dramatic transformation — "low battery ThumpBuddy."
 
     private func startSleeping(size: CGFloat) {
         let task = Task { @MainActor in

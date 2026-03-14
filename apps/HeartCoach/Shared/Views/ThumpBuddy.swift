@@ -129,16 +129,61 @@ struct ThumpBuddy: View {
     let size: CGFloat
     /// Set false to hide the ambient aura — useful at small sizes on dark backgrounds.
     let showAura: Bool
+    /// Enable tap-to-cycle: tapping the buddy cycles through all moods
+    /// with a squish animation and haptic feedback.
+    let tappable: Bool
 
-    init(mood: BuddyMood, size: CGFloat = 80, showAura: Bool = true) {
+    init(mood: BuddyMood, size: CGFloat = 80, showAura: Bool = true, tappable: Bool = false) {
         self.mood = mood
         self.size = size
         self.showAura = showAura
+        self.tappable = tappable
     }
 
     // MARK: - Animation State
 
     @State private var anim = BuddyAnimationState()
+
+    // MARK: - Tap Interaction State
+
+    /// Override mood when cycling through taps. nil = use the real mood.
+    @State private var tapMoodOverride: BuddyMood?
+    /// Tracks which mood index we're at in the cycle (persists across reverts).
+    @State private var cycleIndex: Int = 0
+    /// Squish scale for tap feedback.
+    @State private var tapSquish: CGFloat = 1.0
+    /// Speech bubble text shown after tap.
+    @State private var speechText: String?
+    /// Auto-revert task — cancelled on each new tap.
+    @State private var revertTask: Task<Void, Never>?
+    /// Pet mode — triggered by long press.
+    @State private var isPetting: Bool = false
+
+    /// The mood to display — tap override > real mood.
+    /// Pet mode keeps the current mood (doesn't override to content).
+    private var displayMood: BuddyMood {
+        tapMoodOverride ?? mood
+    }
+
+    /// Whether eyes should force-close (blink state) during petting.
+    private var petEyesClosed: Bool { isPetting }
+
+    /// All moods in cycle order.
+    private static let allMoods: [BuddyMood] = [
+        .content, .thriving, .nudging, .active, .stressed, .tired, .celebrating, .conquering
+    ]
+
+    /// Mood-aware speech lines — what ThumpBuddy would say.
+    private static let speechLines: [BuddyMood: [String]] = [
+        .content:     ["All good here", "Balanced day", "Steady as she goes"],
+        .thriving:    ["Feeling strong!", "Great energy today", "Let's go!"],
+        .nudging:     ["Time to move?", "A walk would help", "Let's get steps in"],
+        .active:      ["In the zone!", "Keep it up!", "Heart's pumping"],
+        .stressed:    ["Take a breath", "I see the tension", "Let's slow down"],
+        .tired:       ["Rest is power", "Zzz... recharging", "Sleep helps everything"],
+        .celebrating: ["You did it!", "Goal crushed!", "Party time!"],
+        .conquering:  ["Champion mode!", "Unstoppable!", "Victory!"],
+    ]
 
     // MARK: - Body
 
@@ -146,33 +191,33 @@ struct ThumpBuddy: View {
         ZStack {
             // Mood-specific aura (suppressed at small sizes)
             if showAura {
-                ThumpBuddyAura(mood: mood, size: size, anim: anim)
+                ThumpBuddyAura(mood: displayMood, size: size, anim: anim)
             }
 
             // Celebration confetti (id forces recreation for repeating bursts)
-            if mood == .celebrating || mood == .conquering {
+            if displayMood == .celebrating || displayMood == .conquering {
                 ThumpBuddyConfetti(size: size, active: anim.confettiActive)
                     .id(anim.confettiGeneration)
             }
 
             // Conquering: waving flag raised above buddy
-            if mood == .conquering {
+            if displayMood == .conquering {
                 ThumpBuddyFlag(size: size, anim: anim)
             }
 
             // Content: monk-style aurora halo ring orbiting the head
-            if mood == .content {
-                BuddyMonkHalo(mood: mood, size: size, anim: anim)
+            if displayMood == .content {
+                BuddyMonkHalo(mood: displayMood, size: size, anim: anim)
             }
 
             // Floating heart for thriving
-            if mood == .thriving {
+            if displayMood == .thriving {
                 ThumpBuddyFloatingHeart(size: size, anim: anim)
             }
 
             // Thriving: flexing arms BEHIND the sphere (Duolingo wing trick)
-            if mood == .thriving {
-                BuddyFlexArms(mood: mood, size: size, anim: anim)
+            if displayMood == .thriving {
+                BuddyFlexArms(mood: displayMood, size: size, anim: anim)
                     .offset(
                         x: anim.horizontalDrift,
                         y: anim.bounceOffset + anim.fidgetOffsetY + anim.moodOffsetY
@@ -181,8 +226,8 @@ struct ThumpBuddy: View {
 
             // Main sphere body with face + mood body shape
             ZStack {
-                ThumpBuddySphere(mood: mood, size: size, anim: anim)
-                ThumpBuddyFace(mood: mood, size: size, anim: anim)
+                ThumpBuddySphere(mood: displayMood, size: size, anim: anim)
+                ThumpBuddyFace(mood: displayMood, size: size, anim: anim)
 
                 // Stressed: sweat drop
                 if anim.sweatDrop {
@@ -202,23 +247,132 @@ struct ThumpBuddy: View {
             ))
 
             // Celebration sparkles
-            if mood == .celebrating {
+            if displayMood == .celebrating {
                 ThumpBuddySparkles(size: size, anim: anim)
             }
 
             // Tired: cot with legs — rendered outside rotation so it stays level
-            if mood == .tired {
+            if displayMood == .tired {
                 BuddySleepCot(size: size, coverage: anim.blanketCoverage)
                 BuddySleepZzz(size: size)
             }
         }
+        .scaleEffect(tapSquish)
         .scaleEffect(anim.entranceScale)
+        .overlay(alignment: .top) {
+            // Speech bubble — appears on tap, fades out
+            if let text = speechText {
+                Text(text)
+                    .font(.system(size: size * 0.14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, size * 0.12)
+                    .padding(.vertical, size * 0.06)
+                    .background(
+                        Capsule().fill(.ultraThinMaterial)
+                            .shadow(color: .black.opacity(0.15), radius: 4)
+                    )
+                    .offset(y: -size * 0.15)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.5).combined(with: .opacity).combined(with: .offset(y: 10)),
+                        removal: .opacity
+                    ))
+            }
+        }
         .frame(width: size * 2.0, height: size * 2.0)
-        .onAppear { anim.startAnimations(mood: mood, size: size) }
-        .onChange(of: mood) { _, _ in anim.startAnimations(mood: mood, size: size) }
-        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: mood)
+        .contentShape(Circle().scale(0.6))
+        .onTapGesture { if tappable { handleTap() } }
+        .onLongPressGesture(minimumDuration: 0.5) { if tappable { handlePet() } }
+        .onAppear { anim.startAnimations(mood: displayMood, size: size) }
+        .onChange(of: displayMood) { _, newMood in anim.startAnimations(mood: newMood, size: size) }
+        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: displayMood)
+        .animation(.spring(response: 0.3), value: speechText != nil)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Thump buddy feeling \(mood.label)")
+        .accessibilityLabel("Thump buddy feeling \(displayMood.label)")
+    }
+
+    // MARK: - Tap to Cycle
+
+    private func handleTap() {
+        // Cancel any pending revert
+        revertTask?.cancel()
+        isPetting = false
+
+        // Haptic
+        #if os(watchOS)
+        WKInterfaceDevice.current().play(.click)
+        #else
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+
+        // Squish bounce
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) {
+            tapSquish = 0.85
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                tapSquish = 1.0
+            }
+        }
+
+        // Advance cycle index (persists even after revert)
+        cycleIndex = (cycleIndex + 1) % Self.allMoods.count
+        let next = Self.allMoods[cycleIndex]
+        tapMoodOverride = next
+
+        // Show speech bubble with random line for this mood
+        let lines = Self.speechLines[next] ?? ["Hey!"]
+        withAnimation(.spring(response: 0.3)) {
+            speechText = lines.randomElement()
+        }
+
+        // Schedule revert: mood + speech bubble fade after 4s
+        revertTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                tapMoodOverride = nil
+                speechText = nil
+            }
+        }
+    }
+
+    // MARK: - Long Press to Pet
+
+    private func handlePet() {
+        // Cancel any pending revert but keep current mood
+        revertTask?.cancel()
+
+        // Haptic — soft
+        #if os(watchOS)
+        WKInterfaceDevice.current().play(.success)
+        #else
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        #endif
+
+        // Enter pet mode — eyes close, big inflate, content mood
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+            isPetting = true
+            tapSquish = 2.08
+            anim.eyeBlink = true  // eyes close — happy sigh
+        }
+
+        // Show pet speech
+        let petLines = ["That feels nice", "Happy to see you", "I'm here for you", "Ahh..."]
+        withAnimation(.spring(response: 0.3)) {
+            speechText = petLines.randomElement()
+        }
+
+        // Release after 1 second
+        revertTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                isPetting = false
+                tapSquish = 1.0
+                speechText = nil
+                anim.eyeBlink = false  // eyes re-open
+            }
+        }
     }
 }
 
@@ -272,6 +426,39 @@ struct BuddySquintShape: Shape {
             to: CGPoint(x: rect.maxX, y: rect.maxY),
             control: CGPoint(x: rect.midX, y: 0)
         )
+        return path
+    }
+}
+
+/// ThumpBuddy happy eye — a crescent/half-moon shape.
+/// Top edge curves down (like a smile), bottom is a gentle arc.
+/// The result is a squished eye that says "I'm happy" without a mouth.
+///
+///    ╭───────╮      ← top curves DOWN into the eye
+///    │  ◠◠◠  │      ← filled white crescent
+///    ╰───────╯      ← bottom curves up slightly
+///
+struct BuddyHappyEyeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        // Start at left edge, vertically centered
+        let leftPt = CGPoint(x: 0, y: rect.midY)
+        let rightPt = CGPoint(x: rect.maxX, y: rect.midY)
+
+        // Top edge — curves DOWN into the eye (the happy squish)
+        // Control point is below midY to push the top lid down
+        let topControl = CGPoint(x: rect.midX, y: rect.midY + rect.height * 0.15)
+
+        // Bottom edge — gentle upward curve (the lower lid)
+        // Control point below to create the crescent opening
+        let bottomControl = CGPoint(x: rect.midX, y: rect.maxY + rect.height * 0.1)
+
+        path.move(to: leftPt)
+        path.addQuadCurve(to: rightPt, control: topControl)
+        path.addQuadCurve(to: leftPt, control: bottomControl)
+        path.closeSubpath()
+
         return path
     }
 }
@@ -537,7 +724,7 @@ struct BuddyFlexArms: View {
 
 // MARK: - Blanket Prop (Tired mood)
 
-/// White blanket that drapes over Baymax from top, covering the body downward.
+/// White blanket that drapes over ThumpBuddy from top, covering the body downward.
 /// Also includes a bed underneath for the sleeping scene.
 struct BuddyBlanket: View {
     let mood: BuddyMood
@@ -546,7 +733,7 @@ struct BuddyBlanket: View {
 
     var body: some View {
         // Cot is NOT inside the rotated body group — it stays level in world space.
-        // It sits below the sphere as a stable surface Baymax rests on.
+        // It sits below the sphere as a stable surface ThumpBuddy rests on.
         EmptyView()
     }
 }
@@ -659,41 +846,59 @@ struct SweatDropShape: Shape {
 
 // MARK: - Sleep Zzz Particles
 
-/// Floating "Z" letters that drift upward — universal sleep shorthand.
+/// Floating "Z" letters on both sides that drift upward — universal sleep shorthand.
 struct BuddySleepZzz: View {
     let size: CGFloat
 
-    @State private var offsets: [CGFloat] = [0, 0, 0]
-    @State private var opacities: [Double] = [0, 0, 0]
+    // Left side Z's
+    @State private var leftOffsets: [CGFloat] = [0, 0, 0]
+    @State private var leftOpacities: [Double] = [0, 0, 0]
 
-    private let zSizes: [CGFloat] = [0.14, 0.11, 0.08]
-    private let xPositions: [CGFloat] = [-0.35, -0.45, -0.52]
-    private let delays: [Double] = [0, 0.6, 1.2]
+    // Right side Z's
+    @State private var rightOffsets: [CGFloat] = [0, 0, 0]
+    @State private var rightOpacities: [Double] = [0, 0, 0]
+
+    private let zSizes: [CGFloat] = [0.42, 0.33, 0.24]
+    private let leftX: [CGFloat] = [-0.5, -0.62, -0.72]
+    private let rightX: [CGFloat] = [0.5, 0.62, 0.72]
+    private let leftDelays: [Double] = [0, 0.6, 1.2]
+    private let rightDelays: [Double] = [0.3, 0.9, 1.5]
 
     var body: some View {
-        ForEach(0..<3, id: \.self) { i in
-            Text("z")
-                .font(.system(size: size * zSizes[i], weight: .bold, design: .rounded))
-                .foregroundStyle(Color.white.opacity(0.7))
-                .offset(
-                    x: size * xPositions[i],
-                    y: -size * 0.15 + offsets[i]
-                )
-                .opacity(opacities[i])
+        ZStack {
+            // Left side
+            ForEach(0..<3, id: \.self) { i in
+                Text("z")
+                    .font(.system(size: size * zSizes[i], weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.7))
+                    .offset(x: size * leftX[i], y: -size * 0.15 + leftOffsets[i])
+                    .opacity(leftOpacities[i])
+            }
+            // Right side
+            ForEach(0..<3, id: \.self) { i in
+                Text("z")
+                    .font(.system(size: size * zSizes[i], weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.7))
+                    .offset(x: size * rightX[i], y: -size * 0.15 + rightOffsets[i])
+                    .opacity(rightOpacities[i])
+            }
         }
-        .onAppear { animateZzz() }
+        .onAppear {
+            animateSide(offsets: $leftOffsets, opacities: $leftOpacities, delays: leftDelays)
+            animateSide(offsets: $rightOffsets, opacities: $rightOpacities, delays: rightDelays)
+        }
     }
 
-    private func animateZzz() {
+    private func animateSide(offsets: Binding<[CGFloat]>, opacities: Binding<[Double]>, delays: [Double]) {
         Task { @MainActor in
             while !Task.isCancelled {
                 for i in 0..<3 {
                     try? await Task.sleep(for: .seconds(delays[i]))
-                    offsets[i] = 0
-                    withAnimation(.easeIn(duration: 0.3)) { opacities[i] = 0.85 }
-                    withAnimation(.easeOut(duration: 2.0)) { offsets[i] = -size * 0.4 }
+                    offsets[i].wrappedValue = 0
+                    withAnimation(.easeIn(duration: 0.3)) { opacities[i].wrappedValue = 0.85 }
+                    withAnimation(.easeOut(duration: 2.0)) { offsets[i].wrappedValue = -size * 0.4 }
                     try? await Task.sleep(for: .seconds(1.4))
-                    withAnimation(.easeOut(duration: 0.4)) { opacities[i] = 0 }
+                    withAnimation(.easeOut(duration: 0.4)) { opacities[i].wrappedValue = 0 }
                 }
                 try? await Task.sleep(for: .seconds(1.0))
             }

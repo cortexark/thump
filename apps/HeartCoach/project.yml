@@ -53,6 +53,7 @@ targets:
       - sdk: HealthKit.framework
       - sdk: WatchConnectivity.framework
       - sdk: StoreKit.framework
+      - sdk: AppIntents.framework
     scheme:
       testTargets:
         - ThumpCoreTests
@@ -80,6 +81,7 @@ targets:
     dependencies:
       - sdk: HealthKit.framework
       - sdk: WatchConnectivity.framework
+      - sdk: AppIntents.framework
     scheme:
       gatherCoverageData: true
 

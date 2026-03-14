@@ -1,5 +1,5 @@
 // BuddyStyleGalleryScreen.swift
-// Shows Baymax in all 8 moods on one page for evaluation.
+// Shows ThumpBuddy in all 8 moods on one page for evaluation.
 
 import SwiftUI
 

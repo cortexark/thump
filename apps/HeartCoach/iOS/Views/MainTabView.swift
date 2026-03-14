@@ -4,6 +4,7 @@
 // Root tab-based navigation for the Thump app. Five tabs:
 // Home (Dashboard), Insights, Stress, Trends, Settings.
 // The tint color adapts per tab for visual warmth.
+// Swipe left/right anywhere on screen to move between tabs.
 //
 // Platforms: iOS 17+
 
@@ -23,6 +24,11 @@ struct MainTabView: View {
         return 0  // Start on Home (Dashboard)
     }()
 
+    private let tabCount = 5
+
+    // Raw finger offset — no scaling, just follows the touch directly
+    @State private var dragOffset: CGFloat = 0
+
     var body: some View {
         TabView(selection: $selectedTab) {
             dashboardTab
@@ -35,6 +41,44 @@ struct MainTabView: View {
         .onChange(of: selectedTab) { oldTab, newTab in
             InteractionLog.tabSwitch(from: oldTab, to: newTab)
         }
+        .offset(x: dragOffset)
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 30, coordinateSpace: .global)
+                .onChanged { value in
+                    let h = value.translation.width
+                    let v = value.translation.height
+                    guard abs(h) > abs(v) * 1.2 else { return }
+                    // Resist at edges, free movement between tabs
+                    let atEdge = (selectedTab == 0 && h > 0) ||
+                                 (selectedTab == tabCount - 1 && h < 0)
+                    dragOffset = atEdge ? h * 0.12 : h * 0.45
+                }
+                .onEnded { value in
+                    let h = value.translation.width
+                    let v = value.translation.height
+
+                    if abs(h) > abs(v) * 2 && abs(h) > 60 {
+                        if h < 0 && selectedTab < tabCount - 1 {
+                            // Commit swipe left: slide offset to full width then snap tab
+                            withAnimation(.smooth(duration: 0.28)) {
+                                dragOffset = 0
+                                selectedTab += 1
+                            }
+                            return
+                        } else if h > 0 && selectedTab > 0 {
+                            withAnimation(.smooth(duration: 0.28)) {
+                                dragOffset = 0
+                                selectedTab -= 1
+                            }
+                            return
+                        }
+                    }
+                    // Not enough to commit — spring back
+                    withAnimation(.smooth(duration: 0.22)) {
+                        dragOffset = 0
+                    }
+                }
+        )
     }
 
     // MARK: - Dynamic Tab Tint

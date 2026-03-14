@@ -56,6 +56,10 @@ final class WatchViewModel: ObservableObject {
     /// Drives the daily / weekly / monthly buddy recommendation screens.
     @Published var latestActionPlan: WatchActionPlan?
 
+    /// IDs of action plan items the user has completed today.
+    /// Resets on new day (same as nudgeCompleted).
+    @Published private(set) var completedItemIDs: Set<UUID> = []
+
     // MARK: - Dependencies
 
     /// Reference to the connectivity service, set via `bind(to:)`.
@@ -112,6 +116,7 @@ final class WatchViewModel: ObservableObject {
                     self?.latestAssessment = assessment
                     self?.syncState = .ready
                     self?.resetSessionStateIfNeeded()
+                    self?.updateComplication(assessment)
                 }
             }
             .store(in: &cancellables)
@@ -178,6 +183,51 @@ final class WatchViewModel: ObservableObject {
         lastNudgeCompletionDate = Date()
     }
 
+    /// Marks a specific action plan item as complete.
+    func markItemComplete(_ id: UUID) {
+        completedItemIDs.insert(id)
+    }
+
+    /// Whether a specific action plan item has been completed.
+    func isItemComplete(_ id: UUID) -> Bool {
+        completedItemIDs.contains(id)
+    }
+
+    /// Today's action items, ordered by reminder hour (earliest first).
+    /// Falls back to dailyNudges from the assessment if no action plan exists.
+    var todayItems: [DayPlanItem] {
+        if let plan = latestActionPlan {
+            return plan.dailyItems
+                .sorted { ($0.reminderHour ?? 0) < ($1.reminderHour ?? 0) }
+                .map { item in
+                    DayPlanItem(
+                        id: item.id,
+                        icon: item.icon,
+                        title: item.title,
+                        category: item.category,
+                        isComplete: completedItemIDs.contains(item.id)
+                    )
+                }
+        }
+        // Fallback: use dailyNudges from assessment
+        guard let assessment = latestAssessment else { return [] }
+        return assessment.dailyNudges.enumerated().map { index, nudge in
+            let fakeID = UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", index))") ?? UUID()
+            return DayPlanItem(
+                id: fakeID,
+                icon: nudge.icon,
+                title: nudge.title,
+                category: nudge.category,
+                isComplete: completedItemIDs.contains(fakeID)
+            )
+        }
+    }
+
+    /// The next uncompleted item from today's plan, if any.
+    var nextItem: DayPlanItem? {
+        todayItems.first { !$0.isComplete }
+    }
+
     // MARK: - Sync
 
     /// Manually requests the latest assessment from the companion phone app.
@@ -187,6 +237,62 @@ final class WatchViewModel: ObservableObject {
     }
 
     // MARK: - Private Helpers
+
+    /// Pushes current assessment data to shared UserDefaults so the
+    /// watch face complication and Smart Stack widget can display it.
+    private func updateComplication(_ assessment: HeartAssessment) {
+        let mood = BuddyMood.from(assessment: assessment, nudgeCompleted: nudgeCompleted)
+        ThumpComplicationData.update(
+            mood: mood,
+            cardioScore: assessment.cardioScore,
+            nudgeTitle: assessment.dailyNudge.title,
+            nudgeIcon: assessment.dailyNudge.icon,
+            stressFlag: assessment.stressFlag,
+            status: assessment.status
+        )
+
+        // Push stress heatmap data for the widget
+        updateStressHeatmapWidget(assessment)
+
+        // Push readiness score
+        let readiness = assessment.cardioScore ?? 70
+        ThumpComplicationData.updateReadiness(score: readiness)
+
+        // Push coaching nudge
+        let nudgeText: String
+        if let mins = assessment.dailyNudge.durationMinutes {
+            nudgeText = "\(assessment.dailyNudge.title) · \(mins) min"
+        } else {
+            nudgeText = assessment.dailyNudge.title
+        }
+        ThumpComplicationData.updateCoachingNudge(text: nudgeText, icon: assessment.dailyNudge.icon)
+    }
+
+    /// Derives 6 hourly stress levels from the assessment and anomaly score,
+    /// then pushes them to the stress heatmap widget.
+    private func updateStressHeatmapWidget(_ assessment: HeartAssessment) {
+        // Derive a base stress level from the anomaly score (0-1 scale)
+        // and stress flag, then create a realistic 6-hour spread
+        let baseLevel = assessment.stressFlag
+            ? min(1.0, 0.5 + assessment.anomalyScore * 0.5)
+            : min(0.5, assessment.anomalyScore * 0.6)
+
+        // Generate 6 hourly values with circadian variation
+        // Earlier hours slightly lower, recent hours closer to current state
+        let levels: [Double] = (0..<6).map { i in
+            let ramp = Double(i) / 5.0  // 0.0 → 1.0 over 6 hours
+            let circadian = sin(Double(i) * 0.8) * 0.1  // gentle wave
+            let level = baseLevel * (0.6 + ramp * 0.4) + circadian
+            return min(1.0, max(0.0, level))
+        }
+
+        let label = assessment.stressFlag ? "Stress is up" : "Calm today"
+        ThumpComplicationData.updateStressHeatmap(
+            hourlyLevels: levels,
+            label: label,
+            isStressed: assessment.stressFlag
+        )
+    }
 
     /// Resets session-specific state (feedback submitted, nudge completed)
     /// when a new assessment arrives that likely represents a new day.
@@ -200,6 +306,19 @@ final class WatchViewModel: ObservableObject {
         // not on every assessment received.
         if !Calendar.current.isDateInToday(lastNudgeCompletionDate ?? .distantPast) {
             nudgeCompleted = false
+            completedItemIDs.removeAll()
         }
     }
+}
+
+// MARK: - Day Plan Item
+
+/// A simplified view-layer representation of a daily action item.
+/// Used by the watch face to display today's plan.
+struct DayPlanItem: Identifiable {
+    let id: UUID
+    let icon: String
+    let title: String
+    let category: NudgeCategory
+    let isComplete: Bool
 }

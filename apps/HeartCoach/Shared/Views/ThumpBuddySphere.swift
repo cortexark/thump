@@ -122,27 +122,21 @@ struct ThumpBuddySphere: View {
 
     // MARK: - Rim Refraction
 
-    /// Angular gradient stroke simulating light wrapping
-    /// around the sphere edge.
+    /// Subtle static rim highlight — no rotating angular gradient.
     private var rimRefractionRing: some View {
-        let palette = mood.premiumPalette
-        return SphereShape()
+        SphereShape()
             .stroke(
-                AngularGradient(
+                LinearGradient(
                     colors: [
-                        .clear,
-                        palette.highlight.opacity(0.35),
-                        .white.opacity(0.18),
-                        palette.highlight.opacity(0.25),
+                        .white.opacity(0.15),
                         .clear,
                         .clear,
-                        .clear
+                        mood.premiumPalette.highlight.opacity(0.1)
                     ],
-                    center: .center,
-                    startAngle: .degrees(anim.innerLightPhase - 30),
-                    endAngle: .degrees(anim.innerLightPhase + 330)
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 ),
-                lineWidth: size * 0.015
+                lineWidth: size * 0.012
             )
             .frame(width: size * 0.98, height: size * 1.01)
     }
