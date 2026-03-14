@@ -36,4 +36,15 @@ enum ThumpSharedKeys {
 
     // Coaching nudge text for inline complication
     static let coachingNudgeTextKey = "thump_coaching_nudge_text"
+
+    // Deep link: Siri "Start Breathing" sets this to true, app clears it after navigating
+    static let breatheDeepLinkKey = "thump_breathe_deep_link"
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    /// Posted by DashboardViewModel when a new readiness level is computed.
+    /// userInfo contains ["readinessLevel": String (ReadinessLevel.rawValue)]
+    static let thumpReadinessDidUpdate = Notification.Name("thumpReadinessDidUpdate")
 }

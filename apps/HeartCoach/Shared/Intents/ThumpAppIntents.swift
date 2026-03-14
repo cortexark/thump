@@ -40,15 +40,19 @@ struct CheckStressIntent: AppIntent {
 
 // MARK: - Start Breathing Intent
 
-/// "Start breathing" — Opens the app to trigger a breathing session.
-/// On watchOS this opens the app; on iOS it navigates to the breathing screen.
+/// "Start breathing" — Opens the app and signals it to navigate to breathing.
+/// Sets a UserDefaults flag that the app reads on foreground to switch tabs.
 struct StartBreathingIntent: AppIntent {
     static var title: LocalizedStringResource = "Start Breathing Exercise"
     static var description = IntentDescription("Launch a guided breathing exercise")
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        return .result(dialog: "Starting your breathing exercise. Breathe in slowly...")
+        // Signal the app to navigate to the stress/breathing screen
+        let defaults = UserDefaults(suiteName: ThumpSharedKeys.suiteName)
+        defaults?.set(true, forKey: ThumpSharedKeys.breatheDeepLinkKey)
+
+        return .result(dialog: "Opening your breathing exercise...")
     }
 }
 

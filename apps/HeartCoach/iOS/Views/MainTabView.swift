@@ -41,6 +41,10 @@ struct MainTabView: View {
         .onChange(of: selectedTab) { oldTab, newTab in
             InteractionLog.tabSwitch(from: oldTab, to: newTab)
         }
+        .onAppear { checkBreatheDeepLink() }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            checkBreatheDeepLink()
+        }
         .offset(x: dragOffset)
         .highPriorityGesture(
             DragGesture(minimumDistance: 30, coordinateSpace: .global)
@@ -79,6 +83,16 @@ struct MainTabView: View {
                     }
                 }
         )
+    }
+
+    // MARK: - Deep Link: Siri "Start Breathing"
+
+    private func checkBreatheDeepLink() {
+        let defaults = UserDefaults(suiteName: ThumpSharedKeys.suiteName)
+        guard defaults?.bool(forKey: ThumpSharedKeys.breatheDeepLinkKey) == true else { return }
+        defaults?.set(false, forKey: ThumpSharedKeys.breatheDeepLinkKey)
+        // Tab 2 is the Stress tab which has the breathing UI
+        withAnimation { selectedTab = 2 }
     }
 
     // MARK: - Dynamic Tab Tint

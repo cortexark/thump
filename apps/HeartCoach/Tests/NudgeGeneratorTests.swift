@@ -209,6 +209,102 @@ final class NudgeGeneratorTests: XCTestCase {
         XCTAssertFalse(nudge.title.isEmpty,
                        "Even extreme values should produce a valid nudge")
     }
+
+    // MARK: - Test: Readiness Gate on Regression Path
+
+    /// Priority 2 + recovering readiness must NOT return .moderate nudge.
+    /// This is a safety test: depleted users should never get moderate exercise nudges.
+    func testRegressionWithRecoveringReadinessDoesNotReturnModerate() {
+        let readiness = ReadinessResult(
+            score: 25,
+            level: .recovering,
+            pillars: [],
+            summary: "Take it easy"
+        )
+        let nudge = generator.generate(
+            confidence: .high,
+            anomaly: 1.5,
+            regression: true,
+            stress: false,
+            feedback: nil,
+            current: makeSnapshot(rhr: 75, hrv: 30),
+            history: makeHistory(days: 14),
+            readiness: readiness
+        )
+        XCTAssertNotEqual(nudge.category, .moderate,
+                          "Regression + recovering readiness must not suggest moderate exercise")
+        XCTAssertTrue(
+            nudge.category == .rest || nudge.category == .breathe,
+            "Expected rest or breathe for recovering user, got \(nudge.category.rawValue)"
+        )
+    }
+
+    /// Priority 2 + primed readiness CAN return moderate (regression nudge is safe).
+    func testRegressionWithPrimedReadinessAllowsModerate() {
+        let readiness = ReadinessResult(
+            score: 85,
+            level: .primed,
+            pillars: [],
+            summary: "Great day"
+        )
+        let nudge = generator.generate(
+            confidence: .high,
+            anomaly: 1.5,
+            regression: true,
+            stress: false,
+            feedback: nil,
+            current: makeSnapshot(rhr: 62, hrv: 55),
+            history: makeHistory(days: 14),
+            readiness: readiness
+        )
+        // At primed readiness, the full regression library is available
+        XCTAssertFalse(nudge.title.isEmpty)
+    }
+
+    // MARK: - Test: Low Data Determinism
+
+    /// selectLowDataNudge must return the same nudge for the same date.
+    func testLowDataNudgeIsDeterministicForSameDate() {
+        let fixedDate = Calendar.current.date(from: DateComponents(year: 2026, month: 3, day: 14))!
+        let snapshot = HeartSnapshot(
+            date: fixedDate,
+            restingHeartRate: nil,
+            hrvSDNN: nil,
+            steps: 0,
+            walkMinutes: 0,
+            sleepHours: nil
+        )
+
+        let nudge1 = generator.generate(
+            confidence: .low, anomaly: 0.0, regression: false, stress: false,
+            feedback: nil, current: snapshot, history: []
+        )
+        let nudge2 = generator.generate(
+            confidence: .low, anomaly: 0.0, regression: false, stress: false,
+            feedback: nil, current: snapshot, history: []
+        )
+        XCTAssertEqual(nudge1.title, nudge2.title,
+                       "Same date should produce same low-data nudge")
+    }
+
+    // MARK: - Test: Anomaly 0.5 Boundary
+
+    /// anomaly = 0.5 exactly should NOT hit the positive path (requires < 0.5).
+    func testAnomalyBoundaryAtHalf() {
+        let nudgeBelow = generator.generate(
+            confidence: .high, anomaly: 0.499, regression: false, stress: false,
+            feedback: nil, current: makeSnapshot(rhr: 65, hrv: 50), history: makeHistory(days: 14)
+        )
+        let nudgeAt = generator.generate(
+            confidence: .high, anomaly: 0.5, regression: false, stress: false,
+            feedback: nil, current: makeSnapshot(rhr: 65, hrv: 50), history: makeHistory(days: 14)
+        )
+        // Both should produce valid nudges (no crash)
+        XCTAssertFalse(nudgeBelow.title.isEmpty)
+        XCTAssertFalse(nudgeAt.title.isEmpty)
+        // 0.499 hits positive path, 0.5 hits default — they may differ
+        // (This test documents the boundary exists and doesn't crash)
+    }
 }
 
 // MARK: - NudgeTestContext

@@ -196,7 +196,8 @@ public struct SmartNudgeScheduler: Sendable {
         trendDirection: StressTrendDirection,
         todaySnapshot: HeartSnapshot?,
         patterns: [SleepPattern],
-        currentHour: Int
+        currentHour: Int,
+        readinessGate: ReadinessLevel? = nil
     ) -> SmartNudgeAction {
         // 1. High stress day → journal
         if let todayStress = stressPoints.last,
@@ -277,7 +278,8 @@ public struct SmartNudgeScheduler: Sendable {
         trendDirection: StressTrendDirection,
         todaySnapshot: HeartSnapshot?,
         patterns: [SleepPattern],
-        currentHour: Int
+        currentHour: Int,
+        readinessGate: ReadinessLevel? = nil
     ) -> [SmartNudgeAction] {
         var actions: [SmartNudgeAction] = []
 
@@ -348,7 +350,9 @@ public struct SmartNudgeScheduler: Sendable {
         }
 
         // 5. Activity-based suggestions from today's data
-        if let snapshot = todaySnapshot, actions.count < 3 {
+        // Conflict guard: suppress activity when readiness says rest
+        let activityAllowed = readinessGate != .recovering
+        if activityAllowed, let snapshot = todaySnapshot, actions.count < 3 {
             let walkMin = snapshot.walkMinutes ?? 0
             let workoutMin = snapshot.workoutMinutes ?? 0
             if walkMin + workoutMin < 10 {
@@ -366,6 +370,20 @@ public struct SmartNudgeScheduler: Sendable {
                     )
                 )
             }
+        } else if !activityAllowed, actions.count < 3 {
+            // Recovering readiness: replace activity with rest suggestion
+            actions.append(
+                .restSuggestion(
+                    DailyNudge(
+                        category: .rest,
+                        title: "Your Body Needs Recovery",
+                        description: "Your readiness is low. Rest now and "
+                            + "you'll bounce back stronger tomorrow.",
+                        durationMinutes: nil,
+                        icon: "bed.double.fill"
+                    )
+                )
+            )
         }
 
         // 6. Sleep-based suggestion

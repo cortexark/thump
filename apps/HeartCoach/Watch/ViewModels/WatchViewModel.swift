@@ -9,6 +9,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import HealthKit
 
 // MARK: - Sync State
 
@@ -254,8 +255,13 @@ final class WatchViewModel: ObservableObject {
         // Push stress heatmap data for the widget
         updateStressHeatmapWidget(assessment)
 
-        // Push readiness score
-        let readiness = assessment.cardioScore ?? 70
+        // Push readiness score — use recoveryContext if available, else cardioScore
+        let readiness: Double
+        if let recoveryScore = assessment.recoveryContext?.readinessScore {
+            readiness = Double(recoveryScore)
+        } else {
+            readiness = assessment.cardioScore ?? 70
+        }
         ThumpComplicationData.updateReadiness(score: readiness)
 
         // Push coaching nudge
@@ -266,22 +272,23 @@ final class WatchViewModel: ObservableObject {
             nudgeText = assessment.dailyNudge.title
         }
         ThumpComplicationData.updateCoachingNudge(text: nudgeText, icon: assessment.dailyNudge.icon)
+
+        // Push HRV trend from local accumulation
+        updateHRVTrendWidget()
+
+        AppLogger.sync.info("Complications updated: score=\(Int(readiness)) stress=\(assessment.stressFlag) nudge=\(assessment.dailyNudge.title)")
     }
 
-    /// Derives 6 hourly stress levels from the assessment and anomaly score,
-    /// then pushes them to the stress heatmap widget.
+    /// Derives 6 hourly stress levels from the assessment's anomaly score
+    /// and pushes them to the stress heatmap widget.
     private func updateStressHeatmapWidget(_ assessment: HeartAssessment) {
-        // Derive a base stress level from the anomaly score (0-1 scale)
-        // and stress flag, then create a realistic 6-hour spread
         let baseLevel = assessment.stressFlag
             ? min(1.0, 0.5 + assessment.anomalyScore * 0.5)
             : min(0.5, assessment.anomalyScore * 0.6)
 
-        // Generate 6 hourly values with circadian variation
-        // Earlier hours slightly lower, recent hours closer to current state
         let levels: [Double] = (0..<6).map { i in
-            let ramp = Double(i) / 5.0  // 0.0 → 1.0 over 6 hours
-            let circadian = sin(Double(i) * 0.8) * 0.1  // gentle wave
+            let ramp = Double(i) / 5.0
+            let circadian = sin(Double(i) * 0.8) * 0.1
             let level = baseLevel * (0.6 + ramp * 0.4) + circadian
             return min(1.0, max(0.0, level))
         }
@@ -292,6 +299,77 @@ final class WatchViewModel: ObservableObject {
             label: label,
             isStressed: assessment.stressFlag
         )
+    }
+
+    // MARK: - HRV Trend Accumulation
+
+    /// Accumulates daily HRV values locally on the watch.
+    /// Each assessment arrival appends today's HRV (from cardioScore proxy)
+    /// to a rolling 7-day array stored in shared UserDefaults.
+    private func updateHRVTrendWidget() {
+        guard let defaults = UserDefaults(suiteName: ThumpSharedKeys.suiteName) else { return }
+
+        // Read existing trend
+        var dailyValues: [Double] = []
+        if let raw = defaults.string(forKey: ThumpSharedKeys.hrvTrendKey) {
+            dailyValues = raw.split(separator: ",").compactMap { Double($0) }
+        }
+
+        // Fetch today's HRV directly from HealthKit on the watch
+        fetchTodayHRV { [weak self] todayHRV in
+            guard self != nil else { return }
+            guard let hrv = todayHRV else { return }
+
+            // Check if we already have today's entry (same day)
+            let todayKey = "thump_hrv_last_date"
+            let lastDate = defaults.string(forKey: todayKey) ?? ""
+            let todayStr = Self.dayString(Date())
+
+            if lastDate == todayStr {
+                // Update today's value (latest reading)
+                if !dailyValues.isEmpty {
+                    dailyValues[dailyValues.count - 1] = hrv
+                } else {
+                    dailyValues.append(hrv)
+                }
+            } else {
+                // New day — append
+                dailyValues.append(hrv)
+                defaults.set(todayStr, forKey: todayKey)
+            }
+
+            // Keep only last 7 days
+            if dailyValues.count > 7 {
+                dailyValues = Array(dailyValues.suffix(7))
+            }
+
+            ThumpComplicationData.updateHRVTrend(dailyValues: dailyValues)
+            AppLogger.sync.info("HRV trend updated: \(dailyValues.map { String(format: "%.0f", $0) }.joined(separator: ","))")
+        }
+    }
+
+    private static func dayString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
+    /// Fetches today's HRV from HealthKit directly on the watch.
+    private func fetchTodayHRV(completion: @escaping @MainActor (Double?) -> Void) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            completion(nil)
+            return
+        }
+        let store = HKHealthStore()
+        let type = HKQuantityType(.heartRateVariabilitySDNN)
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
+            let hrv = (samples as? [HKQuantitySample])?.first?.quantity.doubleValue(for: .secondUnit(with: .milli))
+            Task { @MainActor in completion(hrv) }
+        }
+        store.execute(query)
     }
 
     /// Resets session-specific state (feedback submitted, nudge completed)
