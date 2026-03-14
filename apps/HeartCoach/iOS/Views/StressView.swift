@@ -22,6 +22,34 @@ import SwiftUI
 /// smart nudge actions (breath prompt, journal, check-in).
 struct StressView: View {
 
+    // MARK: - Date Formatters (static to avoid per-render allocation)
+
+    private static let weekdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE"
+        return f
+    }()
+    private static let dayHeaderFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMM d"
+        return f
+    }()
+    private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d"
+        return f
+    }()
+    private static let monthDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
+    private static let hourFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "ha"
+        return f
+    }()
+
     // MARK: - View Model
 
     @StateObject private var viewModel = StressViewModel()
@@ -87,9 +115,23 @@ struct StressView: View {
                         .font(.headline)
                         .foregroundStyle(.primary)
 
-                    Text("Score: \(Int(stress.score))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text("Score: \(Int(stress.score))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if stress.confidence == .low {
+                            Text(stress.confidence.displayName)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 1)
+                                .background(
+                                    Capsule().fill(Color.orange.opacity(0.15))
+                                )
+                        }
+                    }
                 }
 
                 Spacer()
@@ -148,6 +190,19 @@ struct StressView: View {
                         .foregroundStyle(stressColor(for: stress.level))
                 }
                 .padding(.top, 2)
+
+                // Signal quality warnings
+                if !stress.warnings.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(stress.warnings.first ?? "")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 2)
+                }
             }
             .padding(ThumpSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -637,17 +692,17 @@ struct StressView: View {
     private func xAxisLabels(points: [(date: Date, value: Double)]) -> [(offset: Int, label: String)] {
         guard points.count >= 2 else { return [] }
 
-        let formatter = DateFormatter()
         let count = points.count
 
-        // Determine format based on time range
+        // Pick the pre-allocated formatter for the current time range
+        let formatter: DateFormatter
         switch viewModel.selectedRange {
         case .day:
-            formatter.dateFormat = "ha" // 9AM, 2PM
+            formatter = Self.hourFormatter
         case .week:
-            formatter.dateFormat = "EEE" // Mon, Tue
+            formatter = Self.weekdayFormatter
         case .month:
-            formatter.dateFormat = "MMM d" // Mar 5
+            formatter = Self.monthDayFormatter
         }
 
         // Pick 3-5 evenly spaced indices including first and last
@@ -1205,21 +1260,15 @@ struct StressView: View {
     }
 
     private func formatWeekday(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date)
+        Self.weekdayFormatter.string(from: date)
     }
 
     private func formatDayHeader(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        return formatter.string(from: date)
+        Self.dayHeaderFormatter.string(from: date)
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE, MMM d"
-        return formatter.string(from: date)
+        Self.shortDateFormatter.string(from: date)
     }
 }
 

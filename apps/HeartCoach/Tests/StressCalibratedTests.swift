@@ -379,7 +379,7 @@ final class StressCalibratedTests: XCTestCase {
             "All signals at baseline should be low stress, got \(result.score)")
     }
 
-    /// Extreme RHR elevation → very high stress.
+    /// Extreme RHR elevation → high stress (damped when signals disagree).
     func testEdge_extremeRHRSpike_veryHighStress() {
         let result = engine.computeStress(
             currentHRV: 50.0, baselineHRV: 50.0, baselineHRVSD: 10.0,
@@ -387,7 +387,9 @@ final class StressCalibratedTests: XCTestCase {
             baselineRHR: 65.0,
             recentHRVs: [50, 50, 50, 50, 50]
         )
-        XCTAssertGreaterThan(result.score, 65,
+        // Disagreement damping applies when HRV is at baseline but RHR is extreme,
+        // so the score is compressed slightly toward neutral.
+        XCTAssertGreaterThan(result.score, 60,
             "Extreme RHR spike should produce high stress, got \(result.score)")
     }
 

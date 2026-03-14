@@ -1,0 +1,25 @@
+{
+  "categories" : [
+    "rest",
+    "moderate",
+    "walk"
+  ],
+  "priorities" : [
+    3,
+    2,
+    1
+  ],
+  "readinessScore" : 83,
+  "recCount" : 3,
+  "sources" : [
+    "trendEngine",
+    "weekOverWeek",
+    "readinessEngine"
+  ],
+  "stressScore" : 38.934666364735996,
+  "titles" : [
+    "A gradual shift in your metrics",
+    "RHR is slightly above your normal",
+    "High readiness — great day to train"
+  ]
+}

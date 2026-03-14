@@ -1,0 +1,17 @@
+{
+  "categories" : [
+    "rest"
+  ],
+  "priorities" : [
+    3
+  ],
+  "readinessScore" : 70,
+  "recCount" : 1,
+  "sources" : [
+    "trendEngine"
+  ],
+  "stressScore" : 59.574223695654538,
+  "titles" : [
+    "A gradual shift in your metrics"
+  ]
+}

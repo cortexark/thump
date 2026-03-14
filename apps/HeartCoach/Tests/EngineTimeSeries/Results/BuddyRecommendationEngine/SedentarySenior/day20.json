@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "rest",
+    "celebrate"
+  ],
+  "priorities" : [
+    3,
+    1
+  ],
+  "readinessScore" : 44,
+  "recCount" : 2,
+  "sources" : [
+    "trendEngine",
+    "scenarioDetection"
+  ],
+  "stressScore" : 48.053055889762867,
+  "titles" : [
+    "A gradual shift in your metrics",
+    "Keep up the good work"
+  ]
+}

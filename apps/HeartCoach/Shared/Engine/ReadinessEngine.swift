@@ -43,6 +43,8 @@ public struct ReadinessEngine: Sendable {
     /// - Parameters:
     ///   - snapshot: Today's health metrics.
     ///   - stressScore: Current stress score (0-100), nil if unavailable.
+    ///   - stressConfidence: Confidence in the stress score. Low confidence
+    ///     reduces the stress pillar's impact on readiness.
     ///   - recentHistory: Recent daily snapshots (ideally 7+ days) for
     ///     trend and activity-balance calculations.
     ///   - consecutiveAlert: If present, indicates 3+ days of elevated
@@ -52,6 +54,7 @@ public struct ReadinessEngine: Sendable {
     public func compute(
         snapshot: HeartSnapshot,
         stressScore: Double?,
+        stressConfidence: StressConfidence? = nil,
         recentHistory: [HeartSnapshot],
         consecutiveAlert: ConsecutiveElevationAlert? = nil
     ) -> ReadinessResult? {
@@ -67,8 +70,8 @@ public struct ReadinessEngine: Sendable {
             pillars.append(pillar)
         }
 
-        // 3. Stress
-        if let pillar = scoreStress(stressScore: stressScore) {
+        // 3. Stress (attenuated by confidence)
+        if let pillar = scoreStress(stressScore: stressScore, confidence: stressConfidence) {
             pillars.append(pillar)
         }
 
@@ -181,20 +184,38 @@ public struct ReadinessEngine: Sendable {
         )
     }
 
-    /// Stress: simple linear inversion of stress score.
-    private func scoreStress(stressScore: Double?) -> ReadinessPillar? {
+    /// Stress: linear inversion of stress score, attenuated by confidence.
+    ///
+    /// Low-confidence stress readings have reduced impact on readiness,
+    /// preventing uncertain stress signals from unfairly penalizing the score.
+    private func scoreStress(stressScore: Double?, confidence: StressConfidence? = nil) -> ReadinessPillar? {
         guard let stress = stressScore else { return nil }
 
         let clamped = max(0, min(100, stress))
-        let score = 100.0 - clamped
+
+        // Attenuate by confidence: low confidence pulls score toward neutral (50).
+        // When confidence is nil (legacy callers), use full weight for backward compatibility.
+        let confidenceWeight = confidence?.weight ?? 1.0
+        let attenuatedInverse = (100.0 - clamped) * confidenceWeight + 50.0 * (1.0 - confidenceWeight)
+        let score = attenuatedInverse
 
         let detail: String
-        if clamped <= 30 {
-            detail = "Low stress — your mind is at ease"
-        } else if clamped <= 60 {
-            detail = "Moderate stress — pretty normal"
+        if confidence == .low {
+            if clamped <= 30 {
+                detail = "Low stress signal — still building confidence"
+            } else if clamped <= 60 {
+                detail = "Moderate stress signal — readings still stabilizing"
+            } else {
+                detail = "Elevated stress signal — but confidence is low"
+            }
         } else {
-            detail = "Elevated stress — consider taking it easy"
+            if clamped <= 30 {
+                detail = "Low stress — your mind is at ease"
+            } else if clamped <= 60 {
+                detail = "Moderate stress — pretty normal"
+            } else {
+                detail = "Elevated stress — consider taking it easy"
+            }
         }
 
         return ReadinessPillar(

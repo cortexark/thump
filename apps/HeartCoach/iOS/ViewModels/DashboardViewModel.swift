@@ -134,7 +134,7 @@ final class DashboardViewModel: ObservableObject {
                 AppLogger.healthKit.info("HealthKit authorization granted")
             }
 
-            // Fetch today's snapshot — fall back to mock data in simulator, empty snapshot on device
+            // Fetch today's snapshot — fall back to mock data in simulator, surface error on device
             let snapshot: HeartSnapshot
             do {
                 snapshot = try await healthDataProvider.fetchTodaySnapshot()
@@ -142,12 +142,15 @@ final class DashboardViewModel: ObservableObject {
                 #if targetEnvironment(simulator)
                 snapshot = MockData.mockTodaySnapshot
                 #else
-                snapshot = HeartSnapshot(date: Calendar.current.startOfDay(for: Date()))
+                AppLogger.engine.error("Today snapshot fetch failed: \(error.localizedDescription)")
+                errorMessage = "Unable to read today's health data. Please check Health permissions in Settings."
+                isLoading = false
+                return
                 #endif
             }
             todaySnapshot = snapshot
 
-            // Fetch historical snapshots — fall back to mock history in simulator, empty on device
+            // Fetch historical snapshots — fall back to mock history in simulator, surface error on device
             let history: [HeartSnapshot]
             do {
                 history = try await healthDataProvider.fetchHistory(days: historyDays)
@@ -155,7 +158,10 @@ final class DashboardViewModel: ObservableObject {
                 #if targetEnvironment(simulator)
                 history = MockData.mockHistory(days: historyDays)
                 #else
-                history = []
+                AppLogger.engine.error("History fetch failed: \(error.localizedDescription)")
+                errorMessage = "Unable to read health history. Please check Health permissions in Settings."
+                isLoading = false
+                return
                 #endif
             }
 
@@ -451,24 +457,30 @@ final class DashboardViewModel: ObservableObject {
 
         // Use actual stress score; fall back to flag-based estimate only when engine returns nil
         let stressScore: Double?
+        let stressConf: StressConfidence?
         if let stress {
             stressScore = stress.score
+            stressConf = stress.confidence
         } else if let assessment = assessment, assessment.stressFlag {
             stressScore = 70.0
+            stressConf = .low
         } else {
             stressScore = nil
+            stressConf = nil
         }
 
         let engine = ReadinessEngine()
         readinessResult = engine.compute(
             snapshot: snapshot,
             stressScore: stressScore,
+            stressConfidence: stressConf,
             recentHistory: history,
             consecutiveAlert: assessment?.consecutiveAlert
         )
         if let result = readinessResult {
             let stressDesc = stressScore.map { String(format: "%.1f", $0) } ?? "nil"
-            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressDesc)")
+            let confDesc = stressConf?.rawValue ?? "nil"
+            AppLogger.engine.info("Readiness: score=\(result.score) level=\(result.level.rawValue) stressInput=\(stressDesc) stressConf=\(confDesc)")
         }
     }
 
@@ -517,7 +529,7 @@ final class DashboardViewModel: ObservableObject {
         )
         self.stressResult = computedStress
         if let s = computedStress {
-            AppLogger.engine.info("Stress: score=\(String(format: "%.1f", s.score)) level=\(s.level.rawValue)")
+            AppLogger.engine.info("Stress: score=\(String(format: "%.1f", s.score)) level=\(s.level.rawValue) mode=\(s.mode.rawValue) confidence=\(s.confidence.rawValue)")
         }
 
         buddyRecommendations = engine.recommend(

@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your HRV is improving! Focus on sleep and recovery to bring the other metrics along.",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "improving",
+    "stable",
+    "declining",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 1,
+  "streakDays" : 3,
+  "weeklyProgressScore" : 68
+}

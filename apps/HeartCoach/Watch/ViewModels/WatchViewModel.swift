@@ -96,6 +96,14 @@ final class WatchViewModel: ObservableObject {
         // Cancel any existing subscriptions before re-binding.
         cancellables.removeAll()
 
+        // Restore today's feedback state from local persistence BEFORE
+        // subscribing to publishers, so incoming assessment updates that
+        // trigger resetSessionStateIfNeeded() see the correct local state.
+        if let savedFeedback = feedbackService.loadFeedback(for: Date()) {
+            feedbackSubmitted = true
+            submittedFeedbackType = savedFeedback
+        }
+
         // Assessment received → move to ready.
         service.$latestAssessment
             .sink { [weak self] assessment in
@@ -138,11 +146,6 @@ final class WatchViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Restore today's feedback state from local persistence.
-        if let savedFeedback = feedbackService.loadFeedback(for: Date()) {
-            feedbackSubmitted = true
-            submittedFeedbackType = savedFeedback
-        }
     }
 
     // MARK: - Feedback Submission

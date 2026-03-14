@@ -1,0 +1,23 @@
+{
+  "heroMessage" : "Your zone balance is improving! Focus on sleep and recovery to bring the other metrics along.",
+  "insightCount" : 6,
+  "insightDirections" : [
+    "declining",
+    "stable",
+    "stable",
+    "stable",
+    "stable",
+    "improving"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max",
+    "zoneBalance"
+  ],
+  "projectionCount" : 2,
+  "streakDays" : 14,
+  "weeklyProgressScore" : 56
+}

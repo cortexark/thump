@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Some metrics shifted this week. A few small changes — more walking, better sleep — can turn things around quickly.",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "declining",
+    "stable",
+    "stable",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 2,
+  "streakDays" : 7,
+  "weeklyProgressScore" : 56
+}

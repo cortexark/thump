@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "breathe",
+    "rest"
+  ],
+  "priorities" : [
+    3,
+    3
+  ],
+  "readinessScore" : 66,
+  "recCount" : 2,
+  "sources" : [
+    "stressEngine",
+    "scenarioDetection"
+  ],
+  "stressScore" : 68.091174386036755,
+  "titles" : [
+    "Stress is running high today",
+    "Let's turn things around"
+  ]
+}

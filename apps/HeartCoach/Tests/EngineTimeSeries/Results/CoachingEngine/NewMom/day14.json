@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your cardio fitness is trending in the right direction. Keep going!",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "stable",
+    "stable",
+    "stable",
+    "improving"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 1,
+  "streakDays" : 0,
+  "weeklyProgressScore" : 49
+}

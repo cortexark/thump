@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your heart metrics are steady. Small, consistent efforts compound into big improvements over time.",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "stable",
+    "stable",
+    "stable",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 1,
+  "streakDays" : 0,
+  "weeklyProgressScore" : 49
+}

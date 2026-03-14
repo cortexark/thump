@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "walk",
+    "celebrate"
+  ],
+  "priorities" : [
+    1,
+    1
+  ],
+  "readinessScore" : 83,
+  "recCount" : 2,
+  "sources" : [
+    "readinessEngine",
+    "scenarioDetection"
+  ],
+  "stressScore" : 25.826261564434841,
+  "titles" : [
+    "High readiness — great day to train",
+    "You bounced back nicely"
+  ]
+}
