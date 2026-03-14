@@ -307,7 +307,7 @@ Each clamped ±8 years per metric. Final = ChronAge + weighted offset.
 
 ## 3. Data Models
 
-**File:** `Shared/Models/HeartModels.swift` (1,553 lines, 60+ types)
+**File:** `Shared/Models/HeartModels.swift` (1,621 lines, 60+ types)
 
 ### Core Types
 
@@ -718,18 +718,18 @@ HeartCoach/
 │
 ├── Shared/
 │   ├── Engine/
-│   │   ├── HeartTrendEngine.swift             # 923 lines ✅ UPGRADED
-│   │   ├── StressEngine.swift                 # 549 lines 🔄
-│   │   ├── BioAgeEngine.swift                 # 514 lines 🔄
-│   │   ├── ReadinessEngine.swift              # 511 lines
-│   │   ├── CoachingEngine.swift               # 567 lines
+│   │   ├── HeartTrendEngine.swift             # 969 lines ✅ UPGRADED
+│   │   ├── StressEngine.swift                 # 641 lines 🔄
+│   │   ├── BioAgeEngine.swift                 # 516 lines 🔄
+│   │   ├── ReadinessEngine.swift              # 522 lines
+│   │   ├── CoachingEngine.swift               # 568 lines
 │   │   ├── NudgeGenerator.swift               # 635 lines
 │   │   ├── BuddyRecommendationEngine.swift    # 483 lines ✅ NEW
-│   │   ├── HeartRateZoneEngine.swift          # 497 lines
-│   │   ├── CorrelationEngine.swift            # 281 lines
+│   │   ├── HeartRateZoneEngine.swift          # 498 lines
+│   │   ├── CorrelationEngine.swift            # 329 lines
 │   │   └── SmartNudgeScheduler.swift          # 424 lines
 │   ├── Models/
-│   │   └── HeartModels.swift                  # 1,553 lines
+│   │   └── HeartModels.swift                  # 1,621 lines
 │   ├── Services/
 │   │   ├── LocalStore.swift                   # 330 lines
 │   │   ├── CryptoService.swift                # 248 lines
@@ -759,9 +759,9 @@ HeartCoach/
 │   │   ├── InsightsViewModel.swift
 │   │   └── StressViewModel.swift
 │   ├── Views/
-│   │   ├── DashboardView.swift                # 1,414 lines
-│   │   ├── StressView.swift                   # 1,039 lines
-│   │   ├── TrendsView.swift                   # 900 lines
+│   │   ├── DashboardView.swift                # 630 lines (+ 6 extension files)
+│   │   ├── StressView.swift                   # 1,230 lines
+│   │   ├── TrendsView.swift                   # 1,022 lines
 │   │   ├── LegalView.swift                    # 661 lines
 │   │   ├── SettingsView.swift                 # 646 lines
 │   │   ├── WeeklyReportDetailView.swift       # 564 lines
@@ -782,7 +782,7 @@ HeartCoach/
 │
 ├── Watch/
 │   ├── Views/
-│   │   ├── WatchInsightFlowView.swift         # 1,611 lines
+│   │   ├── WatchInsightFlowView.swift         # 1,715 lines
 │   │   ├── WatchHomeView.swift                # 349 lines
 │   │   ├── WatchDetailView.swift
 │   │   ├── WatchNudgeView.swift
@@ -841,13 +841,9 @@ HeartCoach/
 
 ### 🔴 Gaps — What's Missing or Broken
 
-#### Gap 1: BuddyRecommendationEngine Not Wired to DashboardViewModel
+#### ~~Gap 1: BuddyRecommendationEngine Not Wired to DashboardViewModel~~ ✅ FIXED
 
-**Problem:** The engine exists (483 lines, 16 tests) but `DashboardViewModel.refresh()` never calls it. The BuddyRecommendation cards don't appear in the Dashboard.
-
-**Impact:** Users only see the basic `dailyNudge` from HeartTrendEngine, not the full prioritized 4-card recommendation set from BuddyRecommendationEngine.
-
-**Fix:** Add `@Published var buddyRecommendations: [BuddyRecommendation]?` to DashboardViewModel, call `BuddyRecommendationEngine.generate(from: assessment)` in `refresh()`, and render the cards in DashboardView.
+BuddyRecommendationEngine is now wired to `DashboardViewModel.refresh()` and renders as `buddyRecommendationsSection` in DashboardView.
 
 #### Gap 2: StressView Smart Action Buttons Are Empty
 
@@ -889,11 +885,9 @@ HeartCoach/
 
 **Fix:** Rewrite `CorrelationEngine.interpretation` strings to be action-oriented: "On days you walk more, your heart recovers faster the next day. Your data shows this consistently." Add the user's actual numbers: "Your HRV averages 45ms on active days vs 38ms on rest days."
 
-#### Gap 7: nudgeSection Was Orphaned in DashboardView
+#### ~~Gap 7: nudgeSection Was Orphaned in DashboardView~~ ✅ FIXED
 
-**Problem:** `nudgeSection` (the "Buddy Says" card with daily nudges) was defined but never included in the main DashboardView VStack layout. **FIXED** in this session — now wired into the layout between dailyGoalsSection and checkInSection.
-
-**Status:** ✅ FIXED
+Resolved — `nudgeSection` replaced by `buddyRecommendationsSection` in DashboardView layout.
 
 #### Gap 8: No User Feedback Integration into Engine Calibration
 
@@ -903,23 +897,19 @@ HeartCoach/
 
 **Fix:** This is the Phase 3 (Option C hybrid) from TODO/05. Defer until we have 1000+ feedback signals. Track thumbs-up/down signals now; calibration comes later.
 
-#### Gap 9: No Onboarding Health Disclaimer Gate
+#### ~~Gap 9: No Onboarding Health Disclaimer Gate~~ ✅ FIXED
 
-**Problem:** Health disclaimer exists only in Settings. Plan calls for a 4th onboarding page with mandatory acknowledgment before users see health data.
-
-**Impact:** Legal liability — users see health scores without ever acknowledging "this is not medical advice."
-
-**Fix:** Add disclaimer page to OnboardingView with acceptance toggle. Block progress until accepted.
+Resolved — OnboardingView now includes a disclaimer page (step 3) with mandatory acknowledgment toggle before users proceed to health data.
 
 ### 📊 Engine Upgrade Scorecard
 
 | Engine | Vision Accuracy | Code Complete | Tests | Gaps |
 |--------|----------------|---------------|-------|------|
-| HeartTrendEngine | ✅ Exact match | ✅ 923 lines | 34 tests | None |
+| HeartTrendEngine | ✅ Exact match | ✅ 969 lines | 34 tests | None |
 | StressEngine | ✅ Accurate | 🔄 Base done, upgrade pending | 52 tests | TODO/01 variants |
 | ReadinessEngine | ✅ Accurate | 🔄 5/6 pillars | 34 tests | TODO/04 6th pillar |
 | BioAgeEngine | ✅ Accurate | 🔄 Weights need tuning | 25 tests | TODO/02 NTNU reweight |
-| BuddyRecommendation | ✅ Exact match | ✅ Complete | 16 tests | Not wired to Dashboard |
+| BuddyRecommendation | ✅ Exact match | ✅ Complete | 16 tests | ✅ Wired to Dashboard |
 | CoachingEngine | ✅ Accurate | ✅ Complete | 26 tests | None |
 | NudgeGenerator | ✅ Accurate | ✅ Complete | 17 tests | Medical language scrubbed ✅ |
 | HeartRateZoneEngine | ✅ Accurate | ✅ Complete | 20 tests | None |

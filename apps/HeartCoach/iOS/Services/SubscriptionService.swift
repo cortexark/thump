@@ -208,7 +208,11 @@ final class SubscriptionService: ObservableObject {
         var resolvedTier: SubscriptionTier = .free
 
         for await result in Transaction.currentEntitlements {
-            guard let transaction = try? checkVerification(result) else {
+            let transaction: Transaction
+            do {
+                transaction = try checkVerification(result)
+            } catch {
+                AppLogger.subscription.error("Transaction verification failed in entitlements check: \(error.localizedDescription)")
                 continue
             }
 
@@ -235,8 +239,11 @@ final class SubscriptionService: ObservableObject {
     /// that occur while the app is running or in the background.
     private func listenForTransactionUpdates() async {
         for await result in Transaction.updates {
-            guard let transaction = try? checkVerification(result) else {
-                debugPrint("[SubscriptionService] Unverified transaction update ignored.")
+            let transaction: Transaction
+            do {
+                transaction = try checkVerification(result)
+            } catch {
+                AppLogger.subscription.error("Transaction verification failed in update listener: \(error.localizedDescription)")
                 continue
             }
 

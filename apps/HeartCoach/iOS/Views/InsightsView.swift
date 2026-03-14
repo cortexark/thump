@@ -17,6 +17,14 @@ import SwiftUI
 /// from `InsightsViewModel`.
 struct InsightsView: View {
 
+    // MARK: - Date Formatters (static to avoid per-render allocation)
+
+    private static let monthDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
+
     // MARK: - View Model
 
     @StateObject private var viewModel = InsightsViewModel()
@@ -453,9 +461,7 @@ struct InsightsView: View {
 
     /// Formats the week date range for display.
     private func reportDateRange(_ report: WeeklyReport) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        return "\(formatter.string(from: report.weekStart)) - \(formatter.string(from: report.weekEnd))"
+        "\(Self.monthDayFormatter.string(from: report.weekStart)) - \(Self.monthDayFormatter.string(from: report.weekEnd))"
     }
 
     /// A capsule badge showing the weekly trend direction.

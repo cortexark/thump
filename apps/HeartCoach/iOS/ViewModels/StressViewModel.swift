@@ -95,8 +95,8 @@ final class StressViewModel: ObservableObject {
     /// Set via `bind(connectivityService:)` from the view layer.
     private var connectivityService: ConnectivityService?
 
-    /// Timer driving the breathing countdown.
-    private var breathingTimer: Timer?
+    /// Task driving the breathing countdown (replaces Timer to avoid RunLoop retain).
+    private var breathingTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
@@ -142,7 +142,10 @@ final class StressViewModel: ObservableObject {
                 #if targetEnvironment(simulator)
                 snapshots = MockData.mockHistory(days: fetchDays)
                 #else
-                snapshots = []
+                AppLogger.engine.error("Stress history fetch failed: \(error.localizedDescription)")
+                errorMessage = "Unable to read health data. Please check Health permissions in Settings."
+                isLoading = false
+                return
                 #endif
             }
 
@@ -205,33 +208,33 @@ final class StressViewModel: ObservableObject {
 
     // MARK: - Action Methods
 
-    /// Starts a guided breathing session with a countdown timer.
+    /// Starts a guided breathing session with a Task-based countdown.
+    ///
+    /// Uses a cancellable `Task` instead of `Timer` to avoid RunLoop retention.
+    /// The task holds only a `[weak self]` reference, so if the view model
+    /// deallocates the task is cancelled and no closure accesses freed memory.
     func startBreathingSession(durationSeconds: Int = 60) {
+        breathingTask?.cancel()
         breathingSecondsRemaining = durationSeconds
         isBreathingSessionActive = true
-        breathingTimer?.invalidate()
-        breathingTimer = Timer.scheduledTimer(
-            withTimeInterval: 1.0,
-            repeats: true
-        ) { [weak self] timer in
-            Task { @MainActor [weak self] in
-                guard let self else {
-                    timer.invalidate()
-                    return
-                }
+        breathingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self else { return }
                 if self.breathingSecondsRemaining > 0 {
                     self.breathingSecondsRemaining -= 1
                 } else {
                     self.stopBreathingSession()
+                    return
                 }
             }
         }
     }
 
-    /// Stops the breathing session and resets the countdown.
+    /// Stops the breathing session and cancels the countdown task.
     func stopBreathingSession() {
-        breathingTimer?.invalidate()
-        breathingTimer = nil
+        breathingTask?.cancel()
+        breathingTask = nil
         isBreathingSessionActive = false
         breathingSecondsRemaining = 0
     }
@@ -383,12 +386,13 @@ final class StressViewModel: ObservableObject {
             return
         }
 
-        // Compute today's stress using context-aware path
+        // Compute today's stress via the canonical snapshot-based path.
+        // This gates on nil HRV internally (returns nil if missing) and uses
+        // the same logic as DashboardViewModel, ensuring consistent scores.
         if let today = history.last {
-            let preceding = Array(history.dropLast())
             currentStress = engine.computeStress(
                 snapshot: today,
-                recentHistory: preceding
+                recentHistory: Array(history.dropLast())
             )
         } else {
             currentStress = nil
