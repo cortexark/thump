@@ -2,13 +2,13 @@
   "anomalyScore" : 0.82206030416876397,
   "confidence" : "low",
   "multiNudgeCategories" : [
-    "walk",
+    "moderate",
     "hydrate",
     "rest"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "A Quick Walk to Get Started",
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "We're Getting to Know You",
   "readinessLevel" : "primed",
   "readinessScore" : 84,
   "regressionFlag" : false,

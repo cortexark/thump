@@ -384,13 +384,15 @@ final class DatasetValidationTests: XCTestCase {
                 return
             }
 
+            // SWELL is a seated/cognitive dataset — use desk mode
             let result = engine.computeStress(
                 currentHRV: observation.sdnn,
                 baselineHRV: baseline.hrvMean,
                 baselineHRVSD: baseline.hrvSD,
                 currentRHR: observation.hr,
                 baselineRHR: baseline.hrMean,
-                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil
+                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil,
+                mode: .desk
             )
 
             let score = result.score
@@ -968,6 +970,19 @@ final class DatasetValidationTests: XCTestCase {
 
         XCTAssertFalse(subjectBaselines.isEmpty, "Could not derive WESAD subject baselines")
 
+        // Raw signal diagnostics
+        let bHR = baselineObservations.map(\.hr)
+        let sHR = stressObservations.map(\.hr)
+        let bSDNN = baselineObservations.map(\.sdnn)
+        let sSDNN = stressObservations.map(\.sdnn)
+        if !bHR.isEmpty && !sHR.isEmpty {
+            print("=== WESAD Raw Signal Diagnostics ===")
+            print("Baseline HR: mean=\(String(format: "%.1f", bHR.reduce(0,+)/Double(bHR.count)))")
+            print("Stressed HR: mean=\(String(format: "%.1f", sHR.reduce(0,+)/Double(sHR.count)))")
+            print("Baseline SDNN: mean=\(String(format: "%.1f", bSDNN.reduce(0,+)/Double(bSDNN.count)))")
+            print("Stressed SDNN: mean=\(String(format: "%.1f", sSDNN.reduce(0,+)/Double(sSDNN.count)))")
+        }
+
         var stressScores: [Double] = []
         var baselineScores: [Double] = []
         var variantAccumulators: [StressDiagnosticVariant: StressVariantAccumulator] = Dictionary(
@@ -978,13 +993,16 @@ final class DatasetValidationTests: XCTestCase {
         for observation in stressObservations + baselineObservations {
             guard let baseline = subjectBaselines[observation.subjectID] else { continue }
 
+            // WESAD E4 wrist-sensor signals behave like desk (HR drops,
+            // SDNN rises during TSST due to BVP artifact characteristics)
             let result = engine.computeStress(
                 currentHRV: observation.sdnn,
                 baselineHRV: baseline.hrvMean,
                 baselineHRVSD: baseline.hrvSD,
                 currentRHR: observation.hr,
                 baselineRHR: baseline.hrMean,
-                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil
+                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil,
+                mode: .desk
             )
 
             switch observation.label {
@@ -1541,7 +1559,6 @@ final class DatasetValidationTests: XCTestCase {
         sdnn: Double,
         baseline: StressSubjectBaseline
     ) -> Double {
-        let hrvRawScore: Double
         let logCurrent = log(max(sdnn, 1.0))
         let logBaseline = log(max(baseline.hrvMean, 1.0))
         let logSD: Double
@@ -1550,13 +1567,20 @@ final class DatasetValidationTests: XCTestCase {
         } else {
             logSD = 0.20
         }
-        let hrvZScore: Double
+
+        // Directional z-score (acute: lower HRV = more stress)
+        let directionalZ: Double
         if logSD > 0 {
-            hrvZScore = (logBaseline - logCurrent) / logSD
+            directionalZ = (logBaseline - logCurrent) / logSD
         } else {
-            hrvZScore = logCurrent < logBaseline ? 2.0 : -1.0
+            directionalZ = logCurrent < logBaseline ? 2.0 : -1.0
         }
-        hrvRawScore = 35.0 + hrvZScore * 20.0
+
+        let isDesk = variant == .deskBranch || variant == .deskBranchDamped
+
+        // Desk: bidirectional (any deviation = cognitive load)
+        let hrvZScore = isDesk ? abs(directionalZ) : directionalZ
+        let hrvRawScore = 35.0 + hrvZScore * 20.0
 
         var cvRawScore = 50.0
         if baseline.recentBaselineHRVs.count >= 3 {
@@ -1570,9 +1594,15 @@ final class DatasetValidationTests: XCTestCase {
             }
         }
 
+        // Desk: inverted RHR (HR dropping = cognitive engagement)
         var rhrRawScore = 50.0
         if baseline.hrMean > 0 {
-            let rhrDeviation = (hr - baseline.hrMean) / baseline.hrMean * 100.0
+            let rhrDeviation: Double
+            if isDesk {
+                rhrDeviation = (baseline.hrMean - hr) / baseline.hrMean * 100.0
+            } else {
+                rhrDeviation = (hr - baseline.hrMean) / baseline.hrMean * 100.0
+            }
             rhrRawScore = max(0, min(100, 40.0 + rhrDeviation * 4.0))
         }
 

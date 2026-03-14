@@ -96,8 +96,8 @@ targets:
           - "**/*.md"
           # SIGSEGV: String(format: "%s") crash in testFullComparisonSummary
           - "AlgorithmComparisonTests.swift"
-          # Dataset validation needs external CSV files
-          - "Validation/DatasetValidationTests.swift"
+          # Dataset validation needs external CSV files — uncomment to skip:
+          # - "Validation/DatasetValidationTests.swift"
           - "Validation/Data/**"
     dependencies:
       - target: Thump

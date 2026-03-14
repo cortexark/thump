@@ -451,10 +451,12 @@ final class StressViewModel: ObservableObject {
     private func injectRecoveryActionIfNeeded() {
         guard let today = history.last else { return }
 
-        let stressScore: Double? = currentStress.map { s in s.score > 60 ? 70.0 : 25.0 }
+        let stressScore: Double? = currentStress?.score
+        let stressConfidence: StressConfidence? = currentStress?.confidence
         guard let readiness = ReadinessEngine().compute(
             snapshot: today,
             stressScore: stressScore,
+            stressConfidence: stressConfidence,
             recentHistory: Array(history.dropLast())
         ) else { return }
 

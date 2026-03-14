@@ -55,9 +55,10 @@ public struct StressEngine: Sendable {
     private let acuteCVWeight: Double = 0.20
 
     // Desk branch weights (HRV-primary, for seated/cognitive contexts)
-    private let deskRHRWeight: Double = 0.10
-    private let deskHRVWeight: Double = 0.55
-    private let deskCVWeight: Double = 0.35
+    // RHR inverted in desk mode (HR drop = cognitive engagement)
+    private let deskRHRWeight: Double = 0.20
+    private let deskHRVWeight: Double = 0.50
+    private let deskCVWeight: Double = 0.30
 
     /// Sigmoid steepness — higher = sharper transition around midpoint.
     private let sigmoidK: Double = 0.08
@@ -174,7 +175,8 @@ public struct StressEngine: Sendable {
         baselineHRVSD: Double? = nil,
         currentRHR: Double? = nil,
         baselineRHR: Double? = nil,
-        recentHRVs: [Double]? = nil
+        recentHRVs: [Double]? = nil,
+        mode: StressMode = .acute
     ) -> StressResult {
         computeStressWithMode(
             currentHRV: currentHRV,
@@ -183,7 +185,7 @@ public struct StressEngine: Sendable {
             currentRHR: currentRHR,
             baselineRHR: baselineRHR,
             recentHRVs: recentHRVs,
-            mode: .acute
+            mode: mode
         )
     }
 
@@ -209,6 +211,8 @@ public struct StressEngine: Sendable {
         }
 
         // ── Signal 1: HRV Z-score ────────────────────────────────────
+        // Acute: directional — lower HRV = higher stress (sympathetic)
+        // Desk:  bidirectional — any deviation from baseline = cognitive load
         let hrvRawScore: Double
         if useLogSDNN {
             let logCurrent = log(max(currentHRV, 1.0))
@@ -221,20 +225,31 @@ public struct StressEngine: Sendable {
             }
             let zScore: Double
             if logSD > 0 {
-                zScore = (logBaseline - logCurrent) / logSD
+                let directionalZ = (logBaseline - logCurrent) / logSD
+                zScore = mode == .desk ? abs(directionalZ) : directionalZ
             } else {
-                zScore = logCurrent < logBaseline ? 2.0 : -1.0
+                zScore = logCurrent < logBaseline ? 2.0 : (mode == .desk ? 2.0 : -1.0)
             }
-            hrvRawScore = 35.0 + zScore * 20.0
+            if mode == .desk {
+                // Desk: lower offset so baseline (z≈0) stays low, deviations separate
+                hrvRawScore = 20.0 + zScore * 30.0
+            } else {
+                hrvRawScore = 35.0 + zScore * 20.0
+            }
         } else {
             let sd = baselineHRVSD ?? (baselineHRV * 0.20)
             let zScore: Double
             if sd > 0 {
-                zScore = (baselineHRV - currentHRV) / sd
+                let directionalZ = (baselineHRV - currentHRV) / sd
+                zScore = mode == .desk ? abs(directionalZ) : directionalZ
             } else {
-                zScore = currentHRV < baselineHRV ? 2.0 : -1.0
+                zScore = currentHRV < baselineHRV ? 2.0 : (mode == .desk ? 2.0 : -1.0)
             }
-            hrvRawScore = 35.0 + zScore * 20.0
+            if mode == .desk {
+                hrvRawScore = 20.0 + zScore * 30.0
+            } else {
+                hrvRawScore = 35.0 + zScore * 20.0
+            }
         }
 
         // ── Signal 2: Coefficient of Variation ───────────────────────
@@ -250,9 +265,17 @@ public struct StressEngine: Sendable {
         }
 
         // ── Signal 3: RHR Deviation ──────────────────────────────────
+        // Acute: HR rising above baseline = stress
+        // Desk:  HR dropping below baseline = cognitive engagement = stress
         var rhrRawScore: Double = 50.0
         if let rhr = currentRHR, let baseRHR = baselineRHR, baseRHR > 0 {
-            let rhrDeviation = (rhr - baseRHR) / baseRHR * 100.0
+            let rhrDeviation: Double
+            if mode == .desk {
+                // Invert: lower HR during desk work indicates cognitive load
+                rhrDeviation = (baseRHR - rhr) / baseRHR * 100.0
+            } else {
+                rhrDeviation = (rhr - baseRHR) / baseRHR * 100.0
+            }
             rhrRawScore = max(0, min(100, 40.0 + rhrDeviation * 4.0))
         }
 

@@ -1,7 +1,7 @@
 {
   "categories" : [
-    "rest",
     "moderate",
+    "rest",
     "celebrate"
   ],
   "priorities" : [
@@ -12,14 +12,14 @@
   "readinessScore" : 39,
   "recCount" : 3,
   "sources" : [
-    "readinessEngine",
     "weekOverWeek",
+    "readinessEngine",
     "general"
   ],
   "stressScore" : 53.037525351028115,
   "titles" : [
-    "Low readiness today",
     "RHR is slightly above your normal",
+    "Low readiness today",
     "Looking good today"
   ]
 }
