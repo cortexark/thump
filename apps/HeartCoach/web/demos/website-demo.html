@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thump — Website Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300..700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #0B0E13;
+  --bg-surface: #12161D;
+  --bg-card: #181D26;
+  --bg-elevated: #1E2430;
+  --border-subtle: rgba(255,255,255,0.06);
+  --coral: #FF6B5A;
+  --coral-light: #FF8E7A;
+  --amber: #FFB347;
+  --gold: #FFD93D;
+  --mint: #4ECDC4;
+  --lavender: #B8A9E8;
+  --rose: #FF6B8A;
+  --text-primary: #F0F2F5;
+  --text-secondary: #9BA3B0;
+  --text-muted: #5C6370;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, sans-serif;
+}
+
+body {
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+/* Browser Frame */
+.browser-frame {
+  width: 960px;
+  height: 540px;
+  background: var(--bg-deep);
+  border-radius: 12px;
+  border: 1px solid #3A3A3E;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,0.6);
+}
+
+.browser-toolbar {
+  height: 36px;
+  background: #1C1C1E;
+  border-bottom: 1px solid #3A3A3E;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+}
+.browser-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.dot-red { background: #FF5F57; }
+.dot-yellow { background: #FEBC2E; }
+.dot-green { background: #28C840; }
+.browser-url {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  padding: 4px 0;
+  margin: 0 60px;
+}
+
+/* Page Content — auto-scrolls */
+.page-viewport {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+.page-content {
+  width: 100%;
+  animation: autoScroll 14s 1s ease-in-out forwards;
+}
+@keyframes autoScroll {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(0); }
+  50% { transform: translateY(-504px); }
+  75% { transform: translateY(-504px); }
+  100% { transform: translateY(-1008px); }
+}
+
+/* ═══ SECTION 1: Hero ═══ */
+.hero {
+  height: 504px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255,107,90,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  font-size: 11px;
+  color: var(--coral);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  opacity: 0;
+  animation: fadeInUp 0.6s 1.5s ease-out forwards;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: 72px;
+  line-height: 1;
+  margin-bottom: 12px;
+  opacity: 0;
+  animation: fadeInUp 0.8s 1.8s ease-out forwards;
+}
+.hero-title span {
+  background: linear-gradient(135deg, var(--coral), var(--amber), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-tagline {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-style: italic;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeInUp 0.6s 2.3s ease-out forwards;
+}
+
+.hero-desc {
+  font-size: 16px;
+  color: var(--text-muted);
+  max-width: 500px;
+  line-height: 1.5;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeInUp 0.6s 2.6s ease-out forwards;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 12px;
+  opacity: 0;
+  animation: fadeInUp 0.6s 2.9s ease-out forwards;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ SECTION 2: Features ═══ */
+.features-section {
+  height: 504px;
+  padding: 60px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.features-label {
+  font-size: 12px;
+  color: var(--coral);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.features-title {
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--text-primary);
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 800px;
+}
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  transition: transform 0.3s, border-color 0.3s;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255,107,90,0.2);
+}
+.feat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin: 0 auto 12px;
+}
+.feat-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.feat-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ═══ SECTION 3: Device Showcase ═══ */
+.showcase-section {
+  height: 504px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  padding: 40px;
+  position: relative;
+}
+.showcase-section::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 400px;
+  background: radial-gradient(ellipse at bottom, rgba(255,107,90,0.06), transparent 70%);
+  pointer-events: none;
+}
+
+/* Mini iPhone */
+.mini-phone {
+  width: 180px;
+  height: 380px;
+  background: var(--bg-deep);
+  border-radius: 28px;
+  border: 2px solid #2A2A2E;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.mini-phone-notch {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 18px;
+  background: #000;
+  border-radius: 10px;
+  z-index: 10;
+}
+.mini-phone-screen {
+  padding: 30px 12px 12px;
+  text-align: center;
+}
+.mini-score {
+  font-family: var(--font-display);
+  font-size: 42px;
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  margin: 10px 0 4px;
+}
+.mini-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+.mini-buddy {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--coral-light), var(--coral));
+  margin: 12px auto 0;
+  box-shadow: 0 0 15px rgba(255,107,90,0.3);
+  animation: wBuddyPulse 3s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+@keyframes wBuddyPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.mini-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 12px;
+}
+.mini-tile {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 8px 4px;
+  text-align: center;
+}
+.mini-tile-val { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.mini-tile-lbl { font-size: 7px; color: var(--text-muted); }
+
+/* Mini Watch */
+.mini-watch {
+  width: 100px;
+  height: 122px;
+  background: var(--bg-deep);
+  border-radius: 26px;
+  border: 2px solid #3A3A3E;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.mini-watch-crown {
+  position: absolute;
+  right: -5px;
+  top: 36px;
+  width: 4px;
+  height: 16px;
+  background: #3A3A3E;
+  border-radius: 2px;
+}
+.mini-watch-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 8px;
+}
+.mini-w-score {
+  font-family: var(--font-display);
+  font-size: 28px;
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+.mini-w-label {
+  font-size: 7px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.mini-w-status {
+  font-size: 8px;
+  color: var(--mint);
+  font-weight: 600;
+  margin-top: 4px;
+  padding: 2px 6px;
+  background: rgba(78,205,196,0.1);
+  border-radius: 4px;
+}
+
+.showcase-text {
+  text-align: left;
+  max-width: 280px;
+}
+.showcase-text h3 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  line-height: 1.1;
+}
+.showcase-text p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.showcase-stats {
+  display: flex;
+  gap: 20px;
+}
+.showcase-stat-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--coral);
+}
+.showcase-stat-lbl {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+</style>
+</head>
+<body>
+
+<div class="browser-frame">
+  <div class="browser-toolbar">
+    <div class="browser-dot dot-red"></div>
+    <div class="browser-dot dot-yellow"></div>
+    <div class="browser-dot dot-green"></div>
+    <div class="browser-url">thump.app</div>
+  </div>
+
+  <div class="page-viewport">
+    <div class="page-content">
+
+      <!-- SECTION 1: Hero -->
+      <div class="hero">
+        <div class="hero-badge">iOS + Apple Watch</div>
+        <div class="hero-title"><span>Thump</span></div>
+        <div class="hero-tagline">Your Heart Training Buddy</div>
+        <div class="hero-desc">
+          Your Apple Watch becomes a personal heart training buddy. Thousands of daily data points transformed into insights that check in on you at the right moment.
+        </div>
+        <div class="hero-cta">
+          <button class="btn-primary">Download on App Store</button>
+          <button class="btn-secondary">Learn More</button>
+        </div>
+      </div>
+
+      <!-- SECTION 2: Features -->
+      <div class="features-section">
+        <div class="features-label">Features</div>
+        <div class="features-title">Everything your heart needs</div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feat-icon" style="background: rgba(255,107,90,0.12);">&#x2764;&#xFE0F;</div>
+            <div class="feat-name">Cardio Score</div>
+            <div class="feat-desc">One number that captures your cardiovascular fitness, updated daily</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-icon" style="background: rgba(78,205,196,0.12);">&#x1F9E0;</div>
+            <div class="feat-name">Stress Detection</div>
+            <div class="feat-desc">HRV-based stress tracking with calendar heatmaps and breathing prompts</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-icon" style="background: rgba(184,169,232,0.12);">&#x1F4CA;</div>
+            <div class="feat-name">Smart Insights</div>
+            <div class="feat-desc">Discover how your habits affect your heart with activity-health correlations</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-icon" style="background: rgba(255,211,61,0.12);">&#x1F4C8;</div>
+            <div class="feat-name">Health Trends</div>
+            <div class="feat-desc">30-day charts with narrative insights showing your progress over time</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-icon" style="background: rgba(255,107,138,0.12);">&#x1F3AF;</div>
+            <div class="feat-name">Daily Coaching</div>
+            <div class="feat-desc">Personalized nudges at the right moment based on your readiness level</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-icon" style="background: rgba(78,205,196,0.12);">&#x231A;</div>
+            <div class="feat-name">Watch First</div>
+            <div class="feat-desc">Glanceable insights on your wrist with complications and quick actions</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: Device Showcase -->
+      <div class="showcase-section">
+        <div class="mini-phone">
+          <div class="mini-phone-notch"></div>
+          <div class="mini-phone-screen">
+            <div class="mini-buddy">:-)</div>
+            <div class="mini-score">78</div>
+            <div class="mini-label">Cardio Score</div>
+            <div class="mini-tiles">
+              <div class="mini-tile">
+                <div class="mini-tile-val" style="color: var(--mint);">42</div>
+                <div class="mini-tile-lbl">HRV</div>
+              </div>
+              <div class="mini-tile">
+                <div class="mini-tile-val" style="color: var(--coral);">58</div>
+                <div class="mini-tile-lbl">RHR</div>
+              </div>
+              <div class="mini-tile">
+                <div class="mini-tile-val" style="color: var(--lavender);">7.2</div>
+                <div class="mini-tile-lbl">Sleep</div>
+              </div>
+              <div class="mini-tile">
+                <div class="mini-tile-val" style="color: var(--gold);">8.4k</div>
+                <div class="mini-tile-lbl">Steps</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-text">
+          <h3>Built for your wrist and pocket</h3>
+          <p>Seamless sync between iPhone and Apple Watch. Your heart data follows you everywhere, with glanceable insights when you need them most.</p>
+          <div class="showcase-stats">
+            <div>
+              <div class="showcase-stat-val">7</div>
+              <div class="showcase-stat-lbl">Health Engines</div>
+            </div>
+            <div>
+              <div class="showcase-stat-val">20</div>
+              <div class="showcase-stat-lbl">Persona Profiles</div>
+            </div>
+            <div>
+              <div class="showcase-stat-val">336+</div>
+              <div class="showcase-stat-lbl">Tests Passing</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mini-watch">
+          <div class="mini-watch-crown"></div>
+          <div class="mini-watch-screen">
+            <div class="mini-w-score">78</div>
+            <div class="mini-w-label">Cardio</div>
+            <div class="mini-w-status">Ready</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
