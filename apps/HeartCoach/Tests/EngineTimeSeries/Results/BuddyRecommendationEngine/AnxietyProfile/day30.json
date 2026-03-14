@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "rest",
+    "celebrate"
+  ],
+  "priorities" : [
+    3,
+    1
+  ],
+  "readinessScore" : 51,
+  "recCount" : 2,
+  "sources" : [
+    "trendEngine",
+    "stressEngine"
+  ],
+  "stressScore" : 28.705644128636823,
+  "titles" : [
+    "A gradual shift in your metrics",
+    "Low stress — great day so far"
+  ]
+}

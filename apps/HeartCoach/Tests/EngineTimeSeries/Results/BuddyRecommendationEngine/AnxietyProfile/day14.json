@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "rest",
+    "celebrate"
+  ],
+  "priorities" : [
+    2,
+    1
+  ],
+  "readinessScore" : 61,
+  "recCount" : 2,
+  "sources" : [
+    "sleepPattern",
+    "stressEngine"
+  ],
+  "stressScore" : 32.153235661519091,
+  "titles" : [
+    "Short on sleep",
+    "Low stress — great day so far"
+  ]
+}

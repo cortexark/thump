@@ -1,0 +1,17 @@
+{
+  "categories" : [
+    "rest"
+  ],
+  "priorities" : [
+    2
+  ],
+  "readinessScore" : 39,
+  "recCount" : 1,
+  "sources" : [
+    "readinessEngine"
+  ],
+  "stressScore" : 58.513138663956035,
+  "titles" : [
+    "Low readiness today"
+  ]
+}

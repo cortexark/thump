@@ -1,0 +1,17 @@
+{
+  "categories" : [
+    "rest"
+  ],
+  "priorities" : [
+    3
+  ],
+  "readinessScore" : 78,
+  "recCount" : 1,
+  "sources" : [
+    "scenarioDetection"
+  ],
+  "stressScore" : 35.526670073298,
+  "titles" : [
+    "Let's turn things around"
+  ]
+}

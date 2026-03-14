@@ -1,0 +1,21 @@
+{
+  "corr_0_beneficial" : true,
+  "corr_0_confidence" : "low",
+  "corr_0_factor" : "Daily Steps",
+  "corr_0_r" : -0.056119156248990658,
+  "corr_1_beneficial" : true,
+  "corr_1_confidence" : "low",
+  "corr_1_factor" : "Walk Minutes",
+  "corr_1_r" : 0.15927706845764386,
+  "corr_2_beneficial" : false,
+  "corr_2_confidence" : "low",
+  "corr_2_factor" : "Activity Minutes",
+  "corr_2_r" : -0.23989114655789262,
+  "corr_3_beneficial" : false,
+  "corr_3_confidence" : "low",
+  "corr_3_factor" : "Sleep Hours",
+  "corr_3_r" : -0.22246140777242232,
+  "correlationCount" : 4,
+  "day" : 20,
+  "snapshotCount" : 20
+}

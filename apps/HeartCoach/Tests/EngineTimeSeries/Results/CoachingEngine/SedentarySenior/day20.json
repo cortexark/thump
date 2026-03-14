@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your resting heart rate is trending in the right direction. Keep going!",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "improving",
+    "stable",
+    "stable",
+    "stable",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 1,
+  "streakDays" : 0,
+  "weeklyProgressScore" : 60
+}

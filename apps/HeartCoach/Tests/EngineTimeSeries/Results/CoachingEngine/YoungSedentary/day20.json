@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your HRV is trending in the right direction. Keep going!",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "improving",
+    "stable",
+    "stable",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 1,
+  "streakDays" : 3,
+  "weeklyProgressScore" : 72
+}

@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "breathe",
+    "rest"
+  ],
+  "priorities" : [
+    3,
+    3
+  ],
+  "readinessScore" : 15,
+  "recCount" : 2,
+  "sources" : [
+    "stressEngine",
+    "trendEngine"
+  ],
+  "stressScore" : 67.126030448146352,
+  "titles" : [
+    "Stress is running high today",
+    "A gradual shift in your metrics"
+  ]
+}

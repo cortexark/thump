@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your activity level is trending in the right direction. Keep going!",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "stable",
+    "improving",
+    "stable",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 1,
+  "streakDays" : 0,
+  "weeklyProgressScore" : 63
+}

@@ -1,0 +1,17 @@
+{
+  "categories" : [
+    "rest"
+  ],
+  "priorities" : [
+    2
+  ],
+  "readinessScore" : 44,
+  "recCount" : 1,
+  "sources" : [
+    "sleepPattern"
+  ],
+  "stressScore" : 38.604430729239681,
+  "titles" : [
+    "Short on sleep"
+  ]
+}

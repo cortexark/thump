@@ -48,6 +48,8 @@ final class DatasetValidationTests: XCTestCase {
         case noRHR
         case subjectNormalizedNoRHR
         case hrvOnly
+        case deskBranch
+        case deskBranchDamped
 
         var displayName: String {
             switch self {
@@ -58,6 +60,8 @@ final class DatasetValidationTests: XCTestCase {
             case .noRHR: return "no-rhr"
             case .subjectNormalizedNoRHR: return "subject-norm-no-rhr"
             case .hrvOnly: return "hrv-only"
+            case .deskBranch: return "desk-branch"
+            case .deskBranchDamped: return "desk-branch+damped"
             }
         }
     }
@@ -380,13 +384,15 @@ final class DatasetValidationTests: XCTestCase {
                 return
             }
 
+            // SWELL is a seated/cognitive dataset — use desk mode
             let result = engine.computeStress(
                 currentHRV: observation.sdnn,
                 baselineHRV: baseline.hrvMean,
                 baselineHRVSD: baseline.hrvSD,
                 currentRHR: observation.hr,
                 baselineRHR: baseline.hrMean,
-                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil
+                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil,
+                mode: .desk
             )
 
             let score = result.score
@@ -404,7 +410,8 @@ final class DatasetValidationTests: XCTestCase {
                 switch variant {
                 case .full:
                     variantScore = score
-                case .rhrOnly, .lowRHR, .gatedRHR, .noRHR, .subjectNormalizedNoRHR, .hrvOnly:
+                case .rhrOnly, .lowRHR, .gatedRHR, .noRHR, .subjectNormalizedNoRHR, .hrvOnly,
+                     .deskBranch, .deskBranchDamped:
                     variantScore = diagnosticStressScore(
                         variant: variant,
                         hr: observation.hr,
@@ -476,6 +483,22 @@ final class DatasetValidationTests: XCTestCase {
                 + "TN=\(overallMetrics.confusion.tn) FN=\(overallMetrics.confusion.fn)"
         )
 
+        // FP/FN export summary
+        do {
+            let cm = overallMetrics.confusion
+            let precision = cm.tp + cm.fp > 0 ? Double(cm.tp) / Double(cm.tp + cm.fp) : 0
+            let recall = cm.tp + cm.fn > 0 ? Double(cm.tp) / Double(cm.tp + cm.fn) : 0
+            let fpRate = cm.fp + cm.tn > 0 ? Double(cm.fp) / Double(cm.fp + cm.tn) : 0
+            let fnRate = cm.tp + cm.fn > 0 ? Double(cm.fn) / Double(cm.tp + cm.fn) : 0
+            let f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0
+            print("=== FP/FN Summary ===")
+            print("Precision = \(String(format: "%.3f", precision))")
+            print("Recall    = \(String(format: "%.3f", recall))")
+            print("F1        = \(String(format: "%.3f", f1))")
+            print("FP rate   = \(String(format: "%.3f", fpRate)) (\(cm.fp) baseline rows scored ≥50)")
+            print("FN rate   = \(String(format: "%.3f", fnRate)) (\(cm.fn) stressed rows scored <50)")
+        }
+
         print("=== Condition Breakdown ===")
         for (condition, metrics) in conditionMetrics {
             print(
@@ -494,12 +517,18 @@ final class DatasetValidationTests: XCTestCase {
                 stressedScores: accumulator.stressedScores,
                 baselineScores: accumulator.baselineScores
             )
+            let cm = metrics.confusion
+            let prec = cm.tp + cm.fp > 0 ? Double(cm.tp) / Double(cm.tp + cm.fp) : 0
+            let rec = cm.tp + cm.fn > 0 ? Double(cm.tp) / Double(cm.tp + cm.fn) : 0
             print(
                 "\(variant.displayName): "
                     + "baseline=\(String(format: "%.1f", metrics.baselineMean)), "
                     + "stressed=\(String(format: "%.1f", metrics.stressedMean)), "
                     + "d=\(String(format: "%.2f", metrics.cohensD)), "
-                    + "auc=\(String(format: "%.3f", metrics.auc))"
+                    + "auc=\(String(format: "%.3f", metrics.auc)), "
+                    + "P=\(String(format: "%.2f", prec)), "
+                    + "R=\(String(format: "%.2f", rec)), "
+                    + "FP=\(cm.fp), FN=\(cm.fn)"
             )
         }
 
@@ -694,7 +723,8 @@ final class DatasetValidationTests: XCTestCase {
                 switch variant {
                 case .full:
                     variantScore = result.score
-                case .rhrOnly, .lowRHR, .gatedRHR, .noRHR, .subjectNormalizedNoRHR, .hrvOnly:
+                case .rhrOnly, .lowRHR, .gatedRHR, .noRHR, .subjectNormalizedNoRHR, .hrvOnly,
+                     .deskBranch, .deskBranchDamped:
                     variantScore = diagnosticStressScore(
                         variant: variant,
                         hr: observation.hr,
@@ -751,6 +781,22 @@ final class DatasetValidationTests: XCTestCase {
                 + "TN=\(overallMetrics.confusion.tn) FN=\(overallMetrics.confusion.fn)"
         )
 
+        // FP/FN export summary
+        do {
+            let cm = overallMetrics.confusion
+            let precision = cm.tp + cm.fp > 0 ? Double(cm.tp) / Double(cm.tp + cm.fp) : 0
+            let recall = cm.tp + cm.fn > 0 ? Double(cm.tp) / Double(cm.tp + cm.fn) : 0
+            let fpRate = cm.fp + cm.tn > 0 ? Double(cm.fp) / Double(cm.fp + cm.tn) : 0
+            let fnRate = cm.tp + cm.fn > 0 ? Double(cm.fn) / Double(cm.tp + cm.fn) : 0
+            let f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0
+            print("=== FP/FN Summary ===")
+            print("Precision = \(String(format: "%.3f", precision))")
+            print("Recall    = \(String(format: "%.3f", recall))")
+            print("F1        = \(String(format: "%.3f", f1))")
+            print("FP rate   = \(String(format: "%.3f", fpRate)) (\(cm.fp) recovery windows scored ≥50)")
+            print("FN rate   = \(String(format: "%.3f", fnRate)) (\(cm.fn) stress windows scored <50)")
+        }
+
         print("=== Variant Ablation ===")
         for variant in StressDiagnosticVariant.allCases {
             guard let accumulator = variantAccumulators[variant] else { continue }
@@ -758,12 +804,18 @@ final class DatasetValidationTests: XCTestCase {
                 stressedScores: accumulator.stressedScores,
                 baselineScores: accumulator.baselineScores
             )
+            let cm = metrics.confusion
+            let prec = cm.tp + cm.fp > 0 ? Double(cm.tp) / Double(cm.tp + cm.fp) : 0
+            let rec = cm.tp + cm.fn > 0 ? Double(cm.tp) / Double(cm.tp + cm.fn) : 0
             print(
                 "\(variant.displayName): "
                     + "baseline=\(String(format: "%.1f", metrics.baselineMean)), "
                     + "stressed=\(String(format: "%.1f", metrics.stressedMean)), "
                     + "d=\(String(format: "%.2f", metrics.cohensD)), "
-                    + "auc=\(String(format: "%.3f", metrics.auc))"
+                    + "auc=\(String(format: "%.3f", metrics.auc)), "
+                    + "P=\(String(format: "%.2f", prec)), "
+                    + "R=\(String(format: "%.2f", rec)), "
+                    + "FP=\(cm.fp), FN=\(cm.fn)"
             )
         }
 
@@ -918,6 +970,19 @@ final class DatasetValidationTests: XCTestCase {
 
         XCTAssertFalse(subjectBaselines.isEmpty, "Could not derive WESAD subject baselines")
 
+        // Raw signal diagnostics
+        let bHR = baselineObservations.map(\.hr)
+        let sHR = stressObservations.map(\.hr)
+        let bSDNN = baselineObservations.map(\.sdnn)
+        let sSDNN = stressObservations.map(\.sdnn)
+        if !bHR.isEmpty && !sHR.isEmpty {
+            print("=== WESAD Raw Signal Diagnostics ===")
+            print("Baseline HR: mean=\(String(format: "%.1f", bHR.reduce(0,+)/Double(bHR.count)))")
+            print("Stressed HR: mean=\(String(format: "%.1f", sHR.reduce(0,+)/Double(sHR.count)))")
+            print("Baseline SDNN: mean=\(String(format: "%.1f", bSDNN.reduce(0,+)/Double(bSDNN.count)))")
+            print("Stressed SDNN: mean=\(String(format: "%.1f", sSDNN.reduce(0,+)/Double(sSDNN.count)))")
+        }
+
         var stressScores: [Double] = []
         var baselineScores: [Double] = []
         var variantAccumulators: [StressDiagnosticVariant: StressVariantAccumulator] = Dictionary(
@@ -928,13 +993,16 @@ final class DatasetValidationTests: XCTestCase {
         for observation in stressObservations + baselineObservations {
             guard let baseline = subjectBaselines[observation.subjectID] else { continue }
 
+            // WESAD E4 wrist-sensor signals behave like desk (HR drops,
+            // SDNN rises during TSST due to BVP artifact characteristics)
             let result = engine.computeStress(
                 currentHRV: observation.sdnn,
                 baselineHRV: baseline.hrvMean,
                 baselineHRVSD: baseline.hrvSD,
                 currentRHR: observation.hr,
                 baselineRHR: baseline.hrMean,
-                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil
+                recentHRVs: baseline.recentBaselineHRVs.count >= 3 ? baseline.recentBaselineHRVs : nil,
+                mode: .desk
             )
 
             switch observation.label {
@@ -949,7 +1017,8 @@ final class DatasetValidationTests: XCTestCase {
                 switch variant {
                 case .full:
                     variantScore = result.score
-                case .rhrOnly, .lowRHR, .gatedRHR, .noRHR, .subjectNormalizedNoRHR, .hrvOnly:
+                case .rhrOnly, .lowRHR, .gatedRHR, .noRHR, .subjectNormalizedNoRHR, .hrvOnly,
+                     .deskBranch, .deskBranchDamped:
                     variantScore = diagnosticStressScore(
                         variant: variant,
                         hr: observation.hr,
@@ -1006,6 +1075,22 @@ final class DatasetValidationTests: XCTestCase {
                 + "TN=\(overallMetrics.confusion.tn) FN=\(overallMetrics.confusion.fn)"
         )
 
+        // FP/FN export summary
+        do {
+            let cm = overallMetrics.confusion
+            let precision = cm.tp + cm.fp > 0 ? Double(cm.tp) / Double(cm.tp + cm.fp) : 0
+            let recall = cm.tp + cm.fn > 0 ? Double(cm.tp) / Double(cm.tp + cm.fn) : 0
+            let fpRate = cm.fp + cm.tn > 0 ? Double(cm.fp) / Double(cm.fp + cm.tn) : 0
+            let fnRate = cm.tp + cm.fn > 0 ? Double(cm.fn) / Double(cm.tp + cm.fn) : 0
+            let f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0
+            print("=== FP/FN Summary ===")
+            print("Precision = \(String(format: "%.3f", precision))")
+            print("Recall    = \(String(format: "%.3f", recall))")
+            print("F1        = \(String(format: "%.3f", f1))")
+            print("FP rate   = \(String(format: "%.3f", fpRate)) (\(cm.fp) baseline windows scored ≥50)")
+            print("FN rate   = \(String(format: "%.3f", fnRate)) (\(cm.fn) TSST windows scored <50)")
+        }
+
         print("=== Variant Ablation ===")
         for variant in StressDiagnosticVariant.allCases {
             guard let accumulator = variantAccumulators[variant] else { continue }
@@ -1013,12 +1098,18 @@ final class DatasetValidationTests: XCTestCase {
                 stressedScores: accumulator.stressedScores,
                 baselineScores: accumulator.baselineScores
             )
+            let cm = metrics.confusion
+            let prec = cm.tp + cm.fp > 0 ? Double(cm.tp) / Double(cm.tp + cm.fp) : 0
+            let rec = cm.tp + cm.fn > 0 ? Double(cm.tp) / Double(cm.tp + cm.fn) : 0
             print(
                 "\(variant.displayName): "
                     + "baseline=\(String(format: "%.1f", metrics.baselineMean)), "
                     + "stressed=\(String(format: "%.1f", metrics.stressedMean)), "
                     + "d=\(String(format: "%.2f", metrics.cohensD)), "
-                    + "auc=\(String(format: "%.3f", metrics.auc))"
+                    + "auc=\(String(format: "%.3f", metrics.auc)), "
+                    + "P=\(String(format: "%.2f", prec)), "
+                    + "R=\(String(format: "%.2f", rec)), "
+                    + "FP=\(cm.fp), FN=\(cm.fn)"
             )
         }
 
@@ -1468,7 +1559,6 @@ final class DatasetValidationTests: XCTestCase {
         sdnn: Double,
         baseline: StressSubjectBaseline
     ) -> Double {
-        let hrvRawScore: Double
         let logCurrent = log(max(sdnn, 1.0))
         let logBaseline = log(max(baseline.hrvMean, 1.0))
         let logSD: Double
@@ -1477,13 +1567,20 @@ final class DatasetValidationTests: XCTestCase {
         } else {
             logSD = 0.20
         }
-        let hrvZScore: Double
+
+        // Directional z-score (acute: lower HRV = more stress)
+        let directionalZ: Double
         if logSD > 0 {
-            hrvZScore = (logBaseline - logCurrent) / logSD
+            directionalZ = (logBaseline - logCurrent) / logSD
         } else {
-            hrvZScore = logCurrent < logBaseline ? 2.0 : -1.0
+            directionalZ = logCurrent < logBaseline ? 2.0 : -1.0
         }
-        hrvRawScore = 35.0 + hrvZScore * 20.0
+
+        let isDesk = variant == .deskBranch || variant == .deskBranchDamped
+
+        // Desk: bidirectional (any deviation = cognitive load)
+        let hrvZScore = isDesk ? abs(directionalZ) : directionalZ
+        let hrvRawScore = 35.0 + hrvZScore * 20.0
 
         var cvRawScore = 50.0
         if baseline.recentBaselineHRVs.count >= 3 {
@@ -1497,9 +1594,15 @@ final class DatasetValidationTests: XCTestCase {
             }
         }
 
+        // Desk: inverted RHR (HR dropping = cognitive engagement)
         var rhrRawScore = 50.0
         if baseline.hrMean > 0 {
-            let rhrDeviation = (hr - baseline.hrMean) / baseline.hrMean * 100.0
+            let rhrDeviation: Double
+            if isDesk {
+                rhrDeviation = (baseline.hrMean - hr) / baseline.hrMean * 100.0
+            } else {
+                rhrDeviation = (hr - baseline.hrMean) / baseline.hrMean * 100.0
+            }
             rhrRawScore = max(0, min(100, 40.0 + rhrDeviation * 4.0))
         }
 
@@ -1532,6 +1635,21 @@ final class DatasetValidationTests: XCTestCase {
                 : subjectNormalizedHRVScore
         case .hrvOnly:
             rawComposite = hrvRawScore
+        case .deskBranch:
+            // Desk-branch weights: RHR 10%, HRV 55%, CV 35%
+            rawComposite = hrvRawScore * 0.55 + cvRawScore * 0.35 + rhrRawScore * 0.10
+        case .deskBranchDamped:
+            // Desk-branch weights + disagreement damping
+            let deskRaw = hrvRawScore * 0.55 + cvRawScore * 0.35 + rhrRawScore * 0.10
+            let rhrStress = rhrRawScore > 60.0
+            let hrvStress = hrvRawScore > 60.0
+            let cvStable = cvRawScore < 40.0
+            let disagree = rhrStress && !hrvStress && cvStable
+            if disagree {
+                rawComposite = deskRaw * 0.70 + 50.0 * 0.30
+            } else {
+                rawComposite = deskRaw
+            }
         }
 
         return 100.0 / (1.0 + exp(-0.08 * (rawComposite - 50.0)))
