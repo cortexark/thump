@@ -1,8 +1,8 @@
 {
   "categories" : [
     "rest",
-    "celebrate",
-    "walk"
+    "walk",
+    "celebrate"
   ],
   "priorities" : [
     3,
@@ -13,13 +13,13 @@
   "recCount" : 3,
   "sources" : [
     "trendEngine",
-    "scenarioDetection",
-    "readinessEngine"
+    "readinessEngine",
+    "scenarioDetection"
   ],
   "stressScore" : 17.413075088385696,
   "titles" : [
     "A gradual shift in your metrics",
-    "Keep up the good work",
-    "High readiness — great day to train"
+    "High readiness — great day to train",
+    "Keep up the good work"
   ]
 }
