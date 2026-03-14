@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "rest",
+    "moderate"
+  ],
+  "priorities" : [
+    3,
+    2
+  ],
+  "readinessScore" : 39,
+  "recCount" : 2,
+  "sources" : [
+    "scenarioDetection",
+    "weekOverWeek"
+  ],
+  "stressScore" : 61.048705910167975,
+  "titles" : [
+    "Let's turn things around",
+    "RHR is slightly above your normal"
+  ]
+}

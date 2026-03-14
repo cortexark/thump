@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "You're building a solid 3-day streak. Consistency is the key to lasting heart health improvements.",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "stable",
+    "stable",
+    "stable",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 2,
+  "streakDays" : 3,
+  "weeklyProgressScore" : 64
+}

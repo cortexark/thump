@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your activity level is improving — your 7-day streak is making a real difference!",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "stable",
+    "improving",
+    "stable",
+    "stable"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 2,
+  "streakDays" : 7,
+  "weeklyProgressScore" : 72
+}

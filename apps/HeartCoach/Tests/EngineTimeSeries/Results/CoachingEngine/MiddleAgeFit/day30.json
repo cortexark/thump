@@ -1,0 +1,23 @@
+{
+  "heroMessage" : "Your zone balance is improving — your 14-day streak is making a real difference!",
+  "insightCount" : 6,
+  "insightDirections" : [
+    "stable",
+    "stable",
+    "stable",
+    "stable",
+    "stable",
+    "improving"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max",
+    "zoneBalance"
+  ],
+  "projectionCount" : 2,
+  "streakDays" : 14,
+  "weeklyProgressScore" : 79
+}

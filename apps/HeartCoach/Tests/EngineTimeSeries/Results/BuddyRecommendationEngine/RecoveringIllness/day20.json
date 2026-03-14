@@ -1,0 +1,17 @@
+{
+  "categories" : [
+    "celebrate"
+  ],
+  "priorities" : [
+    1
+  ],
+  "readinessScore" : 74,
+  "recCount" : 1,
+  "sources" : [
+    "scenarioDetection"
+  ],
+  "stressScore" : 9.3580127573388001,
+  "titles" : [
+    "You bounced back nicely"
+  ]
+}

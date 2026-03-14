@@ -1,0 +1,25 @@
+{
+  "categories" : [
+    "rest",
+    "breathe",
+    "moderate"
+  ],
+  "priorities" : [
+    3,
+    3,
+    2
+  ],
+  "readinessScore" : 27,
+  "recCount" : 3,
+  "sources" : [
+    "scenarioDetection",
+    "stressEngine",
+    "weekOverWeek"
+  ],
+  "stressScore" : 76.326777115048884,
+  "titles" : [
+    "Let's turn things around",
+    "Stress is running high today",
+    "RHR is slightly above your normal"
+  ]
+}

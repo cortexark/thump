@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "rest",
+    "celebrate"
+  ],
+  "priorities" : [
+    2,
+    1
+  ],
+  "readinessScore" : 70,
+  "recCount" : 2,
+  "sources" : [
+    "sleepPattern",
+    "scenarioDetection"
+  ],
+  "stressScore" : 7.3662304065122282,
+  "titles" : [
+    "Short on sleep",
+    "You bounced back nicely"
+  ]
+}

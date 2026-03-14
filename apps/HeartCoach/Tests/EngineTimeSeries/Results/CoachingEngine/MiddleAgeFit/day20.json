@@ -1,0 +1,21 @@
+{
+  "heroMessage" : "Your heart recovery and cardio fitness are improving — your 14-day streak is making a real difference!",
+  "insightCount" : 5,
+  "insightDirections" : [
+    "stable",
+    "stable",
+    "stable",
+    "improving",
+    "improving"
+  ],
+  "insightMetrics" : [
+    "restingHR",
+    "hrv",
+    "activity",
+    "recovery",
+    "vo2Max"
+  ],
+  "projectionCount" : 2,
+  "streakDays" : 14,
+  "weeklyProgressScore" : 83
+}

@@ -1,0 +1,21 @@
+{
+  "categories" : [
+    "moderate",
+    "celebrate"
+  ],
+  "priorities" : [
+    2,
+    1
+  ],
+  "readinessScore" : 69,
+  "recCount" : 2,
+  "sources" : [
+    "weekOverWeek",
+    "scenarioDetection"
+  ],
+  "stressScore" : 35.014771071435696,
+  "titles" : [
+    "RHR is slightly above your normal",
+    "You bounced back nicely"
+  ]
+}
