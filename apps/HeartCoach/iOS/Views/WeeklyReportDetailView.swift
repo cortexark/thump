@@ -19,6 +19,20 @@ import UserNotifications
 /// reminder at its suggested hour.
 struct WeeklyReportDetailView: View {
 
+    // MARK: - Date Formatters (static to avoid per-render allocation)
+
+    private static let monthDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
+    private static let shortTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f
+    }()
+
     let report: WeeklyReport
     let plan: WeeklyActionPlan
 
@@ -468,9 +482,7 @@ struct WeeklyReportDetailView: View {
     // MARK: - Helpers
 
     private var dateRange: String {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MMM d"
-        return "\(fmt.string(from: plan.weekStart)) – \(fmt.string(from: plan.weekEnd))"
+        "\(Self.monthDayFormatter.string(from: plan.weekStart)) – \(Self.monthDayFormatter.string(from: plan.weekEnd))"
     }
 
     private func formattedHour(_ hour: Int) -> String {
@@ -479,10 +491,7 @@ struct WeeklyReportDetailView: View {
         components.minute = 0
         let cal = Calendar.current
         if let date = cal.date(from: components) {
-            let fmt = DateFormatter()
-            fmt.timeStyle = .short
-            fmt.dateStyle = .none
-            return fmt.string(from: date)
+            return Self.shortTimeFormatter.string(from: date)
         }
         return "\(hour):00"
     }

@@ -29,6 +29,15 @@ final class HealthKitService: ObservableObject {
     private let healthStore: HKHealthStore
     private let calendar = Calendar.current
 
+    // MARK: - History Cache
+
+    /// Cached history snapshots keyed by the number of days fetched.
+    /// When a wider range has already been fetched, narrower views
+    /// are derived from the cache instead of re-querying HealthKit.
+    private var cachedHistory: [HeartSnapshot] = []
+    private var cachedHistoryDays: Int = 0
+    private var cachedHistoryDate: Date?
+
     // MARK: - Errors
 
     enum HealthKitError: LocalizedError {
@@ -175,6 +184,16 @@ final class HealthKitService: ObservableObject {
         guard days > 0 else { return [] }
 
         let today = calendar.startOfDay(for: Date())
+
+        // Cache hit: if we already fetched a superset for today, slice it
+        if let cachedDate = cachedHistoryDate,
+           calendar.isDate(cachedDate, inSameDayAs: today),
+           cachedHistoryDays >= days {
+            let surplus = cachedHistory.count - days
+            if surplus >= 0 {
+                return Array(cachedHistory.suffix(days))
+            }
+        }
         guard let rangeStart = calendar.date(byAdding: .day, value: -days, to: today) else {
             return []
         }
@@ -253,6 +272,14 @@ final class HealthKitService: ObservableObject {
                 sleepHours: extras?.sleep,
                 bodyMassKg: extras?.weight
             ))
+        }
+
+        // Cache the result so narrower range switches don't re-query HealthKit
+        if days >= cachedHistoryDays || cachedHistoryDate == nil
+            || !calendar.isDate(cachedHistoryDate!, inSameDayAs: today) {
+            cachedHistory = snapshots
+            cachedHistoryDays = days
+            cachedHistoryDate = today
         }
 
         return snapshots

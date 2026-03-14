@@ -131,7 +131,7 @@ struct SettingsView: View {
                         localStore.saveProfile()
                     }
                 ),
-                in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
+                in: ...(Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date()),
                 displayedComponents: .date
             ) {
                 Label("Date of Birth", systemImage: "birthday.cake.fill")

@@ -18,6 +18,14 @@ import HealthKit
 
 struct WatchInsightFlowView: View {
 
+    // MARK: - Date Formatters (static to avoid per-render allocation)
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
     @EnvironmentObject var viewModel: WatchViewModel
     @State private var selectedTab = 0
     @State private var nudgeInProgress = false
@@ -1340,9 +1348,7 @@ private struct SleepScreen: View {
     }
 
     private func formatTime(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        return f.string(from: date)
+        Self.timeFormatter.string(from: date)
     }
 
     // MARK: - HealthKit fetch
