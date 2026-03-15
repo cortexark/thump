@@ -219,23 +219,33 @@ final class DashboardViewModel: ObservableObject {
             loadTodayCheckIn()
 
             // Compute bio age if user has set date of birth
+            let bioAgeStart = CFAbsoluteTimeGetCurrent()
             computeBioAge(snapshot: snapshot)
+            let bioAgeMs = (CFAbsoluteTimeGetCurrent() - bioAgeStart) * 1000
 
             // Compute readiness score
+            let readinessStart = CFAbsoluteTimeGetCurrent()
             computeReadiness(snapshot: snapshot, history: history)
+            let readinessMs = (CFAbsoluteTimeGetCurrent() - readinessStart) * 1000
 
             // Compute coaching report
+            let coachingStart = CFAbsoluteTimeGetCurrent()
             computeCoachingReport(snapshot: snapshot, history: history)
+            let coachingMs = (CFAbsoluteTimeGetCurrent() - coachingStart) * 1000
 
             // Compute zone analysis
+            let zoneStart = CFAbsoluteTimeGetCurrent()
             computeZoneAnalysis(snapshot: snapshot)
+            let zoneMs = (CFAbsoluteTimeGetCurrent() - zoneStart) * 1000
 
             // Compute buddy recommendations (after readiness and stress are available)
+            let buddyStart = CFAbsoluteTimeGetCurrent()
             computeBuddyRecommendations(
                 assessment: result,
                 snapshot: snapshot,
                 history: history
             )
+            let buddyMs = (CFAbsoluteTimeGetCurrent() - buddyStart) * 1000
 
             // Schedule notifications from live assessment output (CR-001)
             scheduleNotificationsIfNeeded(assessment: result, history: history)
@@ -244,6 +254,35 @@ final class DashboardViewModel: ObservableObject {
             AppLogger.engine.info("Dashboard refresh complete in \(String(format: "%.0f", totalMs))ms — history=\(history.count) days")
 
             isLoading = false
+
+            // Upload engine pipeline trace for quality baselining
+            var trace = PipelineTrace(
+                timestamp: Date(),
+                pipelineDurationMs: totalMs,
+                historyDays: history.count
+            )
+            trace.heartTrend = HeartTrendTrace(from: result, durationMs: engineMs)
+            if let s = stressResult {
+                // Stress duration is included in buddyMs (computed inside computeBuddyRecommendations)
+                trace.stress = StressTrace(from: s, durationMs: buddyMs)
+            }
+            if let r = readinessResult {
+                trace.readiness = ReadinessTrace(from: r, durationMs: readinessMs)
+            }
+            if let b = bioAgeResult {
+                trace.bioAge = BioAgeTrace(from: b, durationMs: bioAgeMs)
+            }
+            if let c = coachingReport {
+                trace.coaching = CoachingTrace(from: c, durationMs: coachingMs)
+            }
+            if let z = zoneAnalysis {
+                trace.zoneAnalysis = ZoneAnalysisTrace(from: z, durationMs: zoneMs)
+            }
+            if let recs = buddyRecommendations {
+                trace.buddy = BuddyTrace(from: recs, durationMs: buddyMs)
+            }
+            trace.inputSummary = InputSummaryTrace(snapshot: snapshot, history: history)
+            EngineTelemetryService.shared.uploadTrace(trace)
         } catch {
             AppLogger.engine.error("Dashboard refresh failed: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
