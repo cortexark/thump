@@ -1,7 +1,7 @@
 # HeartCoach — Project Update 2026-03-13
 
 > Sprint: March 10–14, 2026
-> Branch: `claude/objective-mendeleev`
+> Branch: `fix/deterministic-test-seeds`
 > Status: Ready for PR review
 
 ---
@@ -270,4 +270,4 @@ Add sleep duration vs resting heart rate as 5th correlation pair.
 
 *Last updated: 2026-03-13*
 *Sprint velocity: 47 story points completed*
-*Branch: claude/objective-mendeleev (4 commits ahead of base)*
+*Branch: fix/deterministic-test-seeds (4 commits ahead of base)*
