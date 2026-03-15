@@ -612,8 +612,18 @@ struct DashboardView: View {
                 isLocked: false
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CardButtonStyle())
         .accessibilityHint("Double tap to view trends")
+    }
+}
+
+/// Button style that adds a subtle press effect for card-like buttons.
+struct CardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
