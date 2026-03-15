@@ -36,6 +36,9 @@ struct DashboardView: View {
     /// Controls the Bio Age detail sheet presentation.
     @State private var showBioAgeDetail = false
 
+    /// Controls the Readiness detail sheet presentation.
+    @State var showReadinessDetail = false
+
     // MARK: - Grid Layout
 
     private let metricColumns = [
