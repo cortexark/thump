@@ -25,7 +25,7 @@ extension DashboardView {
                     // Badge is tappable — navigates to buddy recommendations
                     Button {
                         InteractionLog.log(.buttonTap, element: "readiness_badge", page: "Dashboard")
-                        withAnimation { selectedTab = 1 }
+                        showReadinessDetail = true
                     } label: {
                         HStack(spacing: 4) {
                             Text(thumpCheckBadge(result))
@@ -42,8 +42,8 @@ extension DashboardView {
                         )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("View buddy recommendations")
-                    .accessibilityHint("Opens Insights tab")
+                    .accessibilityLabel("View readiness breakdown")
+                    .accessibilityHint("Shows what's driving your score")
                 }
 
                 // Main recommendation — context-aware sentence
@@ -97,6 +97,9 @@ extension DashboardView {
                 "Thump Check: \(thumpCheckRecommendation(result))"
             )
             .accessibilityIdentifier("dashboard_readiness_card")
+            .sheet(isPresented: $showReadinessDetail) {
+                readinessDetailSheet(result)
+            }
         } else if let assessment = viewModel.assessment {
             StatusCardView(
                 status: assessment.status,
@@ -329,6 +332,193 @@ extension DashboardView {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Recovery note: \(ctx.reason). Tonight: \(ctx.tonightAction)")
+        .onTapGesture {
+            InteractionLog.log(.cardTap, element: "recovery_context_banner", page: "Dashboard")
+            withAnimation { selectedTab = 2 }
+        }
+    }
+
+    /// Shows week-over-week RHR change and recovery trend as a compact banner.
+    func weekOverWeekBanner(_ trend: WeekOverWeekTrend) -> some View {
+        let rhrChange = trend.currentWeekMean - trend.baselineMean
+        let rhrArrow = rhrChange <= -1 ? "↓" : rhrChange >= 1 ? "↑" : "→"
+        let rhrColor: Color = rhrChange <= -1
+            ? Color(hex: 0x22C55E)
+            : rhrChange >= 1 ? Color(hex: 0xEF4444) : .secondary
+
+        return VStack(spacing: 6) {
+            // RHR trend line
+            HStack(spacing: 6) {
+                Image(systemName: trend.direction.icon)
+                    .font(.caption2)
+                    .foregroundStyle(rhrColor)
+                Text("RHR \(Int(trend.baselineMean)) \(rhrArrow) \(Int(trend.currentWeekMean)) bpm")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(trendLabel(trend.direction))
+                    .font(.system(size: 9))
+                    .foregroundStyle(rhrColor)
+            }
+
+            // Recovery trend line (if available)
+            if let recovery = viewModel.assessment?.recoveryTrend,
+               recovery.direction != .insufficientData,
+               let current = recovery.currentWeekMean,
+               let baseline = recovery.baselineMean {
+                let recChange = current - baseline
+                let recArrow = recChange >= 1 ? "↑" : recChange <= -1 ? "↓" : "→"
+                let recColor: Color = recChange >= 1
+                    ? Color(hex: 0x22C55E)
+                    : recChange <= -1 ? Color(hex: 0xEF4444) : .secondary
+
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.uturn.up")
+                        .font(.caption2)
+                        .foregroundStyle(recColor)
+                    Text("Recovery \(Int(baseline)) \(recArrow) \(Int(current)) bpm drop")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text(recoveryDirectionLabel(recovery.direction))
+                        .font(.system(size: 9))
+                        .foregroundStyle(recColor)
+                }
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.tertiarySystemGroupedBackground))
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("RHR trend: \(Int(trend.baselineMean)) to \(Int(trend.currentWeekMean)) bpm, \(trendLabel(trend.direction))")
+        .onTapGesture {
+            InteractionLog.log(.cardTap, element: "wow_trend_banner", page: "Dashboard")
+            withAnimation { selectedTab = 3 }
+        }
+    }
+
+    func trendLabel(_ direction: WeeklyTrendDirection) -> String {
+        switch direction {
+        case .significantImprovement: return "Improving fast"
+        case .improving:             return "Trending down"
+        case .stable:                return "Steady"
+        case .elevated:              return "Creeping up"
+        case .significantElevation:  return "Elevated"
+        }
+    }
+
+    func recoveryDirectionLabel(_ direction: RecoveryTrendDirection) -> String {
+        switch direction {
+        case .improving:        return "Getting faster"
+        case .stable:           return "Steady"
+        case .declining:        return "Slowing down"
+        case .insufficientData: return "Not enough data"
+        }
+    }
+
+    // MARK: - Readiness Detail Sheet
+
+    func readinessDetailSheet(_ result: ReadinessResult) -> some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Score circle + level
+                    VStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .stroke(readinessColor(for: result.level).opacity(0.2), lineWidth: 10)
+                                .frame(width: 100, height: 100)
+                            Circle()
+                                .trim(from: 0, to: Double(result.score) / 100.0)
+                                .stroke(readinessColor(for: result.level), style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                                .rotationEffect(.degrees(-90))
+                                .frame(width: 100, height: 100)
+                            Text("\(result.score)")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                        }
+
+                        Text(thumpCheckBadge(result))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(readinessColor(for: result.level))
+
+                        Text(result.summary)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                    }
+                    .padding(.top, 8)
+
+                    // Pillar breakdown
+                    VStack(spacing: 12) {
+                        Text("What's Driving Your Score")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        ForEach(result.pillars, id: \.type) { pillar in
+                            HStack(spacing: 12) {
+                                Image(systemName: pillar.type.icon)
+                                    .font(.title3)
+                                    .foregroundStyle(pillarColor(score: pillar.score))
+                                    .frame(width: 28)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(pillar.type.displayName)
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                        Spacer()
+                                        Text("\(Int(pillar.score))")
+                                            .font(.subheadline)
+                                            .fontWeight(.bold)
+                                            .fontDesign(.rounded)
+                                            .foregroundStyle(pillarColor(score: pillar.score))
+                                    }
+
+                                    // Score bar
+                                    GeometryReader { geo in
+                                        ZStack(alignment: .leading) {
+                                            RoundedRectangle(cornerRadius: 3)
+                                                .fill(Color(.systemGray5))
+                                                .frame(height: 6)
+                                            RoundedRectangle(cornerRadius: 3)
+                                                .fill(pillarColor(score: pillar.score))
+                                                .frame(width: geo.size.width * CGFloat(pillar.score / 100.0), height: 6)
+                                        }
+                                    }
+                                    .frame(height: 6)
+
+                                    Text(pillar.detail)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(pillarColor(score: pillar.score).opacity(0.06))
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.bottom, 32)
+            }
+            .navigationTitle("Readiness Breakdown")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { showReadinessDetail = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     func readinessColor(for level: ReadinessLevel) -> Color {
