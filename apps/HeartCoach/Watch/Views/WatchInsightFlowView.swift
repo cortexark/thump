@@ -1138,6 +1138,12 @@ private struct StressScreen: View {
 /// and a bedtime reminder button. All data is fetched locally on the watch.
 private struct SleepScreen: View {
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
     let needsRest: Bool
 
     @State private var appeared = false
