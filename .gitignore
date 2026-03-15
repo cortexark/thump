@@ -11,6 +11,9 @@ DerivedData/
 .build/
 build/
 
+# Firebase config (contains API keys)
+GoogleService-Info.plist
+
 # Swift Package Manager
 .swiftpm/
 Packages/

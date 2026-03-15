@@ -184,31 +184,59 @@ struct SettingsView: View {
 
     private var subscriptionSection: some View {
         Section {
-            HStack {
-                Label("Current Plan", systemImage: "creditcard.fill")
-                Spacer()
-                Text(currentTierDisplayName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.pink)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.pink.opacity(0.12), in: Capsule())
-            }
-
-            Button {
-                InteractionLog.log(.buttonTap, element: "upgrade_button", page: "Settings")
-                showPaywall = true
-            } label: {
+            if localStore.profile.isInLaunchFreeYear {
+                // Launch free year — show status instead of paywall
                 HStack {
-                    Label("Upgrade Plan", systemImage: "arrow.up.circle.fill")
+                    Label("Current Plan", systemImage: "gift.fill")
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
+                    Text("Coach (Free)")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.green.opacity(0.12), in: Capsule())
+                }
+
+                HStack {
+                    Label("Free Access", systemImage: "clock.fill")
+                    Spacer()
+                    Text("\(localStore.profile.launchFreeDaysRemaining) days remaining")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+
+                Text("All features are unlocked for your first year. No payment required.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                // Free year expired or not enrolled — show regular subscription UI
+                HStack {
+                    Label("Current Plan", systemImage: "creditcard.fill")
+                    Spacer()
+                    Text(currentTierDisplayName)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.pink)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.pink.opacity(0.12), in: Capsule())
+                }
+
+                Button {
+                    InteractionLog.log(.buttonTap, element: "upgrade_button", page: "Settings")
+                    showPaywall = true
+                } label: {
+                    HStack {
+                        Label("Upgrade Plan", systemImage: "arrow.up.circle.fill")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("settings_upgrade_button")
             }
-            .accessibilityIdentifier("settings_upgrade_button")
         } header: {
             Text("Subscription")
         }
