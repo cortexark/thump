@@ -299,13 +299,17 @@ public final class LocalStore: ObservableObject {
                 // Encryption unavailable — do NOT fall back to plaintext for health data.
                 // Data is dropped rather than stored unencrypted. The next successful
                 // save will restore it. This protects PHI at the cost of temporary data loss.
+                #if DEBUG
                 print("[LocalStore] ERROR: Encryption unavailable for key \(key.rawValue). Data NOT saved to protect health data privacy.")
+                #endif
                 #if DEBUG
                 assertionFailure("CryptoService.encrypt() returned nil for key \(key.rawValue). Fix Keychain access or mock CryptoService in tests.")
                 #endif
             }
         } catch {
+            #if DEBUG
             print("[LocalStore] ERROR: Failed to encode \(T.self) for key \(key.rawValue): \(error)")
+            #endif
         }
     }
 
@@ -342,10 +346,12 @@ public final class LocalStore: ObservableObject {
         // Both encrypted and plain-text decoding failed — data is corrupted
         // or from an incompatible schema version. Remove the bad entry so the
         // app can start fresh instead of crashing on every launch.
+        #if DEBUG
         print(
             "[LocalStore] WARNING: Removing unreadable \(T.self) "
             + "from key \(key.rawValue). Stored data was corrupted or incompatible."
         )
+        #endif
         defaults.removeObject(forKey: key.rawValue)
         return nil
     }
