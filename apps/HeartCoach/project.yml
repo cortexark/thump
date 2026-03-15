@@ -25,6 +25,15 @@ settings:
     CODE_SIGN_STYLE: Automatic
 
 ############################################################
+# Swift Package Manager Dependencies
+############################################################
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: "11.0.0"
+
+############################################################
 # Targets
 ############################################################
 
@@ -43,6 +52,8 @@ targets:
     resources:
       - path: iOS/PrivacyInfo.xcprivacy
       - path: iOS/Assets.xcassets
+      - path: iOS/GoogleService-Info.plist
+        optional: true
     settings:
       base:
         INFOPLIST_FILE: iOS/Info.plist
@@ -56,6 +67,8 @@ targets:
       - sdk: StoreKit.framework
       - sdk: AppIntents.framework
       - sdk: AuthenticationServices.framework
+      - package: Firebase
+        product: FirebaseFirestore
     scheme:
       testTargets:
         - ThumpCoreTests

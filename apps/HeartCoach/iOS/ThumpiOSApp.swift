@@ -8,6 +8,7 @@
 // Platforms: iOS 17+
 
 import SwiftUI
+import FirebaseCore
 
 // MARK: - App Entry Point
 
@@ -45,6 +46,8 @@ struct ThumpiOSApp: App {
     // MARK: - Initialization
 
     init() {
+        FirebaseApp.configure()
+
         let store = LocalStore()
         _localStore = StateObject(wrappedValue: store)
         _notificationService = StateObject(wrappedValue: NotificationService(localStore: store))
@@ -136,6 +139,10 @@ struct ThumpiOSApp: App {
                 AppLogger.info("Apple Sign-In credential revoked — returning to sign-in")
             }
         }
+
+        // Configure engine telemetry for quality baselining
+        EngineTelemetryService.shared.configureUserId()
+        Analytics.shared.register(provider: FirestoreAnalyticsProvider())
 
         // Start MetricKit crash reporting and performance monitoring
         MetricKitService.shared.start()
