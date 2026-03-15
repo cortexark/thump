@@ -30,7 +30,7 @@ struct DashboardView: View {
 
     // MARK: - View Model
 
-    @StateObject private var viewModel = DashboardViewModel()
+    @StateObject var viewModel = DashboardViewModel()
     // MARK: - Sheet State
 
     /// Controls the Bio Age detail sheet presentation.
