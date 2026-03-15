@@ -55,6 +55,7 @@ targets:
       - sdk: WatchConnectivity.framework
       - sdk: StoreKit.framework
       - sdk: AppIntents.framework
+      - sdk: AuthenticationServices.framework
     scheme:
       testTargets:
         - ThumpCoreTests

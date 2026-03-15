@@ -1409,6 +1409,9 @@ public struct UserProfile: Codable, Equatable, Sendable {
     /// Biological sex for metric norm stratification.
     public var biologicalSex: BiologicalSex
 
+    /// Email address from Sign in with Apple (optional, only provided on first sign-in).
+    public var email: String?
+
     public init(
         displayName: String = "",
         joinDate: Date = Date(),
@@ -1417,7 +1420,8 @@ public struct UserProfile: Codable, Equatable, Sendable {
         lastStreakCreditDate: Date? = nil,
         nudgeCompletionDates: Set<String> = [],
         dateOfBirth: Date? = nil,
-        biologicalSex: BiologicalSex = .notSet
+        biologicalSex: BiologicalSex = .notSet,
+        email: String? = nil
     ) {
         self.displayName = displayName
         self.joinDate = joinDate
@@ -1427,6 +1431,7 @@ public struct UserProfile: Codable, Equatable, Sendable {
         self.nudgeCompletionDates = nudgeCompletionDates
         self.dateOfBirth = dateOfBirth
         self.biologicalSex = biologicalSex
+        self.email = email
     }
 
     /// Computed chronological age in years from date of birth.
