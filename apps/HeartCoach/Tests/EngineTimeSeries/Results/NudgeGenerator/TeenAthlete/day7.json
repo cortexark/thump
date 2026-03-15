@@ -2,13 +2,13 @@
   "anomalyScore" : 0.58912982880687437,
   "confidence" : "low",
   "multiNudgeCategories" : [
-    "moderate",
+    "seekGuidance",
     "hydrate",
     "rest"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "moderate",
-  "nudgeTitle" : "We're Getting to Know You",
+  "nudgeCategory" : "seekGuidance",
+  "nudgeTitle" : "Quick Sync Check",
   "readinessLevel" : "primed",
   "readinessScore" : 88,
   "regressionFlag" : false,

@@ -71,11 +71,21 @@ public struct SmartNudgeScheduler: Sendable {
 
             let dayOfWeek = calendar.component(.weekday, from: snapshot.date)
 
-            // Estimate bedtime: if they slept N hours and the snapshot
-            // is for a given day, bedtime was roughly (24 - sleepHours)
-            // adjusted for typical patterns
-            let estimatedWakeHour = min(12, max(5, Int(7.0 + (sleepHours - 7.0) * 0.3)))
-            let estimatedBedtimeHour = max(20, min(24, estimatedWakeHour + 24 - Int(sleepHours)))
+            // Estimate bedtime and wake time from sleep duration.
+            // BUG-063 fix: widened wake range to 3-14 (was 5-12) to support shift workers
+            // who may sleep 2AM-10AM. Bedtime floor lowered to 18 (was 20) for early sleepers.
+            // For shift workers sleeping during the day (sleepHours > 9 suggests unusual pattern),
+            // we estimate a later wake time.
+            let baseWake = 7.0 + (sleepHours - 7.0) * 0.3
+            let estimatedWakeHour: Int
+            if sleepHours > 9 {
+                // Long sleep or shift worker — likely wakes later
+                estimatedWakeHour = min(14, max(3, Int(baseWake + 2)))
+            } else {
+                estimatedWakeHour = min(14, max(3, Int(baseWake)))
+            }
+            let rawBedtimeHour = estimatedWakeHour + 24 - Int(sleepHours)
+            let estimatedBedtimeHour = max(18, min(28, rawBedtimeHour))
             let normalizedBedtime = estimatedBedtimeHour >= 24
                 ? estimatedBedtimeHour - 24
                 : estimatedBedtimeHour

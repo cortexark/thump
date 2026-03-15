@@ -2,13 +2,13 @@
   "anomalyScore" : 0.50866995972076723,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "rest",
     "breathe",
+    "rest",
     "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "rest",
-  "nudgeTitle" : "A Cozy Bedtime Routine",
+  "nudgeCategory" : "breathe",
+  "nudgeTitle" : "A Breathing Reset",
   "readinessLevel" : "recovering",
   "readinessScore" : 37,
   "regressionFlag" : true,

@@ -83,7 +83,7 @@ public struct CoachingEngine: Sendable {
 
         // Zone distribution feedback
         let zoneEngine = HeartRateZoneEngine()
-        if let zoneSummary = zoneEngine.weeklyZoneSummary(history: history) {
+        if let zoneSummary = zoneEngine.weeklyZoneSummary(history: history, referenceDate: current.date) {
             insights.append(analyzeZoneBalance(zoneSummary: zoneSummary))
         }
 

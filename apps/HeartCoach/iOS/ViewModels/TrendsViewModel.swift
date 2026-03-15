@@ -131,7 +131,10 @@ final class TrendsViewModel: ObservableObject {
                 #if targetEnvironment(simulator)
                 snapshots = MockData.mockHistory(days: timeRange.rawValue)
                 #else
-                snapshots = []
+                AppLogger.engine.error("Trends history fetch failed: \(error.localizedDescription)")
+                errorMessage = "Unable to read health data. Please check Health permissions in Settings."
+                isLoading = false
+                return
                 #endif
             }
             history = snapshots

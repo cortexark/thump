@@ -2,13 +2,13 @@
   "anomalyScore" : 0.43196632340943752,
   "confidence" : "medium",
   "multiNudgeCategories" : [
-    "walk",
+    "breathe",
     "rest",
-    "breathe"
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "You Might Enjoy a Post-Meal Walk",
+  "nudgeCategory" : "breathe",
+  "nudgeTitle" : "A Breathing Reset",
   "readinessLevel" : "recovering",
   "readinessScore" : 33,
   "regressionFlag" : true,

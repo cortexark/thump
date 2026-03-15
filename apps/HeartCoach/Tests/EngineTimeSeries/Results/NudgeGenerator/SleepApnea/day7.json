@@ -2,13 +2,13 @@
   "anomalyScore" : 0.50957177245207785,
   "confidence" : "low",
   "multiNudgeCategories" : [
-    "moderate",
+    "walk",
     "rest",
     "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "moderate",
-  "nudgeTitle" : "How About Some Movement Today?",
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "An Easy Walk Today",
   "readinessLevel" : "moderate",
   "readinessScore" : 43,
   "regressionFlag" : true,

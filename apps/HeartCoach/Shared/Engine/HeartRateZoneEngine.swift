@@ -74,19 +74,28 @@ public struct HeartRateZoneEngine: Sendable {
 
     // MARK: - Max HR Estimation
 
-    /// Estimate maximum heart rate using the Tanaka formula (2001):
-    /// HRmax = 208 - 0.7 × age
+    /// Estimate maximum heart rate using sex-specific formulas:
     ///
-    /// More accurate than the classic 220-age formula, especially for
-    /// older adults. Sex adjustment: females ~+1 bpm (Gulati et al. 2010).
-    private func estimateMaxHR(age: Int, sex: BiologicalSex) -> Double {
-        // Tanaka et al. (2001): HRmax = 208 - 0.7 * age
-        let base = 208.0 - 0.7 * Double(age)
-        return switch sex {
-        case .female: max(base, 150) // Gulati: 206 - 0.88*age for women
-        case .male: max(base, 150)
-        case .notSet: max(base, 150)
+    /// - **Male**: Tanaka et al. (2001, n=18,712): HRmax = 208 − 0.7 × age
+    /// - **Female**: Gulati et al. (2010, n=5,437): HRmax = 206 − 0.88 × age
+    /// - **notSet**: Average of both formulas
+    ///
+    /// The Gulati formula was derived from the St. James Women Take Heart
+    /// Project and produces lower max HR estimates for women, especially
+    /// at older ages (e.g. age 60: Tanaka 166, Gulati 153 — 13 bpm gap).
+    /// This shifts all zone boundaries meaningfully. (ZE-002 fix)
+    ///
+    /// A floor of 150 bpm prevents pathological zones at extreme ages.
+    func estimateMaxHR(age: Int, sex: BiologicalSex) -> Double {
+        let ageD = Double(age)
+        let tanaka = 208.0 - 0.7 * ageD   // Tanaka et al. 2001
+        let gulati = 206.0 - 0.88 * ageD  // Gulati et al. 2010
+        let base: Double = switch sex {
+        case .female: gulati
+        case .male:   tanaka
+        case .notSet: (tanaka + gulati) / 2.0
         }
+        return max(base, 150.0)
     }
 
     // MARK: - Zone Distribution Analysis
@@ -271,13 +280,20 @@ public struct HeartRateZoneEngine: Sendable {
 
     /// Compute a weekly zone summary from daily snapshots.
     ///
-    /// - Parameter history: Recent daily snapshots with zone minutes.
+    /// - Parameters:
+    ///   - history: Recent daily snapshots with zone minutes.
+    ///   - referenceDate: Anchor date for the 7-day window. Defaults to
+    ///     the latest snapshot date (or wall-clock ``Date()`` if history
+    ///     is empty). Using snapshot dates makes the function deterministic
+    ///     and testable with historical data. (ZE-001 fix)
     /// - Returns: A ``WeeklyZoneSummary`` or nil if no zone data.
     public func weeklyZoneSummary(
-        history: [HeartSnapshot]
+        history: [HeartSnapshot],
+        referenceDate: Date? = nil
     ) -> WeeklyZoneSummary? {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let refDate = referenceDate ?? history.last?.date ?? Date()
+        let today = calendar.startOfDay(for: refDate)
         guard let weekAgo = calendar.date(byAdding: .day, value: -7, to: today) else {
             return nil
         }

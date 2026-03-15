@@ -637,12 +637,13 @@ That means the current engine is not just weak on one challenge set; it is direc
 - WESAD wrist should remain the labeled wrist-stress challenge set.
 - Future algorithm changes should be judged against all three, not any one alone.
 
-3. The next algorithm experiment should be a real desk-mode branch, not a universal weight change.
-- The new evidence points to a branch like:
-  - keep current HR-primary behavior for acute / exam-like contexts
-  - use materially lower or zero RHR influence for desk-work / office-task contexts
-  - add disagreement damping when HR and HRV disagree
-- Do this in tests first, not in product code.
+3. The right algorithm direction is now clearer from the implemented prototype branch.
+- Follow-up commit `d0ffce9` already moved the engine toward:
+  - current HR-primary behavior for acute / exam-like contexts
+  - materially lower RHR influence for desk-work / office-task contexts
+  - disagreement damping when HR and HRV disagree
+- The remaining question is no longer "should we try a desk-mode branch?"
+- The remaining question is "how should that desk branch be calibrated before product rollout?"
 
 4. Do not prioritize more lightweight gates or SWELL-only normalization variants right now.
 - The subject-normalized no-RHR branch did not beat plain `no-rhr`.
@@ -680,56 +681,49 @@ Why:
 
 ### Recommended design direction
 
-Move from a single-mode stress engine to a context-aware stress engine.
+The design direction below is now implemented in the follow-up stress-engine branch (`d0ffce9` / `fc40a78`).
 
-Practical target:
+Practical target now in code on that branch:
 - keep the current HR-primary behavior for acute / exam-like stress
-- add a second low-movement / desk-work branch that materially reduces or removes `RHR`
-- add a disagreement / confidence layer so contradictory signals do not produce overconfident scores
+- add a second low-movement / desk-work branch that materially reduces `RHR`
+- add disagreement / confidence handling so contradictory signals do not produce overconfident scores
 
 ### Recommended implementation plan
 
-1. Add a context layer before scoring in [StressEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/StressEngine.swift)
-- Introduce a small `StressContext` or `StressMode`:
+1. Implemented in follow-up commit `d0ffce9`: explicit context before scoring
+- `StressMode` is explicit and testable:
   - `acute`
   - `desk`
   - `unknown`
-- Do not bury this inside arbitrary thresholds in one giant formula. Make the mode explicit so it is testable.
+- This removed the old "single giant formula" limitation from the redesign branch.
 
-2. Keep the current formula as the `acute` branch
-- This branch already has real support from PhysioNet:
+2. Implemented in follow-up commit `d0ffce9`: preserve the current formula as the `acute` reference branch
+- This remains justified by PhysioNet:
   - full engine AUC `0.729`
   - `rhr-only` nearly as good at `0.715`
-- This should remain the default reference branch.
+- The remaining work is branch-specific tuning, not replacing the acute branch.
 
-3. Add a true `desk` branch, not just a lightweight gate
-- The first lightweight `gated-rhr` experiment is now complete:
-  - SWELL AUC 0.241
-  - WESAD AUC 0.251
-  - PhysioNet AUC 0.721
-- That result is useful, but it is not enough to justify a product change.
-- The next candidate should look more like:
-  - `RHR 0.00 to 0.10`
-  - `HRV 0.55 to 0.65`
-  - `CV 0.25 to 0.35`
-- Keep this in tests first. Do not ship these numbers directly.
+3. Implemented in follow-up commits `d0ffce9` and `fc40a78`: a true `desk` branch and validation variants
+- The redesign branch contains:
+  - real product `desk` branch in `StressEngine`
+  - test-only `desk-branch`
+  - test-only `desk-branch + damped`
+- The remaining work is to decide whether the current desk weighting is the right one for rollout.
 
-4. Add a signal-disagreement dampener
-- If `RHR` implies stress up but `HRV` and `CV` do not, compress the final score toward neutral instead of letting one signal dominate.
-- Example rule:
-  - when `RHR` is elevated but `SDNN >= baseline` and `CV` is stable, reduce score magnitude and mark low confidence
-- This is the safest way to avoid false certainty on SWELL-like cases.
+4. Implemented in follow-up commit `d0ffce9`: signal-disagreement damping
+- `applyDisagreementDamping()` now compresses scores when `RHR` conflicts with HRV/CV.
+- The remaining work is to validate calibration of that damping across all datasets.
 
-5. Add confidence to the output
-- Add a confidence or reliability field to the stress result model in [StressEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/StressEngine.swift)
-- Confidence should drop when:
+5. Implemented in follow-up commit `d0ffce9`: confidence in the output
+- `StressResult` now carries confidence and warnings in the redesign branch.
+- The remaining work is confidence calibration:
   - signals disagree strongly
   - baselines are weak
   - recent HRV sample count is low
   - context is `unknown`
-- Even if the score stays the same, surfacing low confidence is a product improvement.
+- Confidence only counts as done once high-confidence cases measurably outperform low-confidence ones.
 
-6. Decide context from real app features, not dataset names
+6. Still required: keep context driven by real app features, not dataset names
 - Candidate signals already available or derivable in the app:
   - recent steps
   - workout minutes
@@ -739,12 +733,9 @@ Practical target:
   - recent sleep / readiness state
 - The engine should never “know” it is on SWELL or PhysioNet. It should infer mode from physiology + context.
 
-7. Add a stronger test-only `desk-branch` variant to [DatasetValidationTests.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Tests/Validation/DatasetValidationTests.swift)
-- The first `gated-rhr` variant is now done and did not meaningfully solve the cross-dataset conflict.
-- Success condition for the next branch:
-  - beats `gated-rhr` clearly on SWELL
-  - stays close to the full engine on PhysioNet
-  - remains clean on synthetic regression suites
+7. Implemented in follow-up commit `fc40a78`: stronger test-only desk-branch variants
+- The first `gated-rhr` variant is now a historical reference point, not the endpoint.
+- The live validation question is whether the current `desk-branch` or `desk-branch + damped` variants beat the older baselines clearly enough to justify rollout.
 
 8. Keep the three-dataset matrix as the new validation gate
 - Required datasets:
@@ -752,23 +743,22 @@ Practical target:
   - SWELL
   - WESAD
 - Optional next dataset:
-  - add a fourth dataset only if the desk-branch still leaves ambiguity after cross-dataset comparison
+  - add a fourth dataset only if ambiguity remains after cross-dataset comparison
 
 ### Code changes to make next
 
 In [StressEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/StressEngine.swift):
-- add explicit context detection
-- add `acute` and `desk` scoring branches
-- add disagreement damping
-- add confidence output
+- merge the already-implemented context-aware branch into the active delivery branch if it is not present there
+- tune acute and desk coefficients only after cross-dataset comparison
+- calibrate disagreement damping and confidence thresholds
 
 In [DatasetValidationTests.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Tests/Validation/DatasetValidationTests.swift):
 - keep `gated-rhr` as a rejected-but-useful reference point
-- add a stronger `desk-branch` variant
-- keep PhysioNet + SWELL + WESAD side by side
+- keep `desk-branch` and `desk-branch + damped` side by side
+- add richer false-positive / false-negative summaries while keeping PhysioNet + SWELL + WESAD together
 
 In [DashboardViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift):
-- pass richer context into stress computation instead of just raw baseline numbers
+- verify the active delivery branch reaches the context-aware engine path everywhere it should
 - avoid presenting strong language when confidence is low
 
 ### Success criteria for the next version
@@ -788,39 +778,24 @@ The next product candidate should only move forward if it does all of these:
 
 ### Current product gaps in the code
 
-1. The engine is still single-mode.
-- [StressEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/StressEngine.swift) uses one HR-primary formula for every situation.
-- The validation evidence says that is the core mismatch.
-- Acute exam-style stress and desk / office-task stress should not share the exact same weighting rules.
+Implementation status note:
+- The core redesign below is implemented in follow-up commits `d0ffce9` and `fc40a78`.
+- Treat the remaining items here as rollout gaps, merge gaps, or calibration gaps, not as proof that the redesign has not been built anywhere.
 
-2. The engine output is too thin for product use.
-- [HeartModels.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Models/HeartModels.swift) defines `StressResult` with only:
-  - `score`
-  - `level`
-  - `description`
-- There is no `confidence`, `mode`, `signal breakdown`, or `reason code`.
-- That makes it hard to:
-  - explain why a score happened
-  - soften weak predictions
-  - debug false positives
+1. The redesign is not guaranteed to be present on every active branch.
+- The context-aware engine exists in follow-up commits, but not every checked-out branch in this repository necessarily contains it.
+- The first operational gap is branch convergence: make sure the delivery branch actually contains the redesign before evaluating product readiness.
 
-3. The engine does not receive enough context.
-- [DashboardViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift) calls `computeStress(snapshot:recentHistory:)`, which only derives physiology baselines.
-- It does not explicitly pass:
-  - recent steps
-  - recent workout load
-  - inactivity / sedentary context
-  - time-of-day context
-  - recent sleep / recovery context
-- That means the engine cannot reliably tell “acute stress” from “quiet desk work.”
+2. The stress screen integration is still incomplete in the redesign branch.
+- [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift) gained low-confidence / warning support in `d0ffce9`.
+- But [StressViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/StressViewModel.swift) still contains an internal `70 / 25` readiness shortcut in that same redesign branch.
+- That means the product can still diverge between the richer engine output and older screen-level heuristics.
 
-4. The UI is stronger than the model.
-- [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift) presents direct stress messaging and action guidance.
-- Right now the score has no confidence field, so the product cannot distinguish:
-  - high-confidence elevated stress
-  - uncertain or conflicting physiology
+3. The engine still needs calibration, not just structure.
+- The acute / desk / unknown architecture now exists.
+- The remaining question is whether the current desk weights, damping behavior, and confidence thresholds are the right ones across all datasets.
 
-5. The validation story is better now, but still incomplete.
+4. The validation story is better now, but still incomplete.
 - Synthetic tests are good regression protection.
 - Real-world validation is now materially better and includes:
   - PhysioNet acute exam stress
@@ -830,60 +805,32 @@ The next product candidate should only move forward if it does all of these:
 
 ### What we need to build for a more accurate score
 
-1. A context-aware scoring contract
-- Add a small explicit input model such as `StressContextInput` with:
-  - `currentHRV`
-  - `baselineHRV`
-  - `baselineHRVSD`
-  - `currentRHR`
-  - `baselineRHR`
-  - `recentHRVs`
-  - `recentSteps`
-  - `recentWalkMinutes`
-  - `recentWorkoutMinutes`
-  - `sedentaryMinutes`
-  - `sleepHours`
-  - `timeOfDay`
-  - `hasWeakBaseline`
-- This should become the main engine API.
+1. Merge and standardize the implemented context-aware scoring contract
+- `StressContextInput` already exists in follow-up commit `d0ffce9`.
+- The remaining work is to make it the stable delivery-path API everywhere in the app.
 
-2. An explicit mode decision
-- Add `StressMode`:
+2. Keep the explicit mode decision visible and testable
+- `StressMode` already exists with:
   - `acute`
   - `desk`
   - `unknown`
-- The engine should decide mode from context, not from dataset names.
-- Start simple and testable:
-  - high recent movement or post-activity recovery -> `acute`
-  - low movement + seated pattern + working hours -> `desk`
-  - mixed / weak evidence -> `unknown`
+- The remaining work is to keep mode selection observable in tests, logs, and UI-safe behavior.
 
-3. A richer result object
-- Extend `StressResult` to include:
+3. Use the richer result object end to end
+- `StressResult` already exists in the redesign branch with:
   - `confidence`
   - `mode`
-  - `rhrContribution`
-  - `hrvContribution`
-  - `cvContribution`
-  - `explanationKey`
-  - optional `warnings`
-- This is needed for both product quality and faster debugging.
+  - `signalBreakdown`
+  - `warnings`
+- The remaining work is to remove old screen-level shortcuts that ignore those richer fields.
 
-4. A disagreement dampener
-- If the signals disagree, the engine should reduce certainty instead of forcing a strong score.
-- First product-safe rule:
-  - if `RHR` is stress-up
-  - but `HRV` is at or above baseline
-  - and `CV` is stable
-  - then compress the final score toward neutral and reduce confidence
+4. Calibrate the disagreement dampener
+- The first product-safe damping rule is implemented in `d0ffce9`.
+- The remaining work is to validate where it is too weak or too strong.
 
-5. Separate acute and desk scoring branches
-- Acute branch:
-  - keep current HR-primary structure as the starting point
-- Desk branch:
-  - use much lower or zero `RHR`
-  - rely more on HRV deviation and CV
-  - use stronger confidence penalties when signals are mixed
+5. Calibrate the separate acute and desk scoring branches
+- The branch split is implemented.
+- The remaining work is to determine whether desk mode should use even lower `RHR`, different `HRV` weighting, or tighter confidence penalties when signals are mixed.
 
 ### How to find the remaining gaps before changing production scoring
 
@@ -924,26 +871,27 @@ The next product candidate should only move forward if it does all of these:
 
 ### Recommended implementation order
 
-Phase 1: test harness and evidence
+Phase 1: branch convergence and evidence
 - Keep WESAD validation active
-- Add `desk-branch` and `desk-branch + damping` as test-only variants
+- Keep `desk-branch` and `desk-branch + damping` as test-only references
 - Add false-positive / false-negative export summaries
 
-Phase 2: engine contract
-- Introduce `StressContextInput`
-- Introduce `StressMode`
-- Extend `StressResult` with confidence and signal breakdown
+Phase 2: app integration cleanup
+- Make sure the active delivery branch contains `StressContextInput`, `StressMode`, and richer `StressResult`
+- Remove the remaining `StressViewModel` shortcut path
+- Keep readiness integration using both stress score and confidence
 
-Phase 3: product integration
-- Update [DashboardViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift) to pass richer context
-- Update [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift) to soften messaging when confidence is low
-- Update readiness integration so it can use both stress score and confidence
+Phase 3: calibration and replay validation
+- Tune desk weights, damping, and confidence thresholds only after cross-dataset comparison
+- Add app-level replay tests
+- Verify the UI explains low-confidence cases more safely than today
 
 Phase 4: ship criteria
 - Only ship a new scoring branch if:
   - real-dataset performance improves
   - synthetic regression remains green
   - time-series regression remains green
+  - app-level replay tests remain green
   - the UI explains low-confidence cases more safely than today
 
 ### Short answer: how to make the score more accurate
@@ -1102,43 +1050,51 @@ The problem is "we need better context, better branch selection, and better conf
 
 ### Exact build order for the app
 
+Implementation update:
+- The engine-contract work below was implemented in follow-up commit `d0ffce9`:
+  - `StressContextInput`
+  - `StressMode`
+  - richer `StressResult`
+  - disagreement damping
+  - confidence output
+- Validation-only `desk-branch` and `desk-branch + damped` variants were implemented in follow-up commit `fc40a78`.
+- Those commits are real and should be treated as implemented work for planning purposes, even if they are not yet merged into every local branch.
+
 Phase 1. Stabilize the engine contract
-- Add `StressContextInput`
-- Add `StressMode`
-- Extend `StressResult` with:
-  - `confidence`
-  - `mode`
-  - `rhrContribution`
-  - `hrvContribution`
-  - `cvContribution`
-  - `warnings`
+- ✅ Implemented in `d0ffce9`:
+  - `StressContextInput`
+  - `StressMode`
+  - `StressResult.confidence`
+  - `StressResult.mode`
+  - `StressResult.signalBreakdown`
+  - `StressResult.warnings`
 
 Exit criteria:
-- all existing stress tests compile and pass after the API transition
-- the chosen mode is visible in unit tests
+- implemented symbols exist and compile in the follow-up branch
+- mode and confidence are covered by dedicated tests in `StressModeAndConfidenceTests.swift`
 
 Phase 2. Add branch-aware scoring in tests first
-- Implement `desk-branch` in validation-only code
-- Implement `desk-branch + disagreement damping`
-- Compare against:
+- ✅ Implemented in `fc40a78`:
+  - `desk-branch`
+  - `desk-branch + disagreement damping`
+- Available comparison set now includes:
   - `full`
   - `gated-rhr`
   - `low-rhr`
   - `no-rhr`
+  - `desk-branch`
+  - `desk-branch + damped`
 
 Exit criteria:
 - at least one branch design clearly beats current `full` on SWELL and WESAD
 - PhysioNet remains close enough to current acute performance
 
 Phase 3. Move the winning structure into product code
-- Preserve the current formula as `acute`
-- Add a real `desk` branch
-- Add `unknown`
-- Add confidence penalties for:
-  - weak baseline
-  - mixed signals
-  - sparse HRV history
-  - ambiguous context
+- ✅ Implemented in `d0ffce9`:
+  - preserved acute branch
+  - real `desk` branch
+  - real `unknown` mode
+  - confidence penalties for weak baseline, mixed signals, sparse HRV history, and ambiguous context
 
 Exit criteria:
 - synthetic suites green
@@ -1146,10 +1102,12 @@ Exit criteria:
 - app-level replay tests green
 
 Phase 4. Update product integration
-- Pass richer context from [DashboardViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift)
-- Update [StressViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/StressViewModel.swift) to use the same contract
-- Update [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift) to show uncertainty safely
-- Update [ReadinessEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/ReadinessEngine.swift) integration to consume confidence
+- ✅ Implemented in `d0ffce9`:
+  - dashboard path now reaches the context-aware engine via the updated `computeStress(snapshot:recentHistory:)`
+  - [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift) now surfaces low-confidence and warning states
+  - [ReadinessEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/ReadinessEngine.swift) now consumes `stressConfidence`
+- Still open:
+  - [StressViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/StressViewModel.swift) still uses a coarse `70 / 25` readiness shortcut internally and should be moved to the same score+confidence contract
 
 Exit criteria:
 - dashboard and trend views do not diverge
@@ -1294,47 +1252,26 @@ These rules should be treated as project policy for the stress feature.
 
 ### B. Engine contract changes
 
-1. Add a richer engine input model in [StressEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/StressEngine.swift).
-- Create a dedicated context struct instead of growing the current parameter list forever.
-- Minimum fields:
-  - HRV values and baseline
-  - RHR values and baseline
-  - recent HRV series
-  - activity and sedentary context
-  - sleep / recovery context
-  - time-of-day context
-  - baseline quality flags
-
-2. Add explicit stress modes.
-- Add `acute`, `desk`, and `unknown`.
-- Make the chosen mode observable in tests and in debug logging.
-
-3. Extend the output model in [HeartModels.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Models/HeartModels.swift).
-- Add:
+✅ Implemented in follow-up commit `d0ffce9`:
+- richer engine input model via `StressContextInput`
+- explicit `StressMode` with `acute`, `desk`, and `unknown`
+- richer `StressResult` with:
   - `confidence`
   - `mode`
-  - `rhrContribution`
-  - `hrvContribution`
-  - `cvContribution`
+  - `signalBreakdown`
   - `warnings`
-- The product needs these fields to explain and trust the score.
+
+What remains:
+- merge or cherry-pick that engine-contract work into the active delivery branch if it is not already present there
+- keep the mode/contract visible in logs and tests as a non-negotiable rule
 
 ### C. Scoring logic changes
 
-1. Preserve the current formula as the acute branch.
-- Do not throw away the current HR-primary logic.
-- It still has real support from PhysioNet.
-
-2. Build a separate desk branch.
-- Lower or remove `RHR` influence.
-- Increase dependence on HRV deviation and CV.
-- Penalize confidence when signals conflict.
-
-3. Add disagreement damping.
-- When `RHR` is stress-up but HRV and CV do not agree:
-  - compress toward neutral
-  - lower confidence
-  - emit a warning or low-certainty explanation
+✅ Implemented in follow-up commit `d0ffce9`:
+- preserved acute branch
+- built a separate desk branch
+- added disagreement damping
+- lowered confidence and emitted warnings when signals conflict
 
 4. Revisit the sigmoid only after context branches exist.
 - Do not start by retuning `sigmoidK` or `sigmoidMid`.
@@ -1347,25 +1284,20 @@ These rules should be treated as project policy for the stress feature.
 
 ### D. App integration changes
 
-1. Pass richer context from [DashboardViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift).
-- The engine should receive more than baseline physiology.
-- Feed:
-  - recent movement
-  - inactivity pattern
-  - sleep / readiness context
-  - maybe current hour bucket
-
-2. Update [StressViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/StressViewModel.swift).
+1. Finish unifying [StressViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/StressViewModel.swift).
 - Make sure historical trend generation uses the same improved engine contract.
 - Avoid a situation where dashboard stress and trend stress silently diverge.
+- Current gap:
+  - the stress screen still applies an internal `70 / 25` shortcut for readiness-style gating in the older path
+  - that should be replaced with the actual `StressResult.score` and `StressResult.confidence`
 
-3. Update [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift).
-- Use softer language when confidence is low.
-- Show “uncertain / mixed signals” states instead of forcing the same UI treatment for all scores.
+2. Keep [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift) aligned with the richer result model.
+- Low-confidence and warning states are already implemented in `d0ffce9`.
+- Remaining work is mostly polish and consistency, not missing basic support.
 
-4. Update readiness integration.
-- Let [ReadinessEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/ReadinessEngine.swift) consume stress confidence, not just stress score.
-- A low-confidence high stress reading should not affect readiness as strongly as a high-confidence one.
+3. Keep readiness integration on the confidence-aware path.
+- `ReadinessEngine` confidence support is already implemented in `d0ffce9`.
+- Remaining work is broader replay validation, not missing engine support.
 
 ### E. Testing work
 
@@ -1389,9 +1321,9 @@ These rules should be treated as project policy for the stress feature.
 - High-confidence predictions should outperform low-confidence predictions.
 - If not, the confidence field is not useful enough to ship.
 
-5. Add mode-selection tests.
-- Ensure obvious acute and obvious desk contexts route to the expected branch.
-- Ensure ambiguous cases land in `unknown`, not overconfidently in one branch.
+5. Mode-selection tests are now implemented in follow-up commit `fc40a78`.
+- `StressModeAndConfidenceTests.swift` covers acute / desk / unknown routing and baseline confidence behavior.
+- Keep extending these tests as the branch logic evolves.
 
 ### F. Product / UX work
 
@@ -1424,11 +1356,11 @@ Do not ship a production retune until all of these are true:
 
 ### H. Concrete next 5 tasks
 
-1. Add a stronger test-only `desk-branch` variant in [DatasetValidationTests.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Tests/Validation/DatasetValidationTests.swift).
-2. Add `desk-branch + disagreement damping`.
+1. Merge or cherry-pick `d0ffce9` and `fc40a78` into the active delivery branch if they are not already present there.
+2. Remove the `70 / 25` shortcut in [StressViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/StressViewModel.swift) and use the real score + confidence path consistently.
 3. Add false-positive / false-negative export summaries for SWELL, WESAD, and PhysioNet.
-4. Add `StressContextInput` and `StressMode` in [StressEngine.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/StressEngine.swift) and update tests around them.
-5. Extend `StressResult` in [HeartModels.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Models/HeartModels.swift), then update [DashboardViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift) and [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift) to use the new fields.
+4. Add app-level replay tests that validate dashboard stress, stress screen behavior, readiness impact, and UI-facing state consistency.
+5. Add real confidence calibration checks on the datasets so `high` confidence empirically outperforms `moderate` and `low`.
 
 ## Residual Notes
 

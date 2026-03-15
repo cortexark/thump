@@ -2,12 +2,12 @@
   "anomalyScore" : 0.47008634024060386,
   "confidence" : "medium",
   "multiNudgeCategories" : [
-    "walk",
+    "celebrate",
     "hydrate"
   ],
   "multiNudgeCount" : 2,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "Keep That Walking Groove Going",
+  "nudgeCategory" : "celebrate",
+  "nudgeTitle" : "You're on a Roll!",
   "readinessLevel" : "primed",
   "readinessScore" : 83,
   "regressionFlag" : false,

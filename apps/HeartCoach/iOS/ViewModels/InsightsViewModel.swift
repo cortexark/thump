@@ -91,7 +91,10 @@ final class InsightsViewModel: ObservableObject {
                 #if targetEnvironment(simulator)
                 history = MockData.mockHistory(days: 30)
                 #else
-                history = []
+                AppLogger.engine.error("Insights history fetch failed: \(error.localizedDescription)")
+                errorMessage = "Unable to read health data. Please check Health permissions in Settings."
+                isLoading = false
+                return
                 #endif
             }
 

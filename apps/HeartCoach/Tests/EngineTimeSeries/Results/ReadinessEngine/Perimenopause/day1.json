@@ -1,12 +1,14 @@
 {
   "hadConsecutiveAlert" : false,
   "level" : "moderate",
-  "pillarCount" : 2,
+  "pillarCount" : 3,
   "pillarNames" : [
     "sleep",
-    "recovery"
+    "recovery",
+    "activityBalance"
   ],
   "pillarScores" : {
+    "activityBalance" : 55,
     "recovery" : 45.117767141045121,
     "sleep" : 60.211725566458988
   },

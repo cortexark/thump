@@ -5,24 +5,24 @@
   "recommendation" : "tooMuchIntensity",
   "zoneBoundaries" : [
     {
-      "lower" : 121,
-      "upper" : 134
+      "lower" : 117,
+      "upper" : 130
     },
     {
-      "lower" : 134,
-      "upper" : 147
+      "lower" : 130,
+      "upper" : 142
     },
     {
-      "lower" : 147,
-      "upper" : 161
+      "lower" : 142,
+      "upper" : 155
     },
     {
-      "lower" : 161,
-      "upper" : 174
+      "lower" : 155,
+      "upper" : 167
     },
     {
-      "lower" : 174,
-      "upper" : 187
+      "lower" : 167,
+      "upper" : 180
     }
   ],
   "zoneCount" : 5

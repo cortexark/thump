@@ -5,24 +5,24 @@
   "recommendation" : "none",
   "zoneBoundaries" : [
     {
-      "lower" : 121,
-      "upper" : 132
+      "lower" : 116,
+      "upper" : 125
     },
     {
-      "lower" : 132,
-      "upper" : 142
+      "lower" : 125,
+      "upper" : 134
     },
     {
-      "lower" : 142,
-      "upper" : 152
+      "lower" : 134,
+      "upper" : 143
     },
     {
-      "lower" : 152,
-      "upper" : 163
+      "lower" : 143,
+      "upper" : 153
     },
     {
-      "lower" : 163,
-      "upper" : 173
+      "lower" : 153,
+      "upper" : 162
     }
   ],
   "zoneCount" : 5

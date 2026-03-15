@@ -5,24 +5,24 @@
   "recommendation" : "needsMoreAerobic",
   "zoneBoundaries" : [
     {
-      "lower" : 130,
-      "upper" : 142
+      "lower" : 127,
+      "upper" : 138
     },
     {
-      "lower" : 142,
-      "upper" : 154
+      "lower" : 138,
+      "upper" : 149
     },
     {
-      "lower" : 154,
-      "upper" : 166
+      "lower" : 149,
+      "upper" : 160
     },
     {
-      "lower" : 166,
-      "upper" : 177
+      "lower" : 160,
+      "upper" : 171
     },
     {
-      "lower" : 177,
-      "upper" : 189
+      "lower" : 171,
+      "upper" : 182
     }
   ],
   "zoneCount" : 5

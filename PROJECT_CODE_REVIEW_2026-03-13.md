@@ -22,11 +22,10 @@ Scope: repo-wide review with emphasis on correctness, optimization, performance,
   - `218b79b` `fix: batch HealthKit queries, real zoneMinutes, perf fixes, flaky tests, orphan cleanup`
   - `7fbe763` `fix: string interpolation compile error in DashboardViewModel, improve SWELL-HRV validation`
   - `3e47b3d` `test: include more test files in swift test, move EngineTimeSeries-dependent tests`
-- All findings from the code review are now addressed on this branch.
-- ~~One important caveat remains: notification authorization is now wired at startup, but I still did not find production call sites that automatically schedule anomaly alerts or nudge reminders from live assessments.~~
-- ✅ **RESOLVED:** `DashboardViewModel.scheduleNotificationsIfNeeded()` schedules anomaly alerts and smart nudge reminders from live assessment output at the end of every `refresh()` cycle.
+- The originally enumerated code-review fixes appear landed on this branch.
+- This file now treats those as resolved audit items and keeps only genuinely open product-quality and calibration work below.
 
-## Verified Completed Items and Locations
+## Resolved Review Items and Locations
 
 - Duplicate snapshot persistence fix:
   - [LocalStore.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Services/LocalStore.swift#L148) upserts by calendar day at lines 148-164.
@@ -50,198 +49,40 @@ Scope: repo-wide review with emphasis on correctness, optimization, performance,
 - `SmartNudgeScheduler` date-context fix:
   - [SmartNudgeScheduler.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/SmartNudgeScheduler.swift#L240) uses `todaySnapshot?.date` at lines 240-243.
   - [SmartNudgeScheduler.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Engine/SmartNudgeScheduler.swift#L329) uses `todaySnapshot?.date` at lines 329-332.
-- Notification authorization wiring only:
-  - [ThumpiOSApp.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ThumpiOSApp.swift#L41) creates and injects `NotificationService` at lines 41-53.
-  - [ThumpiOSApp.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ThumpiOSApp.swift#L103) requests notification authorization at lines 103-107.
-  - Status note: this is still partial because production scheduling call sites are not wired from live assessments.
+- Notification pipeline fix:
+  - [ThumpiOSApp.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ThumpiOSApp.swift#L43) injects shared `NotificationService` and requests authorization during startup.
+  - [DashboardView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/DashboardView.swift#L29) binds the environment notification service into the view model.
+  - [DashboardViewModel.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift#L225) schedules anomaly alerts and smart nudges from live assessment output at the end of `refresh()`.
 
-## Feedback on "Completed" Statuses
+## Still Open Product Review Areas
 
-My assessment after checking the code directly:
+These are the items I would keep in the review because they are not actually complete:
 
-- Correctly marked complete:
-  - duplicate snapshot upsert behavior
-  - explicit nudge completion tracking
-  - same-day streak guard
-  - SwiftPM fixture-warning cleanup
-  - `ThumpBuddyFace` availability guard
-  - `HeartTrendEngine` baseline-overlap fix
-  - `CoachingEngine` date-anchor fix
-  - `CorrelationEngine` activity-minutes fix
-  - `SmartNudgeScheduler` date-context fix
+- Startup path still needs one-shot hardening and measurement.
+  - `performStartupTasks()` is still attached to the routed root view in [ThumpiOSApp.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/ThumpiOSApp.swift#L57), so route changes can still rerun startup work.
+  - Launch still eagerly instantiates several services and synchronously hydrates `LocalStore`.
 
-- Marked complete, but that label is too strong:
-  - `CR-001` notification integration
-    - What is true: app startup now creates `NotificationService` and requests permission.
-    - What is false/unfinished: I still do not see production code that schedules anomaly alerts or nudge reminders from live assessment output.
-    - ~~Additional concern: `NotificationService()` is created with its own default `LocalStore` instead of explicitly sharing the app root `localStore`, so the wiring is not as clean or trustworthy as the docs imply.~~
-    - ✅ **RESOLVED (commit ad42000):** `ThumpiOSApp.init()` now creates a shared `LocalStore` and passes it to `NotificationService(localStore: store)` via `_notificationService = StateObject(wrappedValue:)`. File: `apps/HeartCoach/iOS/ThumpiOSApp.swift:29-44`.
-    - Verdict: this should be labeled `PARTIALLY FIXED`, not `FIXED`. *(LocalStore sharing is now fixed; production scheduling call sites remain missing.)*
-  - `CR-011` readiness integration
-    - What is true: `DashboardViewModel.computeReadiness()` now passes the real `StressEngine` score.
-    - ~~What is still incomplete: it still does not pass `assessment?.consecutiveAlert` into `ReadinessEngine.compute(...)`, even though the engine supports that overtraining cap.~~
-    - ✅ **RESOLVED (commit ad42000):** `DashboardViewModel.computeReadiness()` now passes `consecutiveAlert: assessment?.consecutiveAlert` to `ReadinessEngine.compute(...)`. File: `apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift:~460`.
-    - Verdict: ~~the main bug is improved, but calling the whole integration fully complete overstates the result.~~ **CR-011 is now FIXED.** Both stress score and consecutiveAlert are passed to the engine.
+- Large-file maintainability hotspots remain.
+  - [DashboardView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/DashboardView.swift)
+  - [WatchInsightFlowView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Watch/Views/WatchInsightFlowView.swift)
+  - [HeartModels.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Models/HeartModels.swift)
+  - [StressView.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/iOS/Views/StressView.swift)
 
-- Easy to misread as "complete", but not actually done:
-  - ~~test coverage depth~~
-    - ~~The default `swift test` run passes, but `Package.swift` still excludes dataset-validation and engine time-series suites.~~
-    - ~~So "tests are green" is true for the default package target, but not the same as "full validation is complete."~~
-    - ✅ **IMPROVED (commit 3e47b3d):** `swift test` now runs 641 tests across both ThumpTests and ThumpTimeSeriesTests targets. EngineKPIValidationTests un-excluded. EndToEnd, UICoherence, and MockProfile tests moved into ThumpTimeSeriesTests. Only iOS-only and external-data tests remain excluded.
-  - notification behavior
-    - ~~permission wiring exists~~
-    - ~~end-to-end delivery from real app logic still appears missing~~
-    - ✅ **RESOLVED:** `DashboardViewModel.scheduleNotificationsIfNeeded()` now calls `scheduleAnomalyAlert()` and `scheduleSmartNudge()` from live assessment output.
-  - readiness pipeline
-    - ~~stress-score input is improved~~
-    - ~~full engine contract is still not used~~
-    - ✅ **RESOLVED (commit ad42000):** Both stress score and `consecutiveAlert` are now passed. Full engine contract is used.
+- `WatchFeedbackBridge` is still a kept-but-unused subsystem.
+  - [WatchFeedbackBridge.swift](/Users/t/workspace/Apple-watch/apps/HeartCoach/Shared/Services/WatchFeedbackBridge.swift)
 
-- Documentation mistakes I want called out explicitly:
-  - ~~`PROJECT_DOCUMENTATION.md` contains two conflicting statements:~~
-    - ~~one section says `NotificationService` is "NOT wired into production app"~~
-    - ~~later the change log says `CR-001` is fixed because it is "wired into app startup"~~
-    - ~~both cannot be the final truth at the same time~~
-    - ✅ **RESOLVED (commit ad42000):** Both sections now say "PARTIALLY WIRED" — authorization + LocalStore sharing done, production scheduling call sites still missing.
-  - ~~`BUG_REGISTRY.md` currently treats `CR-001` as fixed-level resolved language, which is too strong based on the code I verified~~
-    - ✅ **RESOLVED (commit ad42000):** `BUG_REGISTRY.md` CR-001 status changed to `PARTIALLY FIXED` with "What is fixed" / "What is still missing" sections.
+- System design documentation still has drift.
+  - [MASTER_SYSTEM_DESIGN.md](/Users/t/workspace/Apple-watch/apps/HeartCoach/MASTER_SYSTEM_DESIGN.md) remains useful for intent, but it is not a fully current implementation source of truth.
 
-Bottom-line feedback → COMMITTED → COMPLETED:
-- All engine and data-pipeline cleanup work is real and landed.
-- ✅ **Notification work is COMPLETE:** authorization, LocalStore sharing, and production scheduling call sites (anomaly alerts + smart nudge reminders) are all wired from the assessment pipeline.
-- ✅ **Readiness integration is COMPLETE (commit ad42000):** stress score + consecutiveAlert are both passed to the engine.
-- ✅ **HealthKit batching is COMPLETE (commit 218b79b):** `HKStatisticsCollectionQuery` for RHR/HRV/steps/walkMinutes, real zoneMinutes ingestion.
-- ✅ **Performance fixes are COMPLETE (commit 218b79b):** PERF-1 through PERF-5 all resolved.
-- ✅ **Orphan cleanup is COMPLETE (commit 218b79b):** 3 orphan files moved to `.unused/`.
-- ✅ **Test coverage expanded (commit 3e47b3d):** 641 tests, 0 failures.
+- Stress-engine product trust is still open.
+  - Repo-wide stress-calibration status should now be read from the dedicated report:
+    - [STRESS_ENGINE_VALIDATION_REPORT.md](/Users/t/workspace/Apple-watch/apps/HeartCoach/Tests/Validation/STRESS_ENGINE_VALIDATION_REPORT.md)
 
-## Findings
+- `BioAgeEngine`, `CorrelationEngine`, and `SmartNudgeScheduler` still need stronger validation before their outputs deserve high-trust product language.
 
-### 1. [High] Notification pipeline is only partially wired into the production app
-
-**Status: ✅ FIXED** (2026-03-13, branch `fix/deterministic-test-seeds`)
-**What landed:**
-- `ThumpiOSApp` creates `NotificationService` with shared `LocalStore`, injects it into the environment, and requests authorization during startup.
-- `DashboardView` reads `@EnvironmentObject notificationService` and passes it to `DashboardViewModel` via `bind()`.
-- `DashboardViewModel.scheduleNotificationsIfNeeded(assessment:history:)` calls `scheduleAnomalyAlert()` when `assessment.status == .needsAttention` and `scheduleSmartNudge()` for the daily nudge — both from live assessment output at the end of every `refresh()` cycle.
-
-Files:
-- `apps/HeartCoach/iOS/ThumpiOSApp.swift:29-53` — shared LocalStore + NotificationService init
-- `apps/HeartCoach/iOS/Views/DashboardView.swift:29,55-60` — environment object + bind call
-- `apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift:78,110,225,531-564` — notificationService property, bind param, refresh call, scheduling method
-- `apps/HeartCoach/iOS/Services/NotificationService.swift:20-96` — scheduling API
-
-Why it matters:
-- Authorization now works from the app root, so this is no longer a fully disconnected subsystem.
-- But without a production scheduling path from real assessments and nudges, users still do not automatically benefit from the notification engine's alert/reminder logic.
-- That makes this a partial integration rather than a completed end-to-end fix.
-
-Recommendation:
-- Keep the startup authorization wiring.
-- Add explicit production call sites from the assessment/nudge pipeline into scheduling and cancellation methods.
-- Pass the shared app `localStore` into `NotificationService` explicitly so alert-budget state is owned by the same root persistence object.
-- Add one smoke test that proves an assessment can trigger the notification pipeline.
-
-### 2. [High] Dashboard refresh persists duplicate snapshots on every refresh
-
-**Status: ✅ FIXED** (2026-03-13, branch `fix/deterministic-test-seeds`)
-**Fix:** `LocalStore.appendSnapshot(_:)` now upserts by calendar day instead of blindly appending, which removes same-day duplicate persistence from repeated refreshes.
-
-Files:
-- `apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift:186-188`
-- `apps/HeartCoach/Shared/Services/LocalStore.swift:148-152`
-
-Why it matters:
-- Every call to `refresh()` appends a new `StoredSnapshot`, even when the user is still on the same day and the snapshot represents the same period.
-- Pull-to-refresh, tab revisits, and app relaunches will create same-day duplicates.
-- Those duplicates pollute every feature that relies on persisted history: streak calculation, weekly rollups, watch sync seeding, and any future analytics based on `loadHistory()`.
-
-Recommendation:
-- Change persistence from append-only to an upsert keyed by calendar day, or keep only the newest snapshot per day.
-- Add a regression test that calls `refresh()` twice on the same day and asserts a single stored record remains.
-
-### 3. [High] Weekly nudge completion is calculated from “assessment exists”, not from actual completion
-
-**Status: ✅ FIXED** (2026-03-13, branch `fix/deterministic-test-seeds`)
-**Fix:** Added `nudgeCompletionDates: Set<String>` to `UserProfile` in `HeartModels.swift`. Rewrote `InsightsViewModel.nudgeCompletionRate` to use explicit completion records instead of inferring from “assessment exists”.
-
-Files:
-- `apps/HeartCoach/iOS/ViewModels/InsightsViewModel.swift:173-184`
-- `apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift:235-253`
-
-Why it matters:
-- `generateWeeklyReport()` claims a day counts as completed when the user checked in and a stored assessment exists, but the implementation only checks `stored.assessment != nil`.
-- Because `DashboardViewModel.refresh()` stores an assessment automatically, simply opening the app can inflate `nudgeCompletionRate` toward 100% without the user completing anything.
-- The metric shown in the weekly report is therefore misleading.
-
-Recommendation:
-- Track completion explicitly with a dedicated per-day completion record.
-- Do not infer completion from stored assessments.
-- Add tests covering: no completion, single completion, and repeated refreshes without completion.
-
-### 4. [Medium] Same-day nudge taps can inflate the streak counter
-
-**Status: ✅ FIXED** (2026-03-13, branch `fix/deterministic-test-seeds`)
-**Fix:** Added `lastStreakCreditDate` to `UserProfile`. `markNudgeComplete()` now checks this date and only increments streak once per calendar day, regardless of how many nudge cards are tapped.
-
-Files:
-- `apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift:235-253`
-
-Why it matters:
-- `markNudgeComplete()` increments `streakDays` unconditionally.
-- `markNudgeComplete(at:)` calls it again for each card, so multiple nudges on the same day can increment the streak multiple times.
-- This breaks the “days” semantics of the streak and makes the value hard to trust.
-
-Recommendation:
-- Persist the last streak-credit date and only increment once per calendar day.
-- Keep per-card completion UI state separate from streak accounting.
-
-### 5. [Medium] HealthKit history loading fans out into too many queries
-
-**Status: ✅ FIXED** (commit `218b79b`, branch `fix/deterministic-test-seeds`)
-**Fix:** Replaced per-day fan-out with `HKStatisticsCollectionQuery` batch queries for RHR, HRV, steps, and walkMinutes (4 batch queries instead of N×9 individual). Per-day concurrent queries retained only for metrics requiring workout/sample-level analysis (VO2max, recovery HR, sleep, weight, workout minutes, zone minutes).
-
-Files:
-- `apps/HeartCoach/iOS/Services/HealthKitService.swift` — added `batchAverageQuery()` and `batchSumQuery()` helpers, rewrote `fetchHistory(days:)`
-
-Recommendation:
-- Replace the per-day fan-out with batched range queries.
-- Prefer `HKStatisticsCollectionQuery` / `HKStatisticsCollectionQueryDescriptor` (or equivalent batched APIs) so each metric is fetched once across the date range, then bucketed by day in memory.
-- Cache the widest window and derive 7/14/30-day views from that dataset instead of re-querying HealthKit for every tab change.
-
-### 6. [Medium] SwiftPM test target leaves hundreds of fixture files unhandled
-
-**Status: ✅ FIXED** (2026-03-13, branch `fix/deterministic-test-seeds`)
-**Fix:** Updated `Package.swift` exclude list to cover `EngineTimeSeries/Results`, `Validation/Data`, and related fixture paths. A fresh `swift test` on this branch no longer reproduces the earlier warning spam.
-
-Files:
-- `apps/HeartCoach/Package.swift:24-57`
-
-Why it matters:
-- `swift test` previously reported 660 unhandled files in the test target.
-- This warning noise makes real build problems easier to miss and signals that the package manifest is out of sync with the fixture layout.
-
-Recommendation:
-- Explicitly exclude the `Tests/EngineTimeSeries/Results/**` tree and any other fixture directories from the test target, or declare them as resources if they are intentional test inputs.
-- Keep the package warning-free so CI output stays high-signal.
-
-### 7. [Medium] `ThumpBuddyFace` advertises macOS 14 support but uses a macOS 15-only symbol effect
-
-**Status: ✅ FIXED** (2026-03-13, branch `fix/deterministic-test-seeds`)
-**Fix:** Added `if #available(macOS 15, *)` guard around the `.symbolEffect(.bounce)` call in `ThumpBuddyFace.swift`. Build warning eliminated.
-
-Files:
-- `apps/HeartCoach/Package.swift:7-10`
-- `apps/HeartCoach/Shared/Views/ThumpBuddyFace.swift:257-261`
-
-Why it matters:
-- The package declares `.macOS(.v14)`.
-- `starEye` uses `.symbolEffect(.bounce, isActive: true)`, which produced a macOS 15 availability warning during `swift test`.
-- In Swift 6 mode, this becomes a build error on the currently declared platform floor.
-
-Recommendation:
-- Guard the effect with `if #available(macOS 15, *)`, or use a macOS 14-safe alternative animation.
-- Keep the declared deployment target aligned with actual API usage.
+- Broader real-world validation is still uneven outside the stress work.
+  - Stress now has the strongest executed real-data gate in the repo.
+  - The other engines still rely more heavily on synthetic or heuristic validation.
 
 ## Abandoned / Orphaned Code → COMMITTED → COMPLETED
 
@@ -361,7 +202,7 @@ Strengths:
 Gaps / bugs:
 - The prior baseline-overlap bug appears fixed on this branch. `weekOverWeekTrend()` now excludes the most recent seven snapshots before computing the baseline mean.
 - Week-over-week logic is RHR-only. That may be acceptable for a first pass, but it means “trend” is narrower than the UI language suggests.
-- Real-world validation is still weak because the external validation datasets are not actually present or executed by default.
+- Real-world validation is still weak for this specific engine because there is no equivalent executed external-dataset gate comparable to the new stress-engine validation workflow.
 
 Verdict:
 - Enough for a prototype daily assessment engine.
@@ -380,7 +221,11 @@ Strengths:
 
 Gaps / risks:
 - The repo itself still marks this engine as calibration work in progress (`apps/HeartCoach/TODO/01-stress-engine-upgrade.md`).
-- The intended real-world validation datasets are not checked in, and `DatasetValidationTests` are excluded from the SwiftPM test target.
+- The stress-validation story has improved substantially since the original review:
+  - local SWELL, PhysioNet, and WESAD data are now present
+  - the dedicated validation harness has been executed against those datasets
+  - the detailed current status now lives in [STRESS_ENGINE_VALIDATION_REPORT.md](/Users/t/workspace/Apple-watch/apps/HeartCoach/Tests/Validation/STRESS_ENGINE_VALIDATION_REPORT.md)
+- The remaining issue is not absence of validation anymore; it is that the current single-formula product score still does not generalize cleanly across those datasets.
 - The output score is still a heuristic composite with tuned constants rather than a validated real-world scale.
 - The description text can make the score feel more certain than the calibration evidence currently justifies.
 
@@ -408,7 +253,8 @@ Gaps / bugs:
 
 Verdict:
 - Engine design: good enough.
-- Current app output: improved, but still not as good as it could be because the integration is not yet passing every supported input.
+- Current app output: materially improved and now uses the full currently supported dashboard input contract.
+- Remaining gaps are richer recovery inputs and stronger validation, not missing wiring in the current dashboard path.
 
 ### BioAgeEngine
 
@@ -493,8 +339,8 @@ Verdict:
 ### HeartRateZoneEngine
 
 Assessment:
-- The standalone algorithm is plausible, but the shipped product path is not actually feeding it real data.
-- That makes the current output effectively not ready.
+- The standalone algorithm is plausible, and the shipped product path now can feed it real data for users with tracked workouts.
+- The remaining issue is output quality and validation depth, not a missing ingestion pipeline.
 
 Strengths:
 - Karvonen-based zone computation is a sensible approach.
@@ -504,7 +350,7 @@ Gaps / bugs:
 - ~~`HealthKitService.fetchSnapshot()` hardcodes `zoneMinutes: []` in `apps/HeartCoach/iOS/Services/HealthKitService.swift:231-239`. **⬚ OPEN** — requires HealthKit workout session ingestion to populate real zone data.~~
 - ✅ **RESOLVED (commit 218b79b):** Added `queryZoneMinutes(for:)` method that queries workout HR samples and buckets into 5 zones based on age-estimated max HR (220-age). `fetchSnapshot(for:)` now uses real zone data via `async let zones = queryZoneMinutes(for: date)`.
 - `DashboardViewModel.computeZoneAnalysis()` then bails out unless there are 5 populated zone values in `apps/HeartCoach/iOS/ViewModels/DashboardViewModel.swift:455-462`.
-- As a result, zone analysis/coaching is effectively mock-only today for normal HealthKit-backed flows.
+- As a result, zone analysis/coaching now works only for users whose recorded workouts yield enough usable heart-rate-zone data; it is no longer mock-only, but it is still sparse for lightly tracked users.
 - There is also a smaller correctness issue: `computeZones()` documents sex-aware HRmax handling, but the current implementation does not materially apply a different formula.
 
 Verdict:
@@ -555,8 +401,8 @@ Verdict:
 ## Dataset and Validation Sufficiency
 
 Assessment:
-- The repo has enough data infrastructure for development, demos, and regression testing.
-- It does not have enough real validation data or executed validation coverage to justify strong confidence in engine calibration.
+- The repo has enough data infrastructure for development, demos, regression testing, and one strong deep-dive validation area.
+- It still does not have enough evenly distributed real validation coverage across all engines to justify strong confidence in repo-wide calibration.
 
 ### What is present
 
@@ -564,13 +410,19 @@ Assessment:
 - One real 32-day Apple Watch-derived sample embedded in `MockData.swift`.
 - A validation harness in `apps/HeartCoach/Tests/Validation/DatasetValidationTests.swift`.
 - A documented plan for external datasets in `apps/HeartCoach/Tests/Validation/FREE_DATASETS.md`.
+- Real local stress-validation data now present under `apps/HeartCoach/Tests/Validation/Data/`:
+  - `swell_hrv.csv`
+  - `physionet_exam_stress/`
+  - `WESAD.zip`
+  - `wesad_e4_mirror/`
+- A dedicated executed stress-validation write-up in [STRESS_ENGINE_VALIDATION_REPORT.md](/Users/t/workspace/Apple-watch/apps/HeartCoach/Tests/Validation/STRESS_ENGINE_VALIDATION_REPORT.md).
 
 ### What is missing
 
-- The validation data directory contains only `.gitkeep` and a README; no real CSVs are present.
-- `DatasetValidationTests` skip when datasets are missing in `apps/HeartCoach/Tests/Validation/DatasetValidationTests.swift:29-33`.
-- More importantly, that validation suite is excluded from the SwiftPM target in `apps/HeartCoach/Package.swift:28-55`.
-- Several stronger engine time-series and KPI/integration suites are also excluded from the default package test target in the same manifest.
+- Outside the stress work, most engines still do not have equivalent executed real-data validation.
+- `DatasetValidationTests` remain opt-in rather than part of the default `swift test` path, because they depend on external datasets and Xcode-hosted execution.
+- Several iOS-only and external-data suites are still excluded from the default package run in `apps/HeartCoach/Package.swift`.
+- There is still no held-out private product dataset with subjective labels for cross-engine calibration.
 
 ### Is the dataset enough?
 
@@ -582,7 +434,8 @@ For engine calibration and confidence in output quality:
 - No.
 - The synthetic data is partly circular: it encodes the same assumptions the engines reward, so passing those tests does not prove the rules generalize.
 - The single embedded real-history sample is useful for demos and sanity checks, but it is still only one user and several fields are inferred/derived rather than ground-truth labeled.
-- The external validation plan is promising, but currently aspirational because the data is not present and the tests are excluded from normal runs.
+- Stress is now the exception: it has moved beyond “aspirational” into an executed multi-dataset validation workflow.
+- The broader repo is still uneven because the other engines have not yet reached that same validation maturity.
 
 ### Output-quality implications
 
@@ -608,8 +461,8 @@ For engine calibration and confidence in output quality:
 ### Bottom-line verdict
 
 - Enough for a thoughtful prototype and for building the product loop.
-- Not enough yet to say the engines are well-calibrated on real users.
-- The biggest missing piece is not code complexity; it is real, executed validation on real data.
+- Not enough yet to say the engines are well-calibrated on real users across the repo.
+- The biggest remaining gap is not code complexity; it is uneven real-data validation depth outside the now-stronger stress-engine workflow.
 
 ## Dataset Creation Guidance
 
@@ -1175,3 +1028,112 @@ If only a few tests are added soon, I would prioritize these:
 2. ~~Decide whether notifications are a real shipping feature; if yes, wire `NotificationService` now, otherwise remove or park it.~~ **✅ DONE (commit dcbee72)** — Full notification pipeline: authorization + shared LocalStore + scheduling from live assessment output (anomaly alerts + smart nudge reminders).
 3. ~~Rework HealthKit history loading with batched queries before adding more views that depend on long lookback windows.~~ **✅ DONE (commit 218b79b, CR-005)** — `HKStatisticsCollectionQuery` batch queries for RHR, HRV, steps, walkMinutes.
 4. ~~Prune or integrate orphaned services so the codebase reflects the actual runtime architecture.~~ **✅ DONE (commit 218b79b)** — `AlertMetricsService.swift`, `ConfigLoader.swift`, `File.swift` moved to `.unused/`. `WatchFeedbackBridge.swift` kept (likely needed for watch connectivity).
+
+---
+
+## Session Review — 2026-03-13 (in-session findings and fixes)
+
+This section records findings identified and fixed during the hands-on coding session on 2026-03-13.
+
+### Fixed In This Session
+
+#### Watch text truncation — `WatchInsightFlowView.swift`, `WatchDetailView.swift`
+All dynamic `Text` views on watchOS that could produce long strings were missing `lineLimit(nil)` + `fixedSize(horizontal: false, vertical: true)`. watchOS defaults to single-line truncation. Fixed six locations:
+- `PlanScreen` "Yet to Begin" `pushMessage`
+- `PlanScreen` sleep-mode `pushMessage`
+- `PlanScreen` `inProgressMessage`
+- `WalkNudgeScreen` `extraNudgeRow` contextual message
+- `GoalProgressScreen` sleep-hour "Rest up" text
+- `SleepScreen` `sleepSubMessage`
+- `WatchDetailView` "Sync with your iPhone..." placeholder
+
+#### Minimum age validation — `iOS/Views/SettingsView.swift:133`
+`DatePicker` used `in: ...Date()` allowing DOB of today (age = 0). Fixed to:
+```swift
+in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date()
+```
+Also removed the force-unwrap `!` on the date arithmetic result.
+
+#### Silent HealthKit failure on device — `DashboardViewModel.swift`, `StressViewModel.swift`
+Both ViewModels had inner `catch` blocks that swallowed HealthKit errors before they reached the outer error handler:
+- `DashboardViewModel`: today snapshot fetch + history fetch both silently created empty data on device
+- `StressViewModel`: history fetch silently returned `[]` on device
+
+**Fixed pattern** in both (device `#else` branch now):
+```swift
+AppLogger.engine.error("... fetch failed: \(error.localizedDescription)")
+errorMessage = "Unable to read health data. Please check Health permissions in Settings."
+isLoading = false
+return
+```
+The `errorMessage` property drives the error UI in each view, so the user sees the failure instead of silently receiving wrong assessments.
+
+#### Timer retain cycle — `iOS/ViewModels/StressViewModel.swift`
+Breathing session timer used a closure that could outlive `self`. Fixed with `[weak self]` in both the outer timer closure and the inner `Task { @MainActor }`, with explicit `timer.invalidate()` in the guard-nil path.
+
+#### Snapshot history encryption — `Shared/Services/LocalStore.swift`
+Snapshot history (HRV, RHR, steps, sleep) was stored in UserDefaults without application-level encryption. The existing `CryptoService` is now routed through the `save()`/`load()` helpers for this key.
+
+#### Dual stress computation paths — `DashboardViewModel.swift` vs `StressViewModel.swift`
+DashboardViewModel called `computeStress(snapshot:recentHistory:)` while StressViewModel decomposed the snapshot and called `computeStress(currentHRV:baselineHRV:)`. Same data could produce different scores. Both now use the unified `computeStress(snapshot:recentHistory:)` path.
+
+#### `try?` drops billing verification errors — `iOS/Services/SubscriptionService.swift`
+`try? checkVerification(result)` was discarding the error silently. Unverified transactions are now explicitly logged via `debugPrint` before being skipped.
+
+---
+
+### Still Open — Identified This Session
+
+These issues were identified in this session but not yet fixed:
+
+#### HIGH: Same silent-swallow pattern in `InsightsViewModel.swift` and `TrendsViewModel.swift`
+Both still do `history = []` on device when HealthKit fails — same bug just fixed in Dashboard and Stress.
+- `InsightsViewModel.swift` lines ~88-96
+- `TrendsViewModel.swift` lines ~128-136
+
+**Fix pattern** (same as DashboardViewModel fix above):
+```swift
+#else
+AppLogger.engine.error("... fetch failed: \(error.localizedDescription)")
+errorMessage = "Unable to read health data. Please check Health permissions in Settings."
+isLoading = false
+return
+#endif
+```
+
+#### HIGH: `DateFormatter` created inline on every render — three views
+Creates expensive `DateFormatter()` instances inside functions called from `ForEach` loops:
+- `iOS/Views/StressView.swift` — `formatWeekday()`, `formatDayHeader()`, `formatDate()` (three separate inline formatters, called per heatmap cell)
+- `iOS/Views/InsightsView.swift` — `reportDateRange()` (one inline formatter, called per weekly report card)
+- `iOS/Views/TrendsView.swift` — `xAxisLabels()` (one inline formatter, called per chart render with a `.map()` loop)
+
+**Fix pattern** for all three — replace inline creation with `private static let`:
+```swift
+private static let weekdayFormatter: DateFormatter = {
+    let f = DateFormatter(); f.dateFormat = "EEE"; return f
+}()
+```
+
+#### MEDIUM: Force unwrap in `StressView.swift` after nil check
+```swift
+"stress \(score), \(point!.level.displayName)"  // point checked nil above but force-unwrapped
+```
+Use `if let p = point { ... }` instead.
+
+#### MEDIUM: Correlation computation runs in view body — `TrendsView.swift`
+`computeCorrelation()` performs Pearson math inside a view helper called on every render. Should be memoized in `TrendsViewModel` and only recomputed when the underlying data changes.
+
+#### MEDIUM: `NotificationService.isAuthorized` never refreshed after launch
+`checkCurrentAuthorization()` only runs once at init. If the user grants or denies notification permission mid-session, the published property is never updated. Views should call `checkCurrentAuthorization()` in `.onAppear`.
+- File: `iOS/Services/NotificationService.swift`
+
+#### LOW: Active TODO in shipping code
+```swift
+// BUG-053: These fallback delivery hours are hardcoded defaults.
+// TODO: Make configurable via Settings UI
+```
+File: `iOS/Services/NotificationService.swift` lines ~45-47. Move to issue tracker or implement.
+
+#### LOW: HealthKit queries cannot distinguish "no data" from "query failed"
+`queryRestingHeartRate()`, `queryHRV()`, `queryVO2Max()` all return `nil` for both "no samples exist" and "query threw an error". The user cannot tell why a metric is missing.
+Consider `Result<Double?, HealthKitError>` or a logged error companion alongside the nil return.
