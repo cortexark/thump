@@ -123,6 +123,10 @@ extension DashboardView {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("How you recovered: \(recoveryNarrative(wow: wow))")
             .accessibilityIdentifier("dashboard_recovery_card")
+            .onTapGesture {
+                InteractionLog.log(.cardTap, element: "recovery_card", page: "Dashboard")
+                withAnimation { selectedTab = 3 }
+            }
         }
     }
 

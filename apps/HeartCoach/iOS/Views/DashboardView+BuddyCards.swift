@@ -55,7 +55,7 @@ extension DashboardView {
                             }
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CardButtonStyle())
                     .accessibilityHint("Double tap to view details")
                 }
             }
@@ -183,6 +183,16 @@ extension DashboardView {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
+
+                                // Metric impact tag
+                                HStack(spacing: 4) {
+                                    Image(systemName: metricImpactIcon(rec.category))
+                                        .font(.system(size: 8))
+                                    Text(metricImpactLabel(rec.category))
+                                        .font(.system(size: 9, weight: .medium))
+                                }
+                                .foregroundStyle(buddyRecColor(rec))
+                                .padding(.top, 2)
                             }
 
                             Spacer()
@@ -201,7 +211,7 @@ extension DashboardView {
                                 .strokeBorder(buddyRecColor(rec).opacity(0.12), lineWidth: 1)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CardButtonStyle())
                     .accessibilityLabel("\(rec.title): \(rec.message)")
                     .accessibilityHint("Double tap for details")
                 }
@@ -238,6 +248,33 @@ extension DashboardView {
         case .seekGuidance: return Color(hex: 0xEF4444)
         case .celebrate:    return Color(hex: 0x22C55E)
         case .sunlight:     return Color(hex: 0xF59E0B)
+        }
+    }
+
+    /// Maps a recommendation category to the metric it improves.
+    func metricImpactLabel(_ category: NudgeCategory) -> String {
+        switch category {
+        case .walk:         return "Improves VO2 max & recovery"
+        case .rest:         return "Lowers resting heart rate"
+        case .hydrate:      return "Supports HRV & recovery"
+        case .breathe:      return "Reduces stress score"
+        case .moderate:     return "Boosts cardio fitness"
+        case .celebrate:    return "Keep it up!"
+        case .seekGuidance: return "Protect your heart health"
+        case .sunlight:     return "Improves sleep & circadian rhythm"
+        }
+    }
+
+    func metricImpactIcon(_ category: NudgeCategory) -> String {
+        switch category {
+        case .walk:         return "arrow.up.heart.fill"
+        case .rest:         return "heart.fill"
+        case .hydrate:      return "waveform.path.ecg"
+        case .breathe:      return "brain.head.profile"
+        case .moderate:     return "lungs.fill"
+        case .celebrate:    return "star.fill"
+        case .seekGuidance: return "shield.fill"
+        case .sunlight:     return "moon.zzz.fill"
         }
     }
 }
