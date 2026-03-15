@@ -1412,6 +1412,10 @@ public struct UserProfile: Codable, Equatable, Sendable {
     /// Email address from Sign in with Apple (optional, only provided on first sign-in).
     public var email: String?
 
+    /// Date when the launch free year started (first sign-in).
+    /// Nil if the user signed up after the launch promotion ends.
+    public var launchFreeStartDate: Date?
+
     public init(
         displayName: String = "",
         joinDate: Date = Date(),
@@ -1421,7 +1425,8 @@ public struct UserProfile: Codable, Equatable, Sendable {
         nudgeCompletionDates: Set<String> = [],
         dateOfBirth: Date? = nil,
         biologicalSex: BiologicalSex = .notSet,
-        email: String? = nil
+        email: String? = nil,
+        launchFreeStartDate: Date? = nil
     ) {
         self.displayName = displayName
         self.joinDate = joinDate
@@ -1432,6 +1437,7 @@ public struct UserProfile: Codable, Equatable, Sendable {
         self.dateOfBirth = dateOfBirth
         self.biologicalSex = biologicalSex
         self.email = email
+        self.launchFreeStartDate = launchFreeStartDate
     }
 
     /// Computed chronological age in years from date of birth.
@@ -1439,6 +1445,21 @@ public struct UserProfile: Codable, Equatable, Sendable {
         guard let dob = dateOfBirth else { return nil }
         let components = Calendar.current.dateComponents([.year], from: dob, to: Date())
         return components.year
+    }
+
+    /// Whether the user is currently within the launch free year.
+    public var isInLaunchFreeYear: Bool {
+        guard let start = launchFreeStartDate else { return false }
+        guard let expiryDate = Calendar.current.date(byAdding: .year, value: 1, to: start) else { return false }
+        return Date() < expiryDate
+    }
+
+    /// Days remaining in the launch free year. Returns 0 if expired or not enrolled.
+    public var launchFreeDaysRemaining: Int {
+        guard let start = launchFreeStartDate else { return 0 }
+        guard let expiryDate = Calendar.current.date(byAdding: .year, value: 1, to: start) else { return 0 }
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: expiryDate).day ?? 0
+        return max(0, days)
     }
 }
 
