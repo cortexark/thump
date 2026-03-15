@@ -95,6 +95,11 @@ final class StressViewModel: ObservableObject {
     /// Set via `bind(connectivityService:)` from the view layer.
     private var connectivityService: ConnectivityService?
 
+    /// Readiness level from the latest assessment (set by app coordinator).
+    /// Used as a conflict guard so SmartNudgeScheduler doesn't suggest
+    /// activity when NudgeGenerator says rest.
+    var assessmentReadinessLevel: ReadinessLevel?
+
     /// Task driving the breathing countdown (replaces Timer to avoid RunLoop retain).
     private var breathingTask: Task<Void, Never>?
 
@@ -108,6 +113,18 @@ final class StressViewModel: ObservableObject {
         self.healthKitService = healthKitService
         self.engine = engine
         self.scheduler = scheduler
+
+        // Listen for readiness updates from DashboardViewModel
+        // so the conflict guard stays in sync across tabs
+        NotificationCenter.default.addObserver(
+            forName: .thumpReadinessDidUpdate,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let raw = notification.userInfo?["readinessLevel"] as? String,
+                  let level = ReadinessLevel(rawValue: raw) else { return }
+            self?.assessmentReadinessLevel = level
+        }
     }
 
     /// Binds shared service dependencies (PERF-4).
@@ -435,14 +452,16 @@ final class StressViewModel: ObservableObject {
             trendDirection: trendDirection,
             todaySnapshot: history.last,
             patterns: sleepPatterns,
-            currentHour: currentHour
+            currentHour: currentHour,
+            readinessGate: assessmentReadinessLevel
         )
         smartActions = scheduler.recommendActions(
             stressPoints: trendPoints,
             trendDirection: trendDirection,
             todaySnapshot: history.last,
             patterns: sleepPatterns,
-            currentHour: currentHour
+            currentHour: currentHour,
+            readinessGate: assessmentReadinessLevel
         )
 
         // Readiness gate: compute readiness from our own history and inject a

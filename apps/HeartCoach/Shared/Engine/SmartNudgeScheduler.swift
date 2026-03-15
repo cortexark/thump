@@ -71,11 +71,21 @@ public struct SmartNudgeScheduler: Sendable {
 
             let dayOfWeek = calendar.component(.weekday, from: snapshot.date)
 
-            // Estimate bedtime: if they slept N hours and the snapshot
-            // is for a given day, bedtime was roughly (24 - sleepHours)
-            // adjusted for typical patterns
-            let estimatedWakeHour = min(12, max(5, Int(7.0 + (sleepHours - 7.0) * 0.3)))
-            let estimatedBedtimeHour = max(20, min(24, estimatedWakeHour + 24 - Int(sleepHours)))
+            // Estimate bedtime and wake time from sleep duration.
+            // BUG-063 fix: widened wake range to 3-14 (was 5-12) to support shift workers
+            // who may sleep 2AM-10AM. Bedtime floor lowered to 18 (was 20) for early sleepers.
+            // For shift workers sleeping during the day (sleepHours > 9 suggests unusual pattern),
+            // we estimate a later wake time.
+            let baseWake = 7.0 + (sleepHours - 7.0) * 0.3
+            let estimatedWakeHour: Int
+            if sleepHours > 9 {
+                // Long sleep or shift worker — likely wakes later
+                estimatedWakeHour = min(14, max(3, Int(baseWake + 2)))
+            } else {
+                estimatedWakeHour = min(14, max(3, Int(baseWake)))
+            }
+            let rawBedtimeHour = estimatedWakeHour + 24 - Int(sleepHours)
+            let estimatedBedtimeHour = max(18, min(28, rawBedtimeHour))
             let normalizedBedtime = estimatedBedtimeHour >= 24
                 ? estimatedBedtimeHour - 24
                 : estimatedBedtimeHour
@@ -196,7 +206,8 @@ public struct SmartNudgeScheduler: Sendable {
         trendDirection: StressTrendDirection,
         todaySnapshot: HeartSnapshot?,
         patterns: [SleepPattern],
-        currentHour: Int
+        currentHour: Int,
+        readinessGate: ReadinessLevel? = nil
     ) -> SmartNudgeAction {
         // 1. High stress day → journal
         if let todayStress = stressPoints.last,
@@ -277,7 +288,8 @@ public struct SmartNudgeScheduler: Sendable {
         trendDirection: StressTrendDirection,
         todaySnapshot: HeartSnapshot?,
         patterns: [SleepPattern],
-        currentHour: Int
+        currentHour: Int,
+        readinessGate: ReadinessLevel? = nil
     ) -> [SmartNudgeAction] {
         var actions: [SmartNudgeAction] = []
 
@@ -348,7 +360,9 @@ public struct SmartNudgeScheduler: Sendable {
         }
 
         // 5. Activity-based suggestions from today's data
-        if let snapshot = todaySnapshot, actions.count < 3 {
+        // Conflict guard: suppress activity when readiness says rest
+        let activityAllowed = readinessGate != .recovering
+        if activityAllowed, let snapshot = todaySnapshot, actions.count < 3 {
             let walkMin = snapshot.walkMinutes ?? 0
             let workoutMin = snapshot.workoutMinutes ?? 0
             if walkMin + workoutMin < 10 {
@@ -366,6 +380,20 @@ public struct SmartNudgeScheduler: Sendable {
                     )
                 )
             }
+        } else if !activityAllowed, actions.count < 3 {
+            // Recovering readiness: replace activity with rest suggestion
+            actions.append(
+                .restSuggestion(
+                    DailyNudge(
+                        category: .rest,
+                        title: "Your Body Needs Recovery",
+                        description: "Your readiness is low. Rest now and "
+                            + "you'll bounce back stronger tomorrow.",
+                        durationMinutes: nil,
+                        icon: "bed.double.fill"
+                    )
+                )
+            )
         }
 
         // 6. Sleep-based suggestion

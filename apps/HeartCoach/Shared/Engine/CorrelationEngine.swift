@@ -111,7 +111,32 @@ public struct CorrelationEngine: Sendable {
             ))
         }
 
-        // 4. Sleep Hours vs HRV
+        // 4. Sleep Hours vs Resting Heart Rate (ZE-003)
+        // Tobaldini et al. (2019): short sleep → elevated RHR (+2-5 bpm/hr deficit)
+        // Cappuccio et al. (2010): sleep <6h → 48% increased CV risk
+        let sleepRHR = pairedValues(
+            history: history,
+            xKeyPath: \.sleepHours,
+            yKeyPath: \.restingHeartRate
+        )
+        if sleepRHR.x.count >= minimumPoints {
+            let r = pearsonCorrelation(x: sleepRHR.x, y: sleepRHR.y)
+            let result = interpretCorrelation(
+                factor: "Sleep Hours",
+                metric: "resting heart rate",
+                r: r,
+                expectedDirection: .negative  // more sleep → lower RHR
+            )
+            results.append(CorrelationResult(
+                factorName: "Sleep Hours vs RHR",
+                correlationStrength: r,
+                interpretation: result.interpretation,
+                confidence: result.confidence,
+                isBeneficial: result.isBeneficial
+            ))
+        }
+
+        // 5. Sleep Hours vs HRV
         let sleepHRV = pairedValues(
             history: history,
             xKeyPath: \.sleepHours,
@@ -257,6 +282,9 @@ public struct CorrelationEngine: Sendable {
         case "Activity Minutes":
             return "Active days lead to faster heart rate recovery in your data. "
                 + "This \(strength) pattern shows your fitness is paying off."
+        case "Sleep Hours" where metric == "resting heart rate":
+            return "On nights you sleep more, your resting heart rate the next day tends to be lower. "
+                + "This is a \(strength) pattern — quality sleep helps your heart recover."
         case "Sleep Hours":
             return "Longer sleep nights are followed by better HRV readings. "
                 + "This is one of the \(strength)est patterns in your data."

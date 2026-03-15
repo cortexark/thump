@@ -1,0 +1,143 @@
+// Quick probe: disable the guard and see if conflicts actually exist
+import XCTest
+@testable import Thump
+
+final class ConflictProbeTests: XCTestCase {
+    func testProbe_WhatHappensWithoutGuard() {
+        let generator = NudgeGenerator()
+        let scheduler = SmartNudgeScheduler()
+        let trendEngine = HeartTrendEngine()
+        let stressEngine = StressEngine()
+        
+        var results: [(String, String, String, String, String, String)] = []
+        
+        // Test only high-risk personas to keep it fast
+        let testPersonas = TestPersonas.all.filter {
+            ["NewMom", "StressedExecutive", "Overtraining", "YoungAthlete", "ObeseSedentary"].contains($0.name)
+        }
+        for persona in testPersonas {
+            let fullHistory = persona.generate30DayHistory()
+            for cpDay in [7, 14, 20, 25, 30] {
+                let snapshots = Array(fullHistory.prefix(cpDay))
+                guard let current = snapshots.last else { continue }
+                let history = Array(snapshots.dropLast())
+                
+                let assessment = trendEngine.assess(history: history, current: current)
+                let stressResult = stressEngine.computeStress(snapshot: current, recentHistory: history)
+                let readiness = ReadinessEngine().compute(
+                    snapshot: current,
+                    stressScore: stressResult?.score,
+                    recentHistory: history
+                )
+                
+                let nudge = generator.generate(
+                    confidence: assessment.confidence,
+                    anomaly: assessment.anomalyScore,
+                    regression: assessment.regressionFlag,
+                    stress: assessment.stressFlag,
+                    feedback: nil,
+                    current: current,
+                    history: history,
+                    readiness: readiness
+                )
+                
+                // Run scheduler WITHOUT guard to see raw behavior
+                let sleepPatterns = scheduler.learnSleepPatterns(from: snapshots)
+                let actions = scheduler.recommendActions(
+                    stressPoints: [],
+                    trendDirection: assessment.stressFlag ? .rising : .steady,
+                    todaySnapshot: current,
+                    patterns: sleepPatterns,
+                    currentHour: 14,
+                    readinessGate: nil  // NO GUARD
+                )
+                
+                let actionNames = actions.map { actionName($0) }.joined(separator: "+")
+                let readinessStr = readiness.map { "\($0.level.rawValue)(\($0.score))" } ?? "nil"
+                
+                results.append((
+                    persona.name, "day\(cpDay)",
+                    nudge.category.rawValue, actionNames,
+                    readinessStr,
+                    assessment.stressFlag ? "STRESSED" : "calm"
+                ))
+            }
+        }
+        
+        // Print full matrix
+        print("\n=== CONFLICT PROBE: NudgeGenerator vs SmartNudgeScheduler (NO GUARD) ===")
+        print(String(format: "%-22s %-6s %-14s %-30s %-18s %-8s", "PERSONA", "DAY", "NUDGE_CAT", "SCHEDULER_ACTIONS", "READINESS", "STRESS"))
+        print(String(repeating: "-", count: 105))
+        for r in results {
+            let flag: String
+            // Check for conflict: nudge says rest but scheduler says activity
+            let nudgeIsRest = r.2 == "rest" || r.2 == "breathe"
+            let schedulerHasActivity = r.3.contains("activity")
+            let readinessIsLow = r.4.contains("recovering") || r.4.contains("moderate")
+            if nudgeIsRest && schedulerHasActivity {
+                flag = " ⚠️ CONFLICT"
+            } else if readinessIsLow && schedulerHasActivity {
+                flag = " ⚠️ READINESS"
+            } else {
+                flag = ""
+            }
+            print(String(format: "%-22s %-6s %-14s %-30s %-18s %-8s%s", r.0, r.1, r.2, r.3, r.4, r.5, flag))
+        }
+        
+        // Count issues
+        let conflicts = results.filter { r in
+            let nudgeIsRest = r.2 == "rest" || r.2 == "breathe"
+            let schedulerHasActivity = r.3.contains("activity")
+            return nudgeIsRest && schedulerHasActivity
+        }
+        let readinessIssues = results.filter { r in
+            let readinessIsLow = r.4.contains("recovering")
+            let schedulerHasActivity = r.3.contains("activity")
+            return readinessIsLow && schedulerHasActivity
+        }
+        
+        print("\n=== SUMMARY ===")
+        print("Total scenarios: \(results.count)")
+        print("Nudge-vs-scheduler conflicts: \(conflicts.count)")
+        print("Recovering + activity issues: \(readinessIssues.count)")
+        
+        // Write report to file
+        var report = "=== CONFLICT PROBE (NO GUARD) ===\n"
+        for r in results {
+            let nudgeIsRest = r.2 == "rest" || r.2 == "breathe"
+            let schedulerHasActivity = r.3.contains("activity")
+            let readinessIsLow = r.4.contains("recovering")
+            var flag = ""
+            if nudgeIsRest && schedulerHasActivity { flag = " CONFLICT" }
+            else if readinessIsLow && schedulerHasActivity { flag = " READINESS_ISSUE" }
+            report += "\(r.0) | \(r.1) | nudge=\(r.2) | sched=\(r.3) | ready=\(r.4) | \(r.5)\(flag)\n"
+        }
+        report += "Total=\(results.count) Conflicts=\(conflicts.count) ReadinessIssues=\(readinessIssues.count)\n"
+        try? report.write(toFile: "/tmp/conflict_probe_report.txt", atomically: true, encoding: .utf8)
+
+        // Dump findings via XCTFail so they show in test output
+        var summary = "Total=\(results.count) Conflicts=\(conflicts.count) ReadinessIssues=\(readinessIssues.count)\n"
+        for r in conflicts {
+            summary += "  CONFLICT: \(r.0) \(r.1) nudge=\(r.2) sched=\(r.3) ready=\(r.4)\n"
+        }
+        for r in readinessIssues {
+            summary += "  READINESS: \(r.0) \(r.1) nudge=\(r.2) sched=\(r.3) ready=\(r.4)\n"
+        }
+
+        // Report findings
+        XCTAssertEqual(conflicts.count + readinessIssues.count, 0,
+                       "PROBE: \(summary)")
+    }
+    
+    private func actionName(_ action: SmartNudgeAction) -> String {
+        switch action {
+        case .journalPrompt: return "journal"
+        case .breatheOnWatch: return "breathe"
+        case .morningCheckIn: return "checkin"
+        case .bedtimeWindDown: return "bedtime"
+        case .activitySuggestion: return "activity"
+        case .restSuggestion: return "rest"
+        case .standardNudge: return "standard"
+        }
+    }
+}

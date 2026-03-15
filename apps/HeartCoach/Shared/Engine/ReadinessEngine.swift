@@ -246,8 +246,27 @@ public struct ReadinessEngine: Sendable {
         let day2 = recentDays.first
         let day3 = recentDays.dropFirst().first
 
-        // Need at least yesterday's data
-        guard let yesterday = day2 else { return nil }
+        // Fallback: if yesterday's data is missing, score from today only
+        guard let yesterday = day2 else {
+            let todayScore: Double
+            let todayDetail: String
+            if day1 >= 20 && day1 <= 45 {
+                todayScore = 75.0
+                todayDetail = "Active today — keep it up"
+            } else if day1 < 5 {
+                todayScore = 35.0
+                todayDetail = "Movement is low — a short walk helps"
+            } else {
+                todayScore = 55.0
+                todayDetail = "Some activity logged"
+            }
+            return ReadinessPillar(
+                type: .activityBalance,
+                score: todayScore,
+                weight: pillarWeights[.activityBalance, default: 0.15],
+                detail: todayDetail
+            )
+        }
 
         let score: Double
         let detail: String

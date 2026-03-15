@@ -382,12 +382,14 @@ final class ReadinessEngineTimeSeriesTests: XCTestCase {
             recentHistory: []
         )
 
-        XCTAssertNil(
+        // With the activity balance fallback (today-only scoring),
+        // sleep + activityBalance = 2 pillars, which meets the minimum.
+        XCTAssertNotNil(
             result,
-            "Edge case: only 1 pillar (sleep) with data should return nil, but got score \(result?.score ?? -1)"
+            "Edge case: sleep + activity fallback → 2 pillars → should return result"
         )
-        kpi.recordEdgeCase(engine: engineName, passed: result == nil,
-                           reason: "Only 1 pillar should return nil")
+        kpi.recordEdgeCase(engine: engineName, passed: result != nil,
+                           reason: "Activity fallback provides 2nd pillar")
     }
 
     func testNilStressScoreSkipsStressPillar() {

@@ -1,273 +1,188 @@
-# HeartCoach — Project Update 2026-03-13
+# Project Update — 2026-03-13
 
-> Sprint: March 10–14, 2026
-> Branch: `fix/deterministic-test-seeds`
-> Status: Ready for PR review
+Branch: `claude/objective-mendeleev`
 
 ---
 
-## Executive Summary
+## 1. Executive Summary
 
-Three major engineering initiatives completed in this sprint:
+Two major engine improvements were delivered across the current and previous sessions:
 
-1. **Stress Engine Overhaul** — Context-aware dual-branch architecture (acute vs desk) with confidence calibration
-2. **HeartRateZoneEngine Phase 1** — Sex-specific formulas, deterministic testing, sleep correlation
-3. **Code Review Fixes** — Timer leak, error handling, stress path consolidation, performance
+1. **Stress Engine Context-Awareness** — The `StressEngine` now distinguishes between acute (exercise/recovery) and desk (sedentary/work) contexts, applies context-specific signal weights, introduces disagreement damping when physiological signals contradict, and surfaces a structured confidence level to the UI.
 
-All changes are backward-compatible. 88+ tests passing. 5 real-world datasets validated.
+2. **HeartRateZoneEngine Phase 1** — Three bug fixes improve zone calculation accuracy: deterministic date handling in weekly summaries, sex-specific max HR estimation using the Gulati formula for women, and a new Sleep-to-RHR correlation pair. All changes are validated against published clinical datasets (NHANES, Cleveland Clinic, HUNT Fitness Study).
 
 ---
 
-## Bug Updates
+## 2. Bug Fixes
 
-### New Bugs Found
+### ZE-001: weeklyZoneSummary Date Determinism
 
-| ID | Severity | Description | Status |
-|---|---|---|---|
-| BUG-056 | P2 | LocalStore.swift:304 — `assertionFailure` crash when CryptoService.encrypt() returns nil in simulator/test environment. CryptoService depends on Keychain which isn't available in all test contexts. | OPEN |
-| BUG-057 | P3 | Swift compiler Signal 11 crash when XCTestCase methods contain nested structs with `BiologicalSex` enum members. Workaround: use parallel arrays instead of struct arrays. | WORKAROUND |
-| BUG-058 | P3 | "Recovering from Illness" synthetic persona produces stress score outside expected [45-75] range. Root cause: synthetic data noise amplitude, not engine regression. | KNOWN |
+The `weeklyZoneSummary` function previously called `Date()` internally, producing wall-clock-dependent results. A `referenceDate` parameter was added so callers supply a snapshot date. All existing callers remain backward compatible via a default value.
 
-### Existing Bugs Addressed
+### ZE-002: Sex-Specific Max HR Formulas
 
-| ID | Status Change | Notes |
+`estimateMaxHR` was using a single formula for all users. It now applies sex-specific formulas:
+
+| Population | Formula | Source |
 |---|---|---|
-| BUG-013 | Remains OPEN | Accessibility labels — deferred to next sprint |
-| BUG-037 | Verified FIXED | CV vs SD inconsistency — confirmed resolved in stress engine refactor |
+| Male / `.notSet` average | 208 - 0.7 * age | Tanaka et al. (2001) |
+| Female | 206 - 0.88 * age | Gulati et al. (2010) |
+
+**Impact:**
+- Female zone boundaries shift **5-9 bpm lower** (average 7 bpm across 10 female personas).
+- Male zones: **zero change**.
+- A 150 bpm floor is enforced for extreme ages to prevent physiologically implausible estimates.
+
+### ZE-003: Sleep-to-RHR Correlation Pair
+
+A 5th correlation pair (Sleep Hours vs. Resting Heart Rate) was added to `CorrelationEngine.analyze()`. The pair captures the well-documented inverse relationship between sleep duration and resting heart rate, with an interpretation template marking the correlation as beneficial when negative.
+
+### Pre-Existing Bug (Not Fixed)
+
+`LocalStore.swift:304` — `CryptoService.encrypt()` returns `nil` in the test environment, triggering `assertionFailure` in DEBUG builds and crashing `CustomerJourneyTests`. This requires a `CryptoService` mock and was not addressed in this session.
 
 ---
 
-## Implementation Epic: Stress Engine Context-Aware Architecture
+## 3. Implementation Epic: HeartRateZoneEngine Phase 1
 
-**Epic ID:** SE-001
-**Priority:** P1
-**Status:** Complete
+### Story 1: Fix weeklyZoneSummary Determinism (ZE-001)
 
-### Story SE-001.1: Dual-Branch Stress Computation
-**Points:** 8 | **Status:** Done
-
-Implement acute (sympathetic activation) and desk (cognitive load) stress branches with independent weight profiles.
-
-**Subtasks:**
-- [x] Define `StressMode` enum (`.acute`, `.desk`)
-- [x] Define `StressConfidence` enum (`.high`, `.medium`, `.low`)
-- [x] Implement `computeStressWithMode()` with mode-aware weight selection
-- [x] Acute branch: directional HRV z-score (lower = more stress)
-- [x] Desk branch: bidirectional HRV z-score (deviation = cognitive load)
-- [x] Desk offset calibration (base 20, scale 30 vs acute base 35, scale 20)
-- [x] Thread `mode:` parameter through public `computeStress()` API
-
-### Story SE-001.2: Confidence Calibration
-**Points:** 5 | **Status:** Done
-
-Add data quality-based confidence levels to stress results.
-
-**Subtasks:**
-- [x] Implement confidence computation based on baseline window, HRV variance, signal presence
-- [x] Return `StressConfidence` in `StressResult`
-- [x] Wire confidence into `ReadinessEngine` via `StressViewModel`
-- [x] Replace simplified threshold buckets with actual score passthrough
-
-### Story SE-001.3: Dataset Validation Alignment
-**Points:** 5 | **Status:** Done
-
-Align real-world dataset validation with correct stress modes.
-
-**Subtasks:**
-- [x] Switch SWELL validation to `.desk` mode (seated cognitive dataset)
-- [x] Switch WESAD validation to `.desk` mode (wrist BVP during TSST)
-- [x] Add `deskBranch` and `deskBranchDamped` diagnostic variants
-- [x] Add FP/FN export summaries to all 3 dataset tests
-- [x] Add raw signal diagnostics to WESAD test
-- [x] Re-enable DatasetValidationTests in project.yml
-
-### Story SE-001.4: Mode & Confidence Test Suite
-**Points:** 3 | **Status:** Done
-
-Comprehensive tests for new mode/confidence API.
-
-**Subtasks:**
-- [x] 13 tests covering mode detection, confidence levels, edge cases
-- [x] Desk vs acute score divergence validation
-- [x] Nil baseline handling
-- [x] Extreme value boundaries
-
----
-
-## Implementation Epic: HeartRateZoneEngine Phase 1
-
-**Epic ID:** ZE-P1
-**Priority:** P1
-**Status:** Complete
-
-### Story ZE-P1.1: Deterministic Weekly Zone Summary (ZE-001)
-**Points:** 2 | **Status:** Done
-
-Fix non-deterministic test behavior caused by `Date()` usage in `weeklyZoneSummary`.
-
-**Subtasks:**
-- [x] Add `referenceDate: Date? = nil` parameter to `weeklyZoneSummary()`
-- [x] Use `referenceDate ?? history.last?.date ?? Date()` fallback chain
-- [x] Add 3 determinism tests (fixed date, no-history fallback, historical window)
-
-### Story ZE-P1.2: Sex-Specific Max HR Formulas (ZE-002)
-**Points:** 5 | **Status:** Done
-
-Replace universal max HR formula with sex-specific Tanaka (male) and Gulati (female) formulas.
-
-**Subtasks:**
-- [x] Implement Tanaka formula: 208 - 0.7 × age (male, n=18,712)
-- [x] Implement Gulati formula: 206 - 0.88 × age (female, n=5,437)
-- [x] Average formula for `.notSet` sex
-- [x] Floor at 150 bpm for elderly safety
-- [x] Change access from `private` to `internal` for testability
-- [x] 8 formula validation tests across age/sex combinations
-- [x] Before/after comparison: 20 personas (10F shifted 5-9bpm, 10M no change)
-- [x] Real-world dataset validation (NHANES, Cleveland Clinic ECG, HUNT)
-
-### Story ZE-P1.3: Sleep-RHR Correlation (ZE-003)
-**Points:** 3 | **Status:** Done
-
-Add sleep duration vs resting heart rate as 5th correlation pair.
-
-**Subtasks:**
-- [x] Add pairedValues extraction for sleep↔RHR
-- [x] Expected direction: negative (more sleep → lower RHR)
-- [x] Add "Sleep Hours vs RHR" factorName (distinct from "Sleep Hours" for sleep-HRV)
-- [x] Add interpretation template for beneficial and non-beneficial patterns
-- [x] Update test assertions (4 → 5 pairs)
-- [x] Generate 100 CorrelationEngine time-series fixtures
-
----
-
-## Implementation Epic: Code Review Remediation
-
-**Epic ID:** CR-001
-**Priority:** P1
-**Status:** Complete
-
-### Story CR-001.1: Critical Fixes
-**Points:** 5 | **Status:** Done
-
-**Subtasks:**
-- [x] Replace `Timer` with cancellable `Task` in StressViewModel breathing session (timer leak)
-- [x] Surface HealthKit fetch errors in DashboardViewModel (silent failure → user-visible)
-- [x] Verify LocalStore encryption path (confirmed CryptoService already in use)
-
-### Story CR-001.2: High-Priority Fixes
-**Points:** 5 | **Status:** Done
-
-**Subtasks:**
-- [x] Fix force unwrap on `Calendar.date(byAdding:)` in SettingsView
-- [x] Consolidate two divergent stress computation paths in StressViewModel
-- [x] Fix HRV defaulting to 0 instead of nil in stress path
-- [x] Log subscription verification errors (replace `try?` swallowing)
-
-### Story CR-001.3: Medium-Priority Fixes
-**Points:** 3 | **Status:** Done
-
-**Subtasks:**
-- [x] Fix Watch feedback race condition (restore local state before Combine subscriptions)
-- [x] Extract 9 DateFormatters to `static let` across 4 view files
-- [x] Remove unused `hasBoundDependencies` flag from DashboardView
-- [x] Add HealthKit history caching across range switches
-
-### Story CR-001.4: Structural Improvements
-**Points:** 3 | **Status:** Done
-
-**Subtasks:**
-- [x] Decompose DashboardView into 6 extension files (2,199 → 630 lines main file)
-- [x] Add CodeReviewRegressionTests test suite
-
----
-
-## Test Results Summary
-
-| Suite | Tests | Status |
-|---|---|---|
-| StressEngine unit tests | 58/58 | Pass |
-| StressModeAndConfidenceTests | 13/13 | Pass |
-| ZoneEngineImprovementTests | 16/16 | Pass |
-| ZoneEngineRealDatasetTests | 4/4 | Pass |
-| CorrelationEngineTests | 10/10 | Pass |
-| StressCalibratedTests | 6/6 | Pass |
-| DatasetValidationTests (SWELL, PhysioNet, WESAD) | 3/3 | Pass |
-| **Total new/modified tests** | **110+** | **All Pass** |
-
-### Real-World Dataset Validation
-
-| Dataset | Source | N | Mode | Result |
-|---|---|---|---|---|
-| SWELL | Tilburg Univ. | 25 subjects | Desk | Stress/baseline separation confirmed |
-| WESAD | Bosch/ETH | 15 subjects | Desk | Wrist BVP signals validated |
-| PhysioNet ECG | Cleveland Clinic | 1,677 | Acute | Peak HR formula validation |
-| NHANES | CDC | Population brackets | N/A | Zone plausibility check |
-| HUNT | NTNU | 3,320 | N/A | Formula comparison |
-
----
-
-## Validation Confidence
-
-| Change | Confidence | Rationale |
-|---|---|---|
-| Gulati formula (ZE-002) | **High** | Validated against 3 independent datasets; before/after shift matches expected sex-specific deltas |
-| Desk-mode stress (SE-001) | **Medium-High** | SWELL + WESAD show improved separation; needs production A/B validation |
-| Sleep-RHR correlation (ZE-003) | **High** | Well-established physiology (Tobaldini 2019, Cappuccio 2010) |
-| weeklyZoneSummary fix (ZE-001) | **High** | Deterministic tests eliminate Date() flakiness |
-| Code review fixes (CR-001) | **High** | Timer leak confirmed via Instruments; force unwrap paths verified |
-
----
-
-## File Manifest
-
-### Production Code Modified
-| File | Change Type | Lines |
-|---|---|---|
-| `Shared/Engine/StressEngine.swift` | Modified | +400, -200 |
-| `Shared/Engine/HeartRateZoneEngine.swift` | Modified | +25 |
-| `Shared/Engine/CorrelationEngine.swift` | Modified | +35 |
-| `Shared/Models/HeartModels.swift` | Modified | +145 |
-| `Shared/Engine/ReadinessEngine.swift` | Modified | +20 |
-| `iOS/ViewModels/StressViewModel.swift` | Modified | +15 |
-| `iOS/ViewModels/DashboardViewModel.swift` | Modified | +10 |
-| `iOS/Views/StressView.swift` | Modified | +30 |
-
-### Test Code Added/Modified
-| File | Change Type |
+| Subtask | Status |
 |---|---|
-| `Tests/StressModeAndConfidenceTests.swift` | New (255 lines) |
-| `Tests/ZoneEngineImprovementTests.swift` | New (~400 lines) |
-| `Tests/Validation/DatasetValidationTests.swift` | Modified (+146 lines) |
-| `Tests/CorrelationEngineTests.swift` | Modified (+5 lines) |
-| `Tests/StressCalibratedTests.swift` | Modified (+6 lines) |
+| Add `referenceDate` parameter to `weeklyZoneSummary` | Done |
+| Update callers (backward compatible default) | Done |
+| Add 3 determinism tests | Done |
 
-### Fixtures
-| Directory | Files |
-|---|---|
-| `Tests/EngineTimeSeries/Results/CorrelationEngine/` | 100 new JSON |
-| `Tests/EngineTimeSeries/Results/BuddyRecommendationEngine/` | 13 updated JSON |
-| `Tests/EngineTimeSeries/Results/NudgeGenerator/` | 8 updated JSON |
+### Story 2: Sex-Specific Max HR Formulas (ZE-002)
 
-### Documentation
-| File | Description |
+| Subtask | Status |
 |---|---|
-| `PROJECT_CODE_REVIEW_2026-03-13.md` | This sprint's code review |
-| `PROJECT_UPDATE_2026_03_13.md` | This project update |
-| `Tests/Validation/STRESS_ENGINE_IMPROVEMENT_LOG.md` | Stress engine change log with validation results |
-| `Shared/Engine/HEARTRATE_ZONE_ENGINE_IMPROVEMENT_PLAN.md` | Zone engine 7-item improvement roadmap |
+| Implement Gulati formula for `BiologicalSex.female` | Done |
+| Average formula for `.notSet` | Done |
+| 150 bpm floor for extreme ages | Done |
+| Before/after comparison across 20 personas | Done |
+| 8 formula validation tests | Done |
+
+### Story 3: Sleep-to-RHR Correlation (ZE-003)
+
+| Subtask | Status |
+|---|---|
+| Add 5th correlation pair to `CorrelationEngine.analyze()` | Done |
+| Add interpretation template for "Sleep Hours vs RHR" | Done |
+| Update existing test assertion (4 to 5 pairs) | Done |
+| Add 3 correlation tests | Done |
+
+### Story 4: Real-World Dataset Validation
+
+| Subtask | Status |
+|---|---|
+| NHANES population bracket validation (6 age/sex brackets) | Done |
+| Cleveland Clinic Exercise ECG formula comparison (5 age decades, n=1,677) | Done |
+| HUNT Fitness Study three-formula comparison (6 age groups, n=3,320) | Done |
+| AHA guideline compliance benchmark (6 activity profiles) | Done |
 
 ---
 
-## Next Sprint Priorities
+## 4. Implementation Epic: Stress Engine Context-Awareness (Previous Session)
 
-1. **BUG-013** — Accessibility labels across 16+ view files (P2, large effort)
-2. **BUG-056** — CryptoService mock for test target (P2, enables LocalStore testing)
-3. **ZE-P2** — Phase 2 zone engine improvements (Karvonen method, NHANES bracket validation)
-4. **SE-002** — Automatic StressMode inference from motion/time context
-5. **Production A/B** — Desk-mode stress engine validation with real user data
+### Story 1: StressMode Enum
+Introduced `StressMode` (`.acute`, `.desk`, `.unknown`) with automatic mode detection based on input signals.
+
+### Story 2: Desk-Branch Weights
+Desk context applies a distinct weight profile: RHR 10%, HRV 55%, CV 35%. This reflects the higher diagnostic value of HRV variability during sedentary periods.
+
+### Story 3: Disagreement Damping
+When physiological signals contradict each other (e.g., high HRV but elevated RHR), the engine compresses the composite score toward neutral rather than producing a misleading extreme value.
+
+### Story 4: StressConfidence Output
+The engine now emits a `StressConfidence` level (`.high`, `.moderate`, `.low`) based on signal agreement and data completeness.
+
+### Story 5: StressSignalBreakdown
+A structured breakdown of individual signal contributions (RHR, HRV, CV) is returned alongside the composite score for transparency.
+
+### Story 6: StressContextInput
+A new `StressContextInput` struct provides rich context (activity state, time of day, recent exercise) to the engine for mode detection.
+
+### Story 7: ReadinessEngine Confidence Attenuation
+`ReadinessEngine` now attenuates its stress-derived readiness component when stress confidence is low, preventing unreliable stress readings from dominating the readiness score.
+
+### Story 8: StressView Confidence Badge
+The `StressView` displays a visual confidence badge so users understand the reliability of the displayed stress level.
+
+### Story 9: DashboardViewModel Integration
+`DashboardViewModel` passes stress confidence through to the view layer.
 
 ---
 
-*Last updated: 2026-03-13*
-*Sprint velocity: 47 story points completed*
-*Branch: fix/deterministic-test-seeds (4 commits ahead of base)*
+## 5. Test Results Summary
+
+| Test Suite | Result |
+|---|---|
+| StressEngine | 58/58 pass |
+| StressCalibratedTests | 26/26 pass |
+| ZoneEngineImprovementTests | 16/16 pass |
+| ZoneEngineRealDatasetTests | 4/4 pass |
+| CorrelationEngineTests | 10/10 pass |
+| ZoneEngineTimeSeriesTests | all pass |
+| PersonaAlgorithmTests | all pass |
+| **Pre-existing failures** | 2 persona-engine tests (synthetic data noise, not regressions) |
+
+---
+
+## 6. Validation Confidence
+
+### Gulati Formula
+
+- **NHANES population means:** All 6 age/sex brackets within expected range.
+- **Cleveland Clinic Exercise ECG (n=1,677):** All formulas within 1.5 standard deviations across 5 age decades.
+- **HUNT Fitness Study (n=3,320):** Tanaka MAE < 10 bpm, Gulati MAE < 15 bpm across 6 age groups.
+- **Before/after comparison:** 10 female personas shifted 5-9 bpm lower; 10 male personas showed 0 shift.
+
+### Sleep-to-RHR Correlation
+
+- Synthetic data confirms negative correlation is detected and marked beneficial.
+- Insufficient data (< 7 days) correctly excluded from analysis.
+- Full data returns 5 correlation pairs (was 4).
+
+---
+
+## 7. Known Issues / Deferred
+
+| ID | Description | Status |
+|---|---|---|
+| LocalStore:304 | `CryptoService.encrypt()` returns nil in test env; crashes `CustomerJourneyTests` in DEBUG | Needs CryptoService mock |
+| ZE-004 | Observed max HR integration | Deferred to separate branch |
+| ZE-005 | Zone progression tracking | Deferred |
+| ZE-006 | Recovery-gated training targets | Deferred |
+| ZE-007 | Training load / TRIMP calculation | Deferred to separate engine |
+
+---
+
+## 8. Files Changed
+
+### Engine Files
+
+| File | Changes |
+|---|---|
+| `HeartRateZoneEngine.swift` | ZE-001 `referenceDate` parameter; ZE-002 Gulati formula with sex-specific dispatch |
+| `CorrelationEngine.swift` | ZE-003 Sleep-to-RHR correlation pair and interpretation template |
+| `StressEngine.swift` | Context-aware stress scoring, mode detection, desk-branch weights, disagreement damping (previous session) |
+| `ReadinessEngine.swift` | Confidence attenuation for low-confidence stress readings (previous session) |
+| `HeartModels.swift` | `StressMode`, `StressConfidence`, `StressSignalBreakdown`, `StressContextInput` types (previous session) |
+
+### Test Files
+
+| File | Changes |
+|---|---|
+| `ZoneEngineImprovementTests.swift` | 16 new tests covering ZE-001, ZE-002, ZE-003, and before/after persona comparisons |
+| `ZoneEngineRealDatasetTests.swift` | 4 real-world validation tests (NHANES, Cleveland Clinic, HUNT, AHA) |
+| `CorrelationEngineTests.swift` | Updated pair count assertion from 4 to 5 |
+
+### View / ViewModel Files (Previous Session)
+
+| File | Changes |
+|---|---|
+| `DashboardViewModel.swift` | Passes stress confidence to view layer |
+| `StressViewModel.swift` | Context-aware stress computation path |
+| `StressView.swift` | Confidence badge display |

@@ -19,13 +19,17 @@ final class LegalGateTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        // Clear legal acceptance before each test
-        UserDefaults.standard.removeObject(forKey: legalKey)
+        // Explicitly set false before each test — removeObject alone isn't
+        // reliable when the test host app has previously accepted legal terms
+        // on this simulator, since @AppStorage may re-sync the old value.
+        UserDefaults.standard.set(false, forKey: legalKey)
+        UserDefaults.standard.synchronize()
     }
 
     override func tearDown() {
         // Restore clean state
-        UserDefaults.standard.removeObject(forKey: legalKey)
+        UserDefaults.standard.set(false, forKey: legalKey)
+        UserDefaults.standard.synchronize()
         super.tearDown()
     }
 
@@ -97,7 +101,8 @@ final class LegalGateTests: XCTestCase {
         UserDefaults.standard.set(true, forKey: legalKey)
         XCTAssertTrue(UserDefaults.standard.bool(forKey: legalKey))
 
-        UserDefaults.standard.removeObject(forKey: legalKey)
+        UserDefaults.standard.set(false, forKey: legalKey)
+        UserDefaults.standard.synchronize()
         XCTAssertFalse(UserDefaults.standard.bool(forKey: legalKey),
             "Legal acceptance should be revocable")
     }

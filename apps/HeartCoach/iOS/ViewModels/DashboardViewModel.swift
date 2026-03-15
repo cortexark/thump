@@ -192,6 +192,16 @@ final class DashboardViewModel: ObservableObject {
 
             assessment = result
 
+            // Broadcast readiness level so StressViewModel's conflict guard stays in sync
+            if let readinessScore = result.recoveryContext?.readinessScore {
+                let readinessLevel = ReadinessLevel.from(score: readinessScore)
+                NotificationCenter.default.post(
+                    name: .thumpReadinessDidUpdate,
+                    object: nil,
+                    userInfo: ["readinessLevel": readinessLevel.rawValue]
+                )
+            }
+
             // Persist the snapshot and assessment
             let stored = StoredSnapshot(snapshot: snapshot, assessment: result)
             localStore.appendSnapshot(stored)

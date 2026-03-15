@@ -2,13 +2,13 @@
   "anomalyScore" : 0.16701496588635162,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "celebrate",
+    "moderate",
     "hydrate",
     "rest"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "celebrate",
-  "nudgeTitle" : "You're on a Roll!",
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Feeling Up for a Little Extra?",
   "readinessLevel" : "primed",
   "readinessScore" : 92,
   "regressionFlag" : false,

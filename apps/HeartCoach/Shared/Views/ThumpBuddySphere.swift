@@ -122,27 +122,21 @@ struct ThumpBuddySphere: View {
 
     // MARK: - Rim Refraction
 
-    /// Angular gradient stroke simulating light wrapping
-    /// around the sphere edge.
+    /// Subtle static rim highlight — no rotating angular gradient.
     private var rimRefractionRing: some View {
-        let palette = mood.premiumPalette
-        return SphereShape()
+        SphereShape()
             .stroke(
-                AngularGradient(
+                LinearGradient(
                     colors: [
-                        .clear,
-                        palette.highlight.opacity(0.35),
-                        .white.opacity(0.18),
-                        palette.highlight.opacity(0.25),
+                        .white.opacity(0.15),
                         .clear,
                         .clear,
-                        .clear
+                        mood.premiumPalette.highlight.opacity(0.1)
                     ],
-                    center: .center,
-                    startAngle: .degrees(anim.innerLightPhase - 30),
-                    endAngle: .degrees(anim.innerLightPhase + 330)
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 ),
-                lineWidth: size * 0.015
+                lineWidth: size * 0.012
             )
             .frame(width: size * 0.98, height: size * 1.01)
     }
@@ -186,19 +180,19 @@ extension BuddyMood {
         switch self {
         case .thriving:
             return BuddyPalette(
+                highlight: Color(hex: 0xFEFCBF),
+                light:     Color(hex: 0xFEF08A),
+                core:      Color(hex: 0xEAB308),
+                mid:       Color(hex: 0xCA8A04),
+                deep:      Color(hex: 0x713F12)
+            )
+        case .content:
+            return BuddyPalette(
                 highlight: Color(hex: 0xD1FAE5),
                 light:     Color(hex: 0x6EE7B7),
                 core:      Color(hex: 0x22C55E),
                 mid:       Color(hex: 0x16A34A),
                 deep:      Color(hex: 0x0F5132)
-            )
-        case .content:
-            return BuddyPalette(
-                highlight: Color(hex: 0xDBEAFE),
-                light:     Color(hex: 0x93C5FD),
-                core:      Color(hex: 0x3B82F6),
-                mid:       Color(hex: 0x2563EB),
-                deep:      Color(hex: 0x1E3A5F)
             )
         case .nudging:
             return BuddyPalette(
@@ -226,11 +220,11 @@ extension BuddyMood {
             )
         case .celebrating:
             return BuddyPalette(
-                highlight: Color(hex: 0xFEFCBF),
-                light:     Color(hex: 0xFDE68A),
-                core:      Color(hex: 0xF59E0B),
-                mid:       Color(hex: 0xD97706),
-                deep:      Color(hex: 0x78350F)
+                highlight: Color(hex: 0xD1FAE5),
+                light:     Color(hex: 0x6EE7B7),
+                core:      Color(hex: 0x22C55E),
+                mid:       Color(hex: 0x16A34A),
+                deep:      Color(hex: 0x0F5132)
             )
         case .active:
             return BuddyPalette(

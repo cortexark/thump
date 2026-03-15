@@ -43,225 +43,125 @@ struct ThumpBuddyAura: View {
     // MARK: - Content: Peaceful Multi-Ring Halo
 
     private var contentAura: some View {
-        ZStack {
-            // Soft outer glow
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            mood.glowColor.opacity(0.12),
-                            mood.glowColor.opacity(0.04),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: size * 0.35,
-                        endRadius: size * 0.7
-                    )
+        // Soft radial glow only — no rings
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        mood.glowColor.opacity(0.14),
+                        mood.glowColor.opacity(0.04),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: size * 0.35,
+                    endRadius: size * 0.75
                 )
-                .frame(width: size * 1.4, height: size * 1.4)
-                .scaleEffect(anim.glowPulse)
-
-            // Concentric rings
-            ForEach(0..<3, id: \.self) { i in
-                Circle()
-                    .stroke(
-                        mood.glowColor.opacity(0.1 - Double(i) * 0.025),
-                        lineWidth: 1.2
-                    )
-                    .frame(
-                        width: size * (1.15 + CGFloat(i) * 0.18),
-                        height: size * (1.15 + CGFloat(i) * 0.18)
-                    )
-                    .scaleEffect(anim.breatheScale * (1.0 + CGFloat(i) * 0.02))
-            }
-        }
+            )
+            .frame(width: size * 1.4, height: size * 1.4)
+            .scaleEffect(anim.glowPulse)
     }
 
     // MARK: - Thriving: Animated Gradient Power Ring
 
     private var thrivingAura: some View {
         ZStack {
-            // Soft ambient glow
+            // Soft radial glow — no spinning ring
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color(hex: 0x22C55E).opacity(0.15),
-                            Color(hex: 0x10B981).opacity(0.05),
+                            mood.glowColor.opacity(0.18),
+                            mood.glowColor.opacity(0.06),
                             .clear
                         ],
                         center: .center,
                         startRadius: size * 0.3,
-                        endRadius: size * 0.75
+                        endRadius: size * 0.8
                     )
                 )
                 .frame(width: size * 1.5, height: size * 1.5)
                 .scaleEffect(anim.glowPulse)
-
-            // Rotating angular gradient ring
-            Circle()
-                .stroke(
-                    AngularGradient(
-                        colors: [
-                            Color(hex: 0x22C55E).opacity(0.5),
-                            Color(hex: 0x10B981).opacity(0.15),
-                            Color(hex: 0x22C55E).opacity(0.5),
-                            Color(hex: 0x34D399).opacity(0.15),
-                            Color(hex: 0x22C55E).opacity(0.5),
-                        ],
-                        center: .center
-                    ),
-                    lineWidth: 2.5
-                )
-                .frame(width: size * 1.18, height: size * 1.18)
-                .scaleEffect(anim.energyPulse)
-                .rotationEffect(.degrees(anim.haloPhase))
         }
     }
 
     // MARK: - Celebrating: Golden Radiant Burst
 
     private var celebratingAura: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(hex: 0xF59E0B).opacity(0.28),
-                            Color(hex: 0xFBBF24).opacity(0.1),
-                            Color(hex: 0xFDE047).opacity(0.03),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: size * 0.15,
-                        endRadius: size * 0.7
-                    )
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        mood.glowColor.opacity(0.28),
+                        mood.glowColor.opacity(0.1),
+                        mood.glowColor.opacity(0.03),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: size * 0.15,
+                    endRadius: size * 0.7
                 )
-                .frame(width: size * 1.4, height: size * 1.4)
-                .scaleEffect(anim.glowPulse)
-
-            // Shimmer ring
-            Circle()
-                .stroke(
-                    AngularGradient(
-                        colors: [
-                            Color(hex: 0xFDE047).opacity(0.35),
-                            .clear,
-                            Color(hex: 0xF59E0B).opacity(0.25),
-                            .clear,
-                            Color(hex: 0xFDE047).opacity(0.35),
-                        ],
-                        center: .center
-                    ),
-                    lineWidth: 1.5
-                )
-                .frame(width: size * 1.25, height: size * 1.25)
-                .rotationEffect(.degrees(anim.sparkleRotation))
-        }
+            )
+            .frame(width: size * 1.4, height: size * 1.4)
+            .scaleEffect(anim.glowPulse)
     }
 
     // MARK: - Stressed: Warm Urgent Pulse
 
     private var stressedAura: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(hex: 0xF97316).opacity(0.15),
-                            Color(hex: 0xEA580C).opacity(0.05),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: size * 0.35,
-                        endRadius: size * 0.65
-                    )
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color(hex: 0xF97316).opacity(0.15),
+                        Color(hex: 0xEA580C).opacity(0.05),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: size * 0.35,
+                    endRadius: size * 0.65
                 )
-                .frame(width: size * 1.3, height: size * 1.3)
-                .scaleEffect(anim.glowPulse)
-
-            Circle()
-                .stroke(
-                    Color(hex: 0xF97316).opacity(0.18),
-                    lineWidth: 1.8
-                )
-                .frame(width: size * 1.12, height: size * 1.12)
-                .scaleEffect(anim.breatheScale * 1.03)
-        }
+            )
+            .frame(width: size * 1.3, height: size * 1.3)
+            .scaleEffect(anim.glowPulse)
     }
 
     // MARK: - Active: High-Energy Speed Rings
 
     private var activeAura: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(hex: 0xEF4444).opacity(0.12),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: size * 0.35,
-                        endRadius: size * 0.7
-                    )
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color(hex: 0xEF4444).opacity(0.12),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: size * 0.35,
+                    endRadius: size * 0.7
                 )
-                .frame(width: size * 1.4, height: size * 1.4)
-                .scaleEffect(anim.glowPulse)
-
-            ForEach(0..<4, id: \.self) { i in
-                Circle()
-                    .stroke(
-                        Color(hex: 0xEF4444).opacity(0.13 - Double(i) * 0.025),
-                        lineWidth: 1.5
-                    )
-                    .frame(
-                        width: size * (1.1 + CGFloat(i) * 0.12),
-                        height: size * (1.1 + CGFloat(i) * 0.12)
-                    )
-                    .scaleEffect(anim.energyPulse * (1.0 + CGFloat(i) * 0.015))
-            }
-        }
+            )
+            .frame(width: size * 1.4, height: size * 1.4)
+            .scaleEffect(anim.glowPulse)
     }
 
     // MARK: - Conquering: Champion Golden Burst
 
     private var conqueringAura: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(hex: 0xEAB308).opacity(0.35),
-                            Color(hex: 0xFDE047).opacity(0.15),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: size * 0.15,
-                        endRadius: size * 0.7
-                    )
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color(hex: 0xEAB308).opacity(0.35),
+                        Color(hex: 0xFDE047).opacity(0.15),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: size * 0.15,
+                    endRadius: size * 0.7
                 )
-                .frame(width: size * 1.4, height: size * 1.4)
-                .scaleEffect(anim.breatheScale * 1.06)
-                .rotationEffect(.degrees(anim.haloPhase))
-
-            // Trophy shimmer ring
-            Circle()
-                .stroke(
-                    AngularGradient(
-                        colors: [
-                            Color(hex: 0xFEF08A).opacity(0.4),
-                            .clear,
-                            Color(hex: 0xEAB308).opacity(0.3),
-                            .clear,
-                        ],
-                        center: .center
-                    ),
-                    lineWidth: 2
-                )
-                .frame(width: size * 1.3, height: size * 1.3)
-                .rotationEffect(.degrees(-anim.haloPhase * 0.5))
-        }
+            )
+            .frame(width: size * 1.4, height: size * 1.4)
+            .scaleEffect(anim.breatheScale * 1.06)
     }
 
     // MARK: - Tired: Soft Moonlight Glow

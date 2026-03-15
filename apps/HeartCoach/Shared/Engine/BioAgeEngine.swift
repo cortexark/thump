@@ -168,19 +168,24 @@ public struct BioAgeEngine: Sendable {
         }
 
         // BMI — optimal zone 22-25 (NTNU fitness age, WHO longevity data)
-        // Requires both weight and a user-provided height (stored in profile).
-        // For now we use weight alone against age-expected BMI ranges,
-        // using sex-stratified average height. When height is available, use actual BMI.
+        // BUG-062 fix: use actual height from HeartSnapshot when available.
+        // Falls back to sex-stratified average height only when height is nil.
         if let weightKg = snapshot.bodyMassKg, weightKg > 0 {
             let optimalBMI = 23.5  // Center of longevity-optimal 22-25 range
-            // Sex-stratified average heights (WHO global data):
-            // Male: ~1.75m → heightSq = 3.0625
-            // Female: ~1.62m → heightSq = 2.6244
-            // Averaged: ~1.70m → heightSq = 2.89
-            let heightSq: Double = switch sex {
-            case .male: 3.0625
-            case .female: 2.6244
-            case .notSet: 2.89
+            let heightSq: Double
+            if let h = snapshot.heightM, h > 0 {
+                // Actual height available — accurate BMI
+                heightSq = h * h
+            } else {
+                // Fallback: sex-stratified average heights (WHO global data)
+                // Male: ~1.75m → heightSq = 3.0625
+                // Female: ~1.62m → heightSq = 2.6244
+                // Averaged: ~1.70m → heightSq = 2.89
+                heightSq = switch sex {
+                case .male: 3.0625
+                case .female: 2.6244
+                case .notSet: 2.89
+                }
             }
             let estimatedBMI = weightKg / heightSq
             let deviation = abs(estimatedBMI - optimalBMI)
