@@ -29,6 +29,10 @@ struct SettingsView: View {
     @AppStorage("thump_nudge_reminders_enabled")
     private var nudgeRemindersEnabled: Bool = true
 
+    /// Whether anonymous engine telemetry is enabled.
+    @AppStorage("thump_telemetry_consent")
+    private var telemetryConsent: Bool = false
+
     /// Controls presentation of the paywall sheet.
     @State private var showPaywall: Bool = false
 
@@ -62,6 +66,7 @@ struct SettingsView: View {
                 subscriptionSection
                 feedbackPreferencesSection
                 notificationsSection
+                analyticsSection
                 dataSection
                 bugReportSection
                 aboutSection
@@ -235,6 +240,24 @@ struct SettingsView: View {
                 "Anomaly alerts notify you when your numbers look different from your usual range. "
                     + "Nudge reminders encourage daily engagement."
             )
+        }
+    }
+
+    // MARK: - Analytics Section
+
+    private var analyticsSection: some View {
+        Section {
+            Toggle(isOn: $telemetryConsent) {
+                Label("Share Engine Insights", systemImage: "chart.bar.xaxis.ascending")
+            }
+            .tint(.pink)
+            .onChange(of: telemetryConsent) { _, newValue in
+                InteractionLog.log(.toggleChange, element: "telemetry_consent_toggle", page: "Settings", details: "enabled=\(newValue)")
+            }
+        } header: {
+            Text("Analytics")
+        } footer: {
+            Text("Help improve Thump by sharing anonymized engine scores and timing data. No raw health data (heart rate, HRV, steps, etc.) is ever shared.")
         }
     }
 
