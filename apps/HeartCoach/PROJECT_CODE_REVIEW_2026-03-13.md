@@ -1,6 +1,6 @@
 # HeartCoach — Code Review 2026-03-13
 
-> Branch: `claude/objective-mendeleev`
+> Branch: `fix/deterministic-test-seeds`
 > Scope: Stress engine refactoring, zone engine Phase 1 improvements, correlation engine extension
 > Commits reviewed: `d0ffce9..a816ac9` (3 commits, 516 files, +8,182 / -326 lines)
 
@@ -215,5 +215,5 @@ This review covers three engineering initiatives shipped in a single branch:
 ---
 
 *Reviewed: 2026-03-13*
-*Branch: claude/objective-mendeleev*
+*Branch: fix/deterministic-test-seeds*
 *Commits: d0ffce9, fc40a78, a816ac9*

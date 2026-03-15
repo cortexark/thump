@@ -1,6 +1,6 @@
 # Thump Bug Tracker
 
-> Auto-maintained by Claude during development sessions.
+> Auto-maintained during development sessions.
 > Status: `OPEN` | `FIXED` | `WONTFIX`
 > Severity: `P0-CRASH` | `P1-BLOCKER` | `P2-MAJOR` | `P3-MINOR` | `P4-COSMETIC`
 
