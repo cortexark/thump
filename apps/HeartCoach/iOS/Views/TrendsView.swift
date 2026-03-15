@@ -114,15 +114,16 @@ struct TrendsView: View {
     // MARK: - Metric Picker
 
     private var metricPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        VStack(spacing: 8) {
             HStack(spacing: 8) {
                 metricChip("RHR", icon: "heart.fill", metric: .restingHR)
                 metricChip("HRV", icon: "waveform.path.ecg", metric: .hrv)
                 metricChip("Recovery", icon: "arrow.uturn.up", metric: .recovery)
+            }
+            HStack(spacing: 8) {
                 metricChip("Cardio Fitness", icon: "lungs.fill", metric: .vo2Max)
                 metricChip("Active", icon: "figure.run", metric: .activeMinutes)
             }
-            .padding(.horizontal, 4)
         }
         .accessibilityIdentifier("metric_selector")
     }

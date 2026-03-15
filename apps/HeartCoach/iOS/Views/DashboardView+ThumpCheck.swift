@@ -58,19 +58,19 @@ extension DashboardView {
                     todaysPlayPill(
                         icon: "heart.fill",
                         label: "Recovery",
-                        value: recoveryLabel(result),
+                        value: "\(result.score)",
                         color: recoveryPillColor(result)
                     )
                     todaysPlayPill(
                         icon: "flame.fill",
                         label: "Activity",
-                        value: activityLabel,
+                        value: viewModel.zoneAnalysis.map { "\($0.overallScore)" } ?? "—",
                         color: activityPillColor
                     )
                     todaysPlayPill(
                         icon: "brain.head.profile",
                         label: "Stress",
-                        value: stressLabel,
+                        value: viewModel.stressResult.map { "\(Int($0.score))" } ?? "—",
                         color: stressPillColor
                     )
                 }
