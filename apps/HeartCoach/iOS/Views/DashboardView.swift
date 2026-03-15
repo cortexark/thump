@@ -25,7 +25,7 @@ struct DashboardView: View {
 
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
-    @EnvironmentObject private var localStore: LocalStore
+    @EnvironmentObject var localStore: LocalStore
     @EnvironmentObject private var notificationService: NotificationService
 
     // MARK: - View Model
