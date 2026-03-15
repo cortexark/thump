@@ -75,6 +75,11 @@ extension DashboardView {
                     )
                 }
 
+                // Week-over-week trend indicators
+                if let trend = viewModel.assessment?.weekOverWeekTrend {
+                    weekOverWeekBanner(trend)
+                }
+
                 // Recovery context banner — shown when readiness is low.
                 if let ctx = viewModel.assessment?.recoveryContext {
                     recoveryContextBanner(ctx)

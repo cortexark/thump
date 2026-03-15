@@ -396,16 +396,4 @@ extension DashboardView {
         }
     }
 
-    private func metricImpactLabel(_ category: NudgeCategory) -> String {
-        switch category {
-        case .walk:         return "Helps VO2 Max & Recovery"
-        case .rest:         return "Supports HRV & Heart Rate"
-        case .hydrate:      return "Aids Recovery"
-        case .breathe:      return "Lowers Stress & RHR"
-        case .moderate:     return "Protects Recovery"
-        case .celebrate:    return "Keep it up!"
-        case .seekGuidance: return "Worth checking in"
-        case .sunlight:     return "Regulates Sleep Cycle"
-        }
-    }
 }
