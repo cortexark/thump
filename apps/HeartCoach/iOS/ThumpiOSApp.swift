@@ -78,6 +78,9 @@ struct ThumpiOSApp: App {
     /// Tracks whether the user has accepted the Terms of Service and Privacy Policy.
     @AppStorage("thump_legal_accepted_v1") private var legalAccepted: Bool = false
 
+    /// Whether to show the launch congratulations screen after first sign-in.
+    @AppStorage("thump_launch_congrats_shown") private var launchCongratsShown: Bool = false
+
     // MARK: - Root View Routing
 
     /// Routes through: Sign In → Legal Gate → Onboarding → Main Tab View.
@@ -98,7 +101,16 @@ struct ThumpiOSApp: App {
             MainTabView()
         } else if !isSignedIn {
             AppleSignInView {
+                // Record launch free year start date on first sign-in
+                if localStore.profile.launchFreeStartDate == nil {
+                    localStore.profile.launchFreeStartDate = Date()
+                    localStore.saveProfile()
+                }
                 isSignedIn = true
+            }
+        } else if !launchCongratsShown && localStore.profile.isInLaunchFreeYear {
+            LaunchCongratsView {
+                launchCongratsShown = true
             }
         } else if !legalAccepted {
             LegalGateView {
@@ -153,17 +165,25 @@ struct ThumpiOSApp: App {
 
         // Sync subscription tier to local store
         await MainActor.run {
-            #if targetEnvironment(simulator)
-            // Force Coach tier in the simulator for full feature access during development
-            subscriptionService.currentTier = .coach
-            localStore.tier = .coach
-            localStore.saveTier()
-            #else
-            if subscriptionService.currentTier != localStore.tier {
-                localStore.tier = subscriptionService.currentTier
+            if localStore.profile.isInLaunchFreeYear {
+                // Launch promotion: grant full Coach access for the first year
+                subscriptionService.currentTier = .coach
+                localStore.tier = .coach
                 localStore.saveTier()
+                AppLogger.info("Launch free year active — Coach tier granted (\(localStore.profile.launchFreeDaysRemaining) days remaining)")
+            } else {
+                #if targetEnvironment(simulator)
+                // Force Coach tier in the simulator for full feature access during development
+                subscriptionService.currentTier = .coach
+                localStore.tier = .coach
+                localStore.saveTier()
+                #else
+                if subscriptionService.currentTier != localStore.tier {
+                    localStore.tier = subscriptionService.currentTier
+                    localStore.saveTier()
+                }
+                #endif
             }
-            #endif
         }
 
         let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
