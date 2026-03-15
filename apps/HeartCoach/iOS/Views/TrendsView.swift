@@ -114,16 +114,16 @@ struct TrendsView: View {
     // MARK: - Metric Picker
 
     private var metricPicker: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                metricChip("RHR", icon: "heart.fill", metric: .restingHR)
-                metricChip("HRV", icon: "waveform.path.ecg", metric: .hrv)
-                metricChip("Recovery", icon: "arrow.uturn.up", metric: .recovery)
-            }
-            HStack(spacing: 8) {
-                metricChip("Cardio Fitness", icon: "lungs.fill", metric: .vo2Max)
-                metricChip("Active", icon: "figure.run", metric: .activeMinutes)
-            }
+        LazyVGrid(columns: [
+            GridItem(.flexible(), spacing: 8),
+            GridItem(.flexible(), spacing: 8),
+            GridItem(.flexible(), spacing: 8)
+        ], spacing: 8) {
+            metricChip("RHR", icon: "heart.fill", metric: .restingHR)
+            metricChip("HRV", icon: "waveform.path.ecg", metric: .hrv)
+            metricChip("Recovery", icon: "arrow.uturn.up", metric: .recovery)
+            metricChip("Cardio", icon: "lungs.fill", metric: .vo2Max)
+            metricChip("Active", icon: "figure.run", metric: .activeMinutes)
         }
         .accessibilityIdentifier("metric_selector")
     }
@@ -143,9 +143,10 @@ struct TrendsView: View {
                     .font(.system(size: 11, weight: .semibold))
                 Text(label)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
             }
             .foregroundStyle(isSelected ? .white : .primary)
-            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 9)
             .background(chipColor, in: Capsule())
             .overlay(
@@ -215,6 +216,11 @@ struct TrendsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Text(metricExplainer)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             TrendChartView(
                 dataPoints: points,
@@ -993,6 +999,21 @@ struct TrendsView: View {
         case .recovery:       return Color(hex: 0x22C55E)
         case .vo2Max:         return Color(hex: 0x8B5CF6)
         case .activeMinutes:  return Color(hex: 0xF59E0B)
+        }
+    }
+
+    private var metricExplainer: String {
+        switch viewModel.selectedMetric {
+        case .restingHR:
+            return "Your heart rate at complete rest — lower generally means better cardiovascular fitness. Athletes often sit in the 40–60 bpm range."
+        case .hrv:
+            return "The variation in time between heartbeats. Higher HRV signals better stress resilience and recovery capacity."
+        case .recovery:
+            return "How quickly your heart rate drops after exercise. A faster drop (higher number) indicates stronger cardiovascular fitness."
+        case .vo2Max:
+            return "An estimate of your VO2 max — how efficiently your body uses oxygen. Higher scores mean better endurance."
+        case .activeMinutes:
+            return "Total minutes of walking and workout activity. The AHA recommends 150+ minutes of moderate activity per week."
         }
     }
 
