@@ -1,13 +1,20 @@
 // WatchInsightFlowView.swift
 // Thump Watch
 //
-// 5 swipeable screens — engagement first, stats never.
+// 6-screen architecture:
+//   Screen 0: HERO — Score + Buddy + Nudge (the 2-second glance)
+//   Screen 1: READINESS — 5-pillar breakdown (why is my score this?)
+//   Screen 2: WALK — Step count + time-aware push + START (get moving)
+//   Screen 3: STRESS — Buddy emoji + heatmap + Breathe on active stress
+//   Screen 4: SLEEP — Hours + quality + trend (how did I sleep?)
+//   Screen 5: TRENDS — HRV↑ RHR↓ + coaching note + streak (am I improving?)
 //
-//   1. Today's Plan    — buddy + big GO shortcut. Pending → active → conquered.
-//   2. Activity        — Walk / Run as two large equal tiles. Tap launches Apple Workout.
-//   3. Stress          — 7-day heat-map dots + compact Breathe button.
-//   4. Sleep           — last night hours + wind-down time + bedtime reminder.
-//   5. Metrics         — HRV + RHR tiles with trend delta and action-oriented interpretation.
+// Design principles (from wearable UX research):
+//   - 2-second rule: every screen communicates in under 2 seconds
+//   - One number, one color, one action on the hero screen
+//   - Score > raw data: interpreted scores, not sensor values
+//   - Progressive disclosure: glance → tap → swipe → iPhone for full detail
+//   - No scroll within screens: each screen is one viewport
 //
 // Platforms: watchOS 10+
 
@@ -28,7 +35,6 @@ struct WatchInsightFlowView: View {
 
     @EnvironmentObject var viewModel: WatchViewModel
     @State private var selectedTab = 0
-    @State private var nudgeInProgress = false
     private let totalTabs = 6
 
     private var assessment: HeartAssessment {
@@ -37,108 +43,58 @@ struct WatchInsightFlowView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            planScreen.tag(0)
-            walkNudgeScreen.tag(1)
-            goalProgressScreen.tag(2)
+            heroScreen.tag(0)
+            readinessScreen.tag(1)
+            walkScreen.tag(2)
             stressScreen.tag(3)
             sleepScreen.tag(4)
-            metricsScreen.tag(5)
+            trendsScreen.tag(5)
         }
         .tabViewStyle(.page)
         .ignoresSafeArea(edges: .bottom)
     }
 
-    // MARK: - Screen 1: Today's Plan
+    // MARK: - Screen 0: Hero (Score + Buddy + Nudge)
 
-    private var planScreen: some View {
-        let mood: BuddyMood = {
-            if viewModel.nudgeCompleted { return .conquering }
-            if nudgeInProgress { return .active }
-            return BuddyMood.from(assessment: assessment)
-        }()
-
-        return PlanScreen(
-            buddy: mood,
-            nudge: assessment.dailyNudge,
-            cardioScore: assessment.cardioScore,
-            nudgeCompleted: viewModel.nudgeCompleted,
-            nudgeInProgress: nudgeInProgress,
-            onStart: {
-                // Mark in-progress so buddy face and pulse ring animate.
-                // Conquered state is set externally when a real workout completes.
-                withAnimation(.spring(duration: 0.35, bounce: 0.3)) {
-                    nudgeInProgress = true
-                }
-            }
-        )
-        .tag(0)
+    private var heroScreen: some View {
+        HeroScoreScreen()
     }
 
-    // MARK: - Screen 2: Walk nudge — emoji + today's step count
+    // MARK: - Screen 1: Readiness Breakdown
 
-    private var walkNudgeScreen: some View {
-        WalkNudgeScreen(nudge: assessment.dailyNudge)
-            .tag(1)
+    private var readinessScreen: some View {
+        ReadinessBreakdownScreen(assessment: assessment)
     }
 
-    // MARK: - Screen 3: Goal progress — activity remaining + start
+    // MARK: - Screen 2: Walk (Activity suggestion)
 
-    private var goalProgressScreen: some View {
-        GoalProgressScreen(
-            nudge: assessment.dailyNudge,
-            nudgeInProgress: nudgeInProgress,
-            nudgeCompleted: viewModel.nudgeCompleted,
-            onStart: {
-                withAnimation(.spring(duration: 0.35, bounce: 0.3)) {
-                    nudgeInProgress = true
-                }
-                let url = workoutAppURL(for: assessment.dailyNudge.category)
-                if let url { WKExtension.shared().openSystemURL(url) }
-            }
-        )
-        .tag(2)
+    private var walkScreen: some View {
+        WalkSuggestionScreen(nudge: assessment.dailyNudge)
     }
 
-    // MARK: - Screen 4: Stress + Breathe
+    // MARK: - Screen 3: Stress (Buddy emoji + heatmap + breathe)
 
     private var stressScreen: some View {
-        StressScreen(isStressed: assessment.stressFlag)
-            .tag(3)
+        StressPulseScreen(isStressed: assessment.stressFlag)
     }
 
-    // MARK: - Screen 5: Sleep
+    // MARK: - Screen 4: Sleep Summary
 
     private var sleepScreen: some View {
         let needsRest = assessment.status == .needsAttention || assessment.stressFlag
-        return SleepScreen(needsRest: needsRest)
-            .tag(4)
+        return SleepSummaryScreen(needsRest: needsRest)
     }
 
-    // MARK: - Screen 6: Heart Metrics
+    // MARK: - Screen 5: Trends + Coaching
 
-    private var metricsScreen: some View {
-        HeartMetricsScreen()
-            .tag(5)
-    }
-
-    // MARK: - Helpers
-
-    /// Returns the Apple Workout deep-link URL for a given nudge category.
-    private func workoutAppURL(for category: NudgeCategory) -> URL? {
-        switch category {
-        case .walk:     return URL(string: "workout://startWorkout?activityType=52")
-        case .moderate: return URL(string: "workout://startWorkout?activityType=37")
-        default:        return URL(string: "workout://")
-        }
+    private var trendsScreen: some View {
+        TrendsScreen(assessment: assessment)
     }
 }
 
 // MARK: - Mock Data
 
 enum InsightMockData {
-    /// Mid-day walk nudge used when no phone assessment has arrived yet.
-    /// Shows "Yet to Begin" state on Screen 1, realistic step progress on Screen 2,
-    /// and 12 min remaining on Screen 3.
     static var demoAssessment: HeartAssessment {
         HeartAssessment(
             status: .improving,
@@ -159,340 +115,463 @@ enum InsightMockData {
     }
 }
 
-// ─────────────────────────────────────────
-// MARK: - Screen 1: Plan
-// ─────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MARK: - Screen 0: Hero Score Screen
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// The screen users see 50+ times/day. Must communicate in <2 seconds.
+// Score is 60% of visual weight. Buddy is 25%. Nudge is 15%.
+// Every successful wearable app leads with a single hero number.
 
-/// Screen 1: Today's goal in three explicit states.
-///   • Yet to Begin  — idle buddy + goal chip + START button
-///   • In Progress   — pulsing ring around buddy + "Active" label
-///   • Complete      — flag pop + "Goal Done!" + streak message
-private struct PlanScreen: View {
+private struct HeroScoreScreen: View {
 
-    let buddy: BuddyMood
-    let nudge: DailyNudge
-    let cardioScore: Double?
-    let nudgeCompleted: Bool
-    let nudgeInProgress: Bool
-    let onStart: () -> Void
+    @EnvironmentObject var viewModel: WatchViewModel
 
     @State private var appeared = false
-    @State private var pulseScale: CGFloat = 1.0
-    @State private var pulseOpacity: Double = 0.6
-    @State private var completeScale: CGFloat = 0.5
+    @State private var scoreScale: CGFloat = 0.5
+    @State private var skyPhase: CGFloat = 0
+    @State private var groundPulse: CGFloat = 1.0
+
+    private var assessment: HeartAssessment {
+        viewModel.latestAssessment ?? InsightMockData.demoAssessment
+    }
+
+    private var mood: BuddyMood {
+        if viewModel.nudgeCompleted { return .conquering }
+        return BuddyMood.from(assessment: assessment)
+    }
+
+    private var score: Int {
+        Int(assessment.cardioScore ?? 0)
+    }
+
+    private var scoreColor: Color {
+        switch score {
+        case 70...:  return Color(hex: 0x22C55E)
+        case 40..<70: return Color(hex: 0xF59E0B)
+        default:      return Color(hex: 0xEF4444)
+        }
+    }
+
+    private var scoreContext: String {
+        if viewModel.nudgeCompleted { return "Goal done — streak alive" }
+        switch score {
+        case 80...:  return "Strong day"
+        case 70..<80: return "Ready to move"
+        case 55..<70: return "Take it easy"
+        case 40..<55: return "Rest & recover"
+        default:      return "Listen to your body"
+        }
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-
-            // Cardio score chip at top — hidden during sleep hours
-            if !nudgeCompleted && !isSleepHour, let score = cardioScore {
-                scoreChip(score)
-                    .opacity(appeared ? 1 : 0)
-                Spacer(minLength: 4)
-            }
-
-            buddyWithState
-                .opacity(appeared ? 1 : 0)
-
-            Spacer(minLength: 8)
-
-            stateContent
-                .opacity(appeared ? 1 : 0)
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .containerBackground(Color(nudge.category.tintColorName).gradient.opacity(0.08), for: .tabView)
-        .onAppear {
-            withAnimation(.spring(duration: 0.5, bounce: 0.25)) { appeared = true }
-            if nudgeInProgress { startPulse() }
-            if nudgeCompleted { startCompleteAnimation() }
-        }
-        .onChange(of: nudgeInProgress) { _, inProgress in
-            if inProgress { startPulse() } else { stopPulse() }
-        }
-        .onChange(of: nudgeCompleted) { _, done in
-            if done { startCompleteAnimation() }
-        }
-    }
-
-    // MARK: - Score chip
-
-    private func scoreChip(_ score: Double) -> some View {
-        let scoreInt = Int(score)
-        let chipColor: Color = scoreInt >= 80 ? Color(hex: 0x22C55E)
-            : scoreInt >= 60 ? Color(hex: 0xF59E0B)
-            : Color(hex: 0xEF4444)
-        let label = scoreInt >= 80 ? "Heart \(scoreInt)" : scoreInt >= 60 ? "Score \(scoreInt)" : "Score \(scoreInt) ↓"
-        return HStack(spacing: 4) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 9, weight: .semibold))
-            Text(label)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-        }
-        .foregroundStyle(chipColor)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(chipColor.opacity(0.15)))
-    }
-
-    // MARK: - Buddy with state ring
-
-    @ViewBuilder
-    private var buddyWithState: some View {
         ZStack {
-            if nudgeInProgress {
-                // Pulsing ring — shows activity is happening
-                Circle()
-                    .stroke(Color(nudge.category.tintColorName).opacity(pulseOpacity), lineWidth: 3)
-                    .frame(width: 74, height: 74)
-                    .scaleEffect(pulseScale)
-            }
-            ThumpBuddy(
-                mood: buddy, size: 60,
-                showAura: nudgeCompleted
-            )
-            .scaleEffect(nudgeCompleted ? completeScale : 1.0)
-        }
-    }
+            // Atmospheric background
+            atmosphericSky
+            groundGlow
 
-    // MARK: - State content
+            VStack(spacing: 0) {
+                Spacer(minLength: 10)
 
-    @ViewBuilder
-    private var stateContent: some View {
-        if nudgeCompleted {
-            // ── Complete ──
-            VStack(spacing: 4) {
-                HStack(spacing: 4) {
-                    Image(systemName: "flag.fill")
-                        .font(.system(size: 11, weight: .bold))
-                    Text("Goal Done!")
-                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                // ── Hero Score: the product IS this number ──
+                VStack(spacing: 2) {
+                    Text("\(score)")
+                        .font(.system(size: 48, weight: .heavy, design: .rounded))
+                        .foregroundStyle(scoreColor)
+                        .scaleEffect(scoreScale)
+
+                    Text(scoreContext)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.7))
                 }
-                .foregroundStyle(Color(hex: 0xEAB308))
-
-                Text("Streak alive. See you tomorrow.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-        } else if nudgeInProgress {
-            // ── In Progress ──
-            VStack(spacing: 6) {
-                Text(inProgressMessage)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(nudge.category.tintColorName))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 10)
-
-                Text(nudgeLabel)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
-        } else if isSleepHour {
-            // ── Sleep / Tomorrow mode ──
-            // No button. No nudge to start. Show tomorrow's plan quietly.
-            VStack(spacing: 6) {
-                Text(pushMessage)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 10)
+                .opacity(appeared ? 1 : 0)
 
                 Spacer(minLength: 6)
 
-                // Tomorrow's goal preview card
-                HStack(spacing: 6) {
-                    Image(systemName: nudge.icon)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x6366F1))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Tomorrow")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        Text(nudge.title)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(hex: 0x6366F1).opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal, 12)
-            }
-        } else {
-            // ── Yet to Begin ──
-            VStack(spacing: 7) {
-                // Dynamic time-aware push message
-                Text(pushMessage)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 10)
+                // ── ThumpBuddy: emotional anchor — tap to cycle moods ──
+                ThumpBuddy(mood: mood, size: 46, showAura: false, tappable: true)
+                    .opacity(appeared ? 1 : 0)
+                    .scaleEffect(appeared ? 1 : 0.6)
 
-                // Goal action button — label and colour shift with time-of-day urgency
-                Button(action: onStart) {
-                    HStack(spacing: 5) {
+                Spacer(minLength: 8)
+
+                // ── Daily Nudge: one-tap action ──
+                if !viewModel.nudgeCompleted {
+                    nudgePill
+                        .opacity(appeared ? 1 : 0)
+                } else {
+                    // Completed state
+                    HStack(spacing: 4) {
+                        Image(systemName: "flag.fill")
+                            .font(.system(size: 10, weight: .bold))
+                        Text("Done")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundStyle(Color(hex: 0xEAB308))
+                    .opacity(appeared ? 1 : 0)
+                }
+
+                Spacer(minLength: 6)
+            }
+            .padding(.horizontal, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.spring(duration: 0.6, bounce: 0.25)) {
+                appeared = true
+                scoreScale = 1.0
+            }
+            withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
+                skyPhase = 1
+            }
+            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+                groundPulse = 1.15
+            }
+        }
+        .onTapGesture { handleTap() }
+        .animation(.easeInOut(duration: 1.0), value: mood)
+    }
+
+    // MARK: - Nudge Pill
+
+    private var nudgePill: some View {
+        let nudge = assessment.dailyNudge
+        let isSleepHour = {
+            let h = Calendar.current.component(.hour, from: Date())
+            return h >= 22 || h < 5
+        }()
+
+        return Group {
+            if isSleepHour {
+                // Sleep hours: no action, just context
+                HStack(spacing: 4) {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text("Rest up")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.white.opacity(0.4))
+            } else {
+                // Active hours: tappable nudge pill with START
+                Button {
+                    launchNudge(nudge)
+                } label: {
+                    HStack(spacing: 6) {
                         Image(systemName: nudge.icon)
                             .font(.system(size: 11, weight: .semibold))
-                        Text(actionButtonLabel)
-                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        Text(nudgeLabel(nudge))
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 8))
                     }
                     .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
                     .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(buttonColor)
+                        Capsule().fill(scoreColor.opacity(0.85))
                     )
-                    .padding(.horizontal, 12)
                 }
                 .buttonStyle(.plain)
             }
         }
     }
 
-    // MARK: - Dynamic messaging helpers
-
-    /// True during sleep hours (10 PM – 4:59 AM) when exercise nudges are inappropriate.
-    private var isSleepHour: Bool {
-        let hour = Calendar.current.component(.hour, from: Date())
-        return hour >= 22 || hour < 5
+    private func nudgeLabel(_ nudge: DailyNudge) -> String {
+        if let mins = nudge.durationMinutes {
+            return "\(nudge.title) · \(mins)m"
+        }
+        return nudge.title
     }
 
-    private var pushMessage: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let score = cardioScore ?? 70
-        if isSleepHour {
-            return score < 60 ? "Rest well — sleep is your recovery tonight." : "Rest up. Tomorrow is a fresh start."
+    // MARK: - Tap Handler
+
+    private func handleTap() {
+        let nudge = assessment.dailyNudge
+        if mood == .stressed || assessment.stressFlag {
+            // Open Apple Mindfulness for breathing
+            if let url = URL(string: "mindfulness://") {
+                #if os(watchOS)
+                WKExtension.shared().openSystemURL(url)
+                #endif
+            }
+            return
         }
-        switch hour {
-        case 5..<9:
-            return score >= 75 ? "Good morning. Your body is ready." : "Start the day with a win."
-        case 9..<12:
-            return "Morning window is open — great time to move."
-        case 12..<14:
-            return "Midday break is perfect for your goal."
-        case 14..<17:
-            return score < 65 ? "Your numbers are lower today. Even a short session helps." : "Afternoon energy is up — move now."
-        case 17..<20:
-            return "Evening is a great time for your \(nudgeActivityWord.lowercased())."
-        default:
-            return "There's still time for a quick session tonight."
-        }
+        launchNudge(nudge)
     }
 
-    private var actionButtonLabel: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        if isSleepHour { return "Good Night" }
-        switch hour {
-        case 5..<12:  return "Start \(nudgeActivityWord)"
-        case 12..<17: return "Go Now"
-        case 17..<20: return "Do It"
-        default:      return "Finish It"
+    private func launchNudge(_ nudge: DailyNudge) {
+        if let url = workoutURL(for: nudge.category) {
+            #if os(watchOS)
+            WKExtension.shared().openSystemURL(url)
+            #endif
         }
     }
 
-    private var buttonColor: Color {
-        let hour = Calendar.current.component(.hour, from: Date())
-        if isSleepHour { return Color(hex: 0x4B5563) }  // muted grey at night
-        if hour < 17 { return Color(nudge.category.tintColorName) }
-        if hour < 20 { return Color(hex: 0xF59E0B) }
-        return Color(hex: 0xEF4444)
-    }
-
-    private var inProgressMessage: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        if isSleepHour { return "Sleep is your workout now" }
-        switch hour {
-        case 5..<12:  return "Morning move underway"
-        case 12..<14: return "Midday goal — keep going"
-        case 14..<18: return "Afternoon push — stay with it"
-        case 18..<21: return "Evening streak — nearly there"
-        default:      return "In progress — keep it up"
+    private func workoutURL(for category: NudgeCategory) -> URL? {
+        switch category {
+        case .walk:     return URL(string: "workout://startWorkout?activityType=52")
+        case .moderate: return URL(string: "workout://startWorkout?activityType=37")
+        case .breathe:  return URL(string: "mindfulness://")
+        default:        return URL(string: "workout://")
         }
     }
 
-    private var nudgeActivityWord: String {
-        switch nudge.category {
-        case .walk:     return "Walk"
-        case .moderate: return "Run"
-        case .breathe:  return "Breathe"
-        case .rest:     return "Stretch"
-        default:        return "Activity"
+    // MARK: - Atmospheric Background
+
+    private var atmosphericSky: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: skyColors,
+                    startPoint: UnitPoint(x: 0.5, y: skyPhase * 0.1),
+                    endPoint: .bottom
+                )
+            )
+            .overlay(
+                RadialGradient(
+                    colors: [
+                        scoreColor.opacity(0.15 + skyPhase * 0.05),
+                        scoreColor.opacity(0.03),
+                        .clear
+                    ],
+                    center: UnitPoint(x: 0.5, y: 0.3),
+                    startRadius: 20,
+                    endRadius: 120
+                )
+            )
+            .ignoresSafeArea()
+    }
+
+    private var skyColors: [Color] {
+        switch mood {
+        case .thriving:
+            return [Color(hex: 0x042F2E), Color(hex: 0x064E3B), Color(hex: 0x065F46), Color(hex: 0x34D399).opacity(0.35)]
+        case .content:
+            return [Color(hex: 0x0F172A), Color(hex: 0x1E3A5F), Color(hex: 0x2563EB).opacity(0.6), Color(hex: 0x7DD3FC).opacity(0.25)]
+        case .nudging:
+            return [Color(hex: 0x1C1917), Color(hex: 0x44403C), Color(hex: 0x92400E).opacity(0.5), Color(hex: 0xFBBF24).opacity(0.25)]
+        case .stressed:
+            return [Color(hex: 0x1C1917), Color(hex: 0x3B1A2A), Color(hex: 0x9D4B6E).opacity(0.5), Color(hex: 0xF9A8D4).opacity(0.2)]
+        case .tired:
+            return [Color(hex: 0x0C0A15), Color(hex: 0x1E1B3A), Color(hex: 0x4C3D7A).opacity(0.5), Color(hex: 0xA78BFA).opacity(0.15)]
+        case .celebrating, .conquering:
+            return [Color(hex: 0x1C1917), Color(hex: 0x422006), Color(hex: 0x854D0E).opacity(0.6), Color(hex: 0xFDE047).opacity(0.3)]
+        case .active:
+            return [Color(hex: 0x1C1917), Color(hex: 0x3B1A1A), Color(hex: 0x9B3A3A).opacity(0.5), Color(hex: 0xFCA5A5).opacity(0.2)]
         }
     }
 
-    // MARK: - Animations
+    private var groundGlow: some View {
+        VStack {
+            Spacer()
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [scoreColor.opacity(0.2), scoreColor.opacity(0.05), .clear],
+                        center: .center, startRadius: 5, endRadius: 80
+                    )
+                )
+                .frame(width: 160, height: 30)
+                .scaleEffect(groundPulse)
+                .offset(y: -15)
+        }
+        .ignoresSafeArea()
+    }
+}
 
-    private func startPulse() {
-        withAnimation(
-            .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
-        ) {
-            pulseScale = 1.18
-            pulseOpacity = 0.0
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MARK: - Screen 1: Readiness Breakdown
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// "Why is my score this?" — 5-pillar breakdown.
+// Oura's readiness breakdown is their most-viewed detail screen.
+// Users want to know the WHY behind the number.
+
+private struct ReadinessBreakdownScreen: View {
+
+    let assessment: HeartAssessment
+
+    @State private var appeared = false
+
+    private var score: Int { Int(assessment.cardioScore ?? 0) }
+
+    private var scoreColor: Color {
+        switch score {
+        case 70...:  return Color(hex: 0x22C55E)
+        case 40..<70: return Color(hex: 0xF59E0B)
+        default:      return Color(hex: 0xEF4444)
         }
     }
 
-    private func stopPulse() {
-        pulseScale = 1.0
-        pulseOpacity = 0.6
+    // Derive pillar scores from assessment data
+    // Each pillar: 0.0-1.0 representing contribution to overall score
+    private var pillars: [(name: String, icon: String, value: Double, color: Color)] {
+        let baseScore = assessment.cardioScore ?? 70
+        let isStressed = assessment.stressFlag
+        let anomaly = assessment.anomalyScore
+
+        // Sleep pillar: inferred from score + stress state
+        let sleepValue = min(1.0, max(0.1, (baseScore / 100) * (isStressed ? 0.7 : 1.1)))
+
+        // Recovery pillar: inverse of anomaly score
+        let recoveryValue = min(1.0, max(0.1, 1.0 - anomaly))
+
+        // Stress pillar: inverse of stress state
+        let stressValue = isStressed ? 0.3 : min(1.0, max(0.2, 1.0 - anomaly * 0.8))
+
+        // Activity pillar: mid-range by default, boosted by good score
+        let activityValue = min(1.0, max(0.15, baseScore / 120))
+
+        // HRV pillar: derived from overall cardio health
+        let hrvValue: Double
+        switch assessment.status {
+        case .improving: hrvValue = min(1.0, baseScore / 90)
+        case .stable:    hrvValue = min(1.0, baseScore / 100)
+        default:         hrvValue = min(0.6, baseScore / 110)
+        }
+
+        return [
+            ("Sleep", "moon.fill", sleepValue, Color(hex: 0x818CF8)),
+            ("Recovery", "arrow.counterclockwise.heart.fill", recoveryValue, Color(hex: 0x34D399)),
+            ("Stress", "brain.head.profile.fill", stressValue, Color(hex: 0xF9A8D4)),
+            ("Activity", "figure.walk", activityValue, Color(hex: 0xFBBF24)),
+            ("HRV", "waveform.path.ecg", hrvValue, Color(hex: 0xA78BFA)),
+        ]
     }
 
-    private func startCompleteAnimation() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
-            completeScale = 1.12
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 6)
+
+            // Header: score recap + label
+            HStack(spacing: 6) {
+                Text("\(score)")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(scoreColor)
+                Text("Readiness")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            .opacity(appeared ? 1 : 0)
+
+            Spacer(minLength: 10)
+
+            // 5-pillar breakdown bars
+            VStack(spacing: 7) {
+                ForEach(Array(pillars.enumerated()), id: \.offset) { index, pillar in
+                    pillarRow(pillar, delay: Double(index) * 0.08)
+                }
+            }
+            .padding(.horizontal, 14)
+            .opacity(appeared ? 1 : 0)
+
+            Spacer(minLength: 8)
+
+            // Context line
+            Text(readinessContext)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .padding(.horizontal, 16)
+                .opacity(appeared ? 1 : 0)
+
+            Spacer(minLength: 6)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            withAnimation(.spring(response: 0.3)) { completeScale = 1.0 }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .containerBackground(scoreColor.gradient.opacity(0.06), for: .tabView)
+        .onAppear {
+            withAnimation(.spring(duration: 0.5, bounce: 0.2)) { appeared = true }
         }
     }
 
-    private var nudgeLabel: String {
-        guard let dur = nudge.durationMinutes else { return nudge.title }
-        switch nudge.category {
-        case .walk:     return "Walk \(dur) min"
-        case .breathe:  return "Breathe \(dur) min"
-        case .moderate: return "Run \(dur) min"
-        case .rest:     return "Stretch \(dur) min"
-        case .hydrate:  return "Hydrate"
-        case .sunlight: return "Get outside"
-        default:        return "\(dur) min activity"
+    private func pillarRow(_ pillar: (name: String, icon: String, value: Double, color: Color), delay: Double) -> some View {
+        HStack(spacing: 6) {
+            // Icon
+            Image(systemName: pillar.icon)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(pillar.color)
+                .frame(width: 14)
+
+            // Label
+            Text(pillar.name)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 52, alignment: .leading)
+
+            // Progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 6)
+
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(pillar.color)
+                        .frame(width: appeared ? geo.size.width * pillar.value : 0, height: 6)
+                        .animation(.spring(duration: 0.6).delay(delay), value: appeared)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
+    private var readinessContext: String {
+        // Find the weakest pillar
+        guard let weakest = pillars.min(by: { $0.value < $1.value }) else {
+            return "All systems balanced"
+        }
+        if weakest.value >= 0.7 {
+            return "All pillars strong — great day to push"
+        }
+        switch weakest.name {
+        case "Sleep":    return "Sleep is holding you back — prioritize tonight"
+        case "Recovery": return "Body still recovering — ease the intensity"
+        case "Stress":   return "Stress is elevated — try a breathing session"
+        case "Activity": return "Movement is low — a short walk helps"
+        case "HRV":      return "HRV dipped — your nervous system needs rest"
+        default:         return "Focus on your lowest pillar today"
         }
     }
 }
 
-// ─────────────────────────────────────────
-// MARK: - Screen 2: Walk nudge
-// ─────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MARK: - Screen 2: Walk Suggestion
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// "Get moving" — step count + time-aware push message + START button.
+// Dedicated activity screen separate from stress.
+// The nudge here is always about movement, not breathing.
 
-/// Screen 2: Walk nudge card — emoji, live step count, and a contextual
-/// "Feeling up for a little extra?" prompt that adapts to step count and time.
-private struct WalkNudgeScreen: View {
+private struct WalkSuggestionScreen: View {
 
     let nudge: DailyNudge
 
     @State private var appeared = false
-    @State private var stepCount: Int? = nil
+    @State private var stepCount: Int?
+
     private let healthStore = HKHealthStore()
 
-    private var activityEmoji: String {
-        switch nudge.category {
-        case .walk:     return "🚶"
-        case .moderate: return "🏃"
-        case .breathe:  return "🧘"
-        case .rest:     return "😴"
-        case .hydrate:  return "💧"
-        case .sunlight: return "☀️"
-        default:        return "🏃"
+    private var isSleepHour: Bool {
+        let h = Calendar.current.component(.hour, from: Date())
+        return h >= 22 || h < 5
+    }
+
+    private var pushMessage: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let steps = stepCount ?? 0
+        if isSleepHour { return "Rest up — move tomorrow" }
+        switch (steps, hour) {
+        case (0..<1000, 5..<10):   return "Start the day with a win"
+        case (0..<1000, 10..<14):  return "Steps are low — a short walk fixes that"
+        case (0..<1000, 14...):    return "Under 1K steps. Even 10 min helps"
+        case (1000..<4000, ..<12): return "Good start. Keep the momentum"
+        case (1000..<4000, 12...): return "Feeling up for a little extra?"
+        case (4000..<7000, _):     return "Nice pace — 15 more min puts you ahead"
+        case (7000..<10000, _):    return "Almost at 10K. One more walk seals it"
+        default:
+            return steps >= 10000 ? "10K+ done — you're ahead today" : "A walk makes everything better"
         }
     }
 
@@ -503,167 +582,87 @@ private struct WalkNudgeScreen: View {
         }
     }
 
-    private var isSleepHour: Bool {
-        let h = Calendar.current.component(.hour, from: Date())
-        return h >= 22 || h < 5
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
 
-            // Big activity emoji
-            Text(activityEmoji)
-                .font(.system(size: 48))
+            // ThumpBuddy in nudging mood — pushing you to move
+            ThumpBuddy(mood: .nudging, size: 50, showAura: false)
                 .opacity(appeared ? 1 : 0)
-                .scaleEffect(appeared ? 1 : 0.7)
+                .scaleEffect(appeared ? 1 : 0.6)
+
+            Spacer(minLength: 8)
+
+            // Step count
+            if let steps = stepCount {
+                HStack(spacing: 4) {
+                    Image(systemName: "shoeprints.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x22C55E))
+                    Text("\(steps.formatted()) steps")
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+                .opacity(appeared ? 1 : 0)
+            } else {
+                Text("Counting steps...")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                    .opacity(appeared ? 1 : 0)
+            }
 
             Spacer(minLength: 6)
 
-            if isSleepHour {
-                // ── Tomorrow's plan hint ──
-                Text("Tomorrow's Plan")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .opacity(appeared ? 1 : 0)
+            // Push message
+            Text(pushMessage)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 16)
+                .opacity(appeared ? 1 : 0)
 
-                Spacer(minLength: 3)
+            Spacer(minLength: 10)
 
-                Text(nudge.title)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .opacity(appeared ? 1 : 0)
-
-                Spacer(minLength: 8)
-
-                Text("Sleep now, move tomorrow.\nYour goal resets at sunrise.")
-                    .font(.system(size: 10, weight: .regular, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 12)
-                    .opacity(appeared ? 1 : 0)
-
-            } else {
-                // ── Active nudge content ──
-                Text(nudge.title)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .opacity(appeared ? 1 : 0)
-
-                Spacer(minLength: 4)
-
-                stepRow
-                    .opacity(appeared ? 1 : 0)
-
-                Spacer(minLength: 8)
-
-                extraNudgeRow
-                    .opacity(appeared ? 1 : 0)
-
-                Spacer(minLength: 10)
-
+            // START button (hidden during sleep hours)
+            if !isSleepHour {
                 Button {
                     if let url = workoutURL {
+                        #if os(watchOS)
                         WKExtension.shared().openSystemURL(url)
+                        #endif
                     }
                 } label: {
-                    Text(startButtonLabel)
-                        .font(.system(size: 13, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(Color(hex: 0x22C55E))
-                        )
-                        .padding(.horizontal, 12)
+                    HStack(spacing: 5) {
+                        Image(systemName: nudge.icon)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Start \(nudge.category == .moderate ? "Run" : "Walk")")
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule().fill(Color(hex: 0x22C55E))
+                    )
+                    .padding(.horizontal, 24)
                 }
                 .buttonStyle(.plain)
                 .opacity(appeared ? 1 : 0)
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .containerBackground(Color(hex: 0x22C55E).gradient.opacity(0.08), for: .tabView)
+        .containerBackground(Color(hex: 0x22C55E).gradient.opacity(0.07), for: .tabView)
         .onAppear {
-            withAnimation(.spring(duration: 0.5, bounce: 0.25)) { appeared = true }
+            withAnimation(.spring(duration: 0.5, bounce: 0.2)) { appeared = true }
             fetchStepCount()
         }
     }
 
-    // MARK: - Step row
-
-    @ViewBuilder
-    private var stepRow: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "shoeprints.fill")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color(hex: 0x22C55E))
-            if let steps = stepCount {
-                Text("\(steps.formatted()) steps today")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("Counting steps…")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-    }
-
-    // MARK: - "Feeling up for extra?" contextual nudge
-
-    @ViewBuilder
-    private var extraNudgeRow: some View {
-        let steps = stepCount ?? 0
-        let hour = Calendar.current.component(.hour, from: Date())
-        let message = extraNudgeMessage(steps: steps, hour: hour)
-
-        Text(message)
-            .font(.system(size: 10, weight: .medium, design: .rounded))
-            .foregroundStyle(Color(hex: 0x22C55E).opacity(0.8))
-            .multilineTextAlignment(.center)
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 14)
-    }
-
-    /// Returns a contextual message that changes based on step count and time-of-day.
-    /// Never shows the same static text — always reflects the user's current state.
-    private func extraNudgeMessage(steps: Int, hour: Int) -> String {
-        switch (steps, hour) {
-        case (0..<1000, 5..<10):
-            return "Early in the day — an easy win is waiting."
-        case (0..<1000, 10..<14):
-            return "Steps are low. A short walk fixes that fast."
-        case (0..<1000, 14...):
-            return "Under 1,000 steps so far. A short walk makes a difference."
-        case (1000..<4000, 5..<12):
-            return "Decent start. Keep the morning momentum."
-        case (1000..<4000, 12..<18):
-            return "On track — feeling up for a little extra?"
-        case (1000..<4000, 18...):
-            return "Still time to add a few more steps tonight."
-        case (4000..<7000, _):
-            return "Good pace. Another 15 min puts you above average."
-        case (7000..<10000, _):
-            return "Almost at 10K. One more walk seals it."
-        default:
-            return steps >= 10000
-                ? "10K+ done. You're already ahead today."
-                : "Feeling up for a little extra today?"
-        }
-    }
-
-    private var startButtonLabel: String {
-        let steps = stepCount ?? 0
-        if steps >= 8000 { return "Beat Yesterday" }
-        if steps >= 4000 { return "Keep Going" }
-        return "Start \(nudge.category == .moderate ? "Run" : "Walk")"
-    }
-
-    // MARK: - HealthKit: today's step count
+    // MARK: - HealthKit
 
     private func fetchStepCount() {
         guard HKHealthStore.isHealthDataAvailable() else {
@@ -695,285 +694,133 @@ private struct WalkNudgeScreen: View {
     }
 }
 
-// ─────────────────────────────────────────
-// MARK: - Screen 3: Goal progress
-// ─────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MARK: - Screen 3: Stress Pulse
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// "Am I stressed?" — ThumpBuddy emoji as the stress indicator.
+// Buddy shows stressed face during active stress, calm face otherwise.
+// Breathe button only appears when stress is detected.
+// Heatmap shows the 6-hour stress pattern.
 
-/// Screen 3: Shows how much activity is left in today's goal,
-/// a compact progress ring, and a "Start Activity" button.
-private struct GoalProgressScreen: View {
-
-    let nudge: DailyNudge
-    let nudgeInProgress: Bool
-    let nudgeCompleted: Bool
-    let onStart: () -> Void
-
-    @State private var appeared = false
-    /// Minutes of activity logged today toward the nudge goal.
-    @State private var minutesDone: Int = 0
-    private let healthStore = HKHealthStore()
-
-    private var goalMinutes: Int { nudge.durationMinutes ?? 15 }
-    private var minutesLeft: Int { max(0, goalMinutes - minutesDone) }
-    private var progress: Double { min(1.0, Double(minutesDone) / Double(goalMinutes)) }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-
-            // Progress ring + centre text
-            ZStack {
-                Circle()
-                    .stroke(Color(hex: 0x22C55E).opacity(0.18), lineWidth: 8)
-                    .frame(width: 72, height: 72)
-
-                Circle()
-                    .trim(from: 0, to: appeared ? progress : 0)
-                    .stroke(
-                        nudgeCompleted ? Color(hex: 0xEAB308) : Color(hex: 0x22C55E),
-                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                    )
-                    .frame(width: 72, height: 72)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeOut(duration: 0.8), value: appeared)
-
-                VStack(spacing: 1) {
-                    if nudgeCompleted {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 18, weight: .heavy))
-                            .foregroundStyle(Color(hex: 0xEAB308))
-                    } else {
-                        Text("\(minutesLeft)")
-                            .font(.system(size: 20, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.primary)
-                        Text("min left")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .opacity(appeared ? 1 : 0)
-
-            Spacer(minLength: 8)
-
-            // Status label
-            Group {
-                if nudgeCompleted {
-                    Text("Goal complete!")
-                        .font(.system(size: 13, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Color(hex: 0xEAB308))
-                } else if nudgeInProgress {
-                    Text("Activity in progress")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color(hex: 0x22C55E))
-                } else {
-                    Text(nudge.title)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                }
-            }
-            .opacity(appeared ? 1 : 0)
-
-            Spacer(minLength: 4)
-
-            // Sub-label: e.g. "3 of 15 min done"
-            if !nudgeCompleted {
-                Text("\(minutesDone) of \(goalMinutes) min done")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .opacity(appeared ? 1 : 0)
-            }
-
-            Spacer(minLength: 10)
-
-            // Start button — hidden when complete or during sleep hours
-            if !nudgeCompleted {
-                let sleepHour = { () -> Bool in
-                    let h = Calendar.current.component(.hour, from: Date())
-                    return h >= 22 || h < 5
-                }()
-                Group {
-                    if sleepHour {
-                        Text("Rest up — pick this up tomorrow")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 12)
-                    } else {
-                        Button(action: onStart) {
-                            Text(nudgeInProgress ? "Resume Activity" : "Start Activity")
-                                .font(.system(size: 13, weight: .heavy, design: .rounded))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 9)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .fill(nudgeInProgress
-                                            ? Color(hex: 0xF59E0B)
-                                            : Color(hex: 0x22C55E))
-                                )
-                                .padding(.horizontal, 12)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .opacity(appeared ? 1 : 0)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .containerBackground(Color(hex: 0x22C55E).gradient.opacity(0.07), for: .tabView)
-        .onAppear {
-            withAnimation(.spring(duration: 0.5, bounce: 0.2)) { appeared = true }
-            fetchActivityMinutes()
-        }
-    }
-
-    // MARK: - HealthKit: minutes of exercise today
-
-    private func fetchActivityMinutes() {
-        guard HKHealthStore.isHealthDataAvailable() else {
-            minutesDone = mockMinutesDone()
-            return
-        }
-        let type = HKQuantityType(.appleExerciseTime)
-        let cal = Calendar.current
-        let start = cal.startOfDay(for: Date())
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
-        let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
-            let mins = result?.sumQuantity()?.doubleValue(for: .minute()) ?? 0
-            Task { @MainActor in
-                self.minutesDone = mins > 0 ? Int(mins) : self.mockMinutesDone()
-            }
-        }
-        healthStore.execute(query)
-    }
-
-    /// Realistic mid-day exercise minutes for simulator.
-    private func mockMinutesDone() -> Int {
-        let hour = Calendar.current.component(.hour, from: Date())
-        // Assume ~2 min of exercise per active hour after 8 AM
-        let done = max(0, (hour - 8) * 2 + 3)
-        return min(done, goalMinutes - 1)  // always leaves at least 1 min left
-    }
-}
-
-// ─────────────────────────────────────────
-// MARK: - Screen 3: Stress
-// ─────────────────────────────────────────
-
-/// Stress screen: buddy state + 12-hour hourly heart-rate heatmap fetched live from HealthKit.
-///
-/// Each column represents one hour (oldest left → now right). The dot's color encodes
-/// how far that hour's average HR was above the user's resting HR baseline:
-///   • Green  → at/below resting (calm)
-///   • Amber  → moderately elevated
-///   • Red    → notably elevated
-/// The current-hour column has a white ring so "now" is always obvious.
-/// Hours with no data render as dim placeholders.
-private struct StressScreen: View {
+private struct StressPulseScreen: View {
 
     let isStressed: Bool
 
-    // MARK: - State
-
     @State private var appeared = false
-    /// Average heart rate per hour slot. Index 0 = 11 hours ago, index 11 = current hour.
-    /// nil = no data for that slot.
-    @State private var hourlyHR: [Double?] = Array(repeating: nil, count: 12)
-    /// User's resting HR baseline, derived from the last available resting HR sample.
+    @State private var hourlyHR: [Double?] = Array(repeating: nil, count: 6)
     @State private var restingHR: Double = 70
 
     private let healthStore = HKHealthStore()
 
-    // MARK: - Body
+    private var stressLevel: String {
+        isStressed ? "Elevated" : "Relaxed"
+    }
+
+    private var stressColor: Color {
+        isStressed ? Color(hex: 0xF59E0B) : Color(hex: 0x0D9488)
+    }
+
+    /// Buddy mood reflects stress state — the emoji IS the indicator
+    private var buddyMood: BuddyMood {
+        isStressed ? .stressed : .content
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 4)
 
-            // Buddy — stressed or calm
-            ThumpBuddy(mood: isStressed ? .stressed : .content, size: 46, showAura: false)
+            // ── ThumpBuddy emoji — the stress indicator ──
+            // Stressed: wide eyes, tense posture
+            // Calm: peaceful eyes, relaxed
+            ThumpBuddy(mood: buddyMood, size: 50, showAura: false)
                 .opacity(appeared ? 1 : 0)
+                .scaleEffect(appeared ? 1 : 0.7)
 
             Spacer(minLength: 4)
 
-            // State label
-            Text(isStressed ? "Stress is up" : "Calm today")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .opacity(appeared ? 1 : 0)
+            // Stress level label
+            VStack(spacing: 2) {
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(stressColor)
+                        .frame(width: 8, height: 8)
+                    Text(stressLevel)
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundStyle(stressColor)
+                }
+
+                Text(isStressed ? "Nervous system running warm" : "Body is calm")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            .opacity(appeared ? 1 : 0)
 
             Spacer(minLength: 8)
 
-            // 12-hour hourly HR heatmap
-            hourlyHeatMap
+            // 6-hour heatmap
+            sixHourHeatmap
                 .opacity(appeared ? 1 : 0)
 
             Spacer(minLength: 10)
 
-            // Compact Breathe shortcut
-            Button {
-                if let url = URL(string: "mindfulness://") {
-                    WKExtension.shared().openSystemURL(url)
+            // Breathe button — only visible during active stress
+            if isStressed {
+                Button {
+                    if let url = URL(string: "mindfulness://") {
+                        WKExtension.shared().openSystemURL(url)
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "wind")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Breathe")
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule().fill(Color(hex: 0x0D9488))
+                    )
+                    .padding(.horizontal, 24)
                 }
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "wind")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Breathe")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                }
-                .foregroundStyle(Color(hex: 0x0D9488))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 7)
-                .background(
-                    Capsule()
-                        .fill(Color(hex: 0x0D9488).opacity(0.18))
-                        .overlay(
-                            Capsule().stroke(Color(hex: 0x0D9488).opacity(0.4), lineWidth: 1)
-                        )
-                )
+                .buttonStyle(.plain)
+                .opacity(appeared ? 1 : 0)
+            } else {
+                // Calm state — just a reassuring message
+                Text("Keep it up")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .opacity(appeared ? 1 : 0)
             }
-            .buttonStyle(.plain)
-            .opacity(appeared ? 1 : 0)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .containerBackground(
-            (isStressed ? Color(hex: 0xF59E0B) : Color(hex: 0x0D9488)).gradient.opacity(0.08),
-            for: .tabView
-        )
+        .containerBackground(stressColor.gradient.opacity(0.08), for: .tabView)
         .onAppear {
             withAnimation(.spring(duration: 0.5, bounce: 0.2)) { appeared = true }
             fetchHourlyHeartRate()
         }
     }
 
-    // MARK: - Hourly Heatmap
+    // MARK: - 6-Hour Heatmap
 
-    /// 2-row × 6-column grid of dots with hour labels underneath each dot.
-    /// Row 0 = slots 0-5 (hours −11…−6), row 1 = slots 6-11 (hours −5…now).
-    /// Green = calm, orange = elevated, dim ring = no data.
-    private var hourlyHeatMap: some View {
+    private var sixHourHeatmap: some View {
         let now = Date()
         let cal = Calendar.current
         let currentHour = cal.component(.hour, from: now)
-        let rows = [[0, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11]]
 
         return VStack(spacing: 4) {
-            ForEach(rows, id: \.first) { row in
-                HStack(spacing: 6) {
-                    ForEach(row, id: \.self) { slotIndex in
-                        let isNow = slotIndex == 11
-                        let hoursAgo = 11 - slotIndex
-                        let hour = (currentHour - hoursAgo + 24) % 24
-                        let avgHR = hourlyHR[slotIndex]
-                        dotWithLabel(avgHR: avgHR, isNow: isNow, hour: hour)
-                    }
+            // Single row of 6 dots
+            HStack(spacing: 8) {
+                ForEach(0..<6, id: \.self) { slotIndex in
+                    let isNow = slotIndex == 5
+                    let hoursAgo = 5 - slotIndex
+                    let hour = (currentHour - hoursAgo + 24) % 24
+                    let avgHR = hourlyHR[slotIndex]
+                    dotWithLabel(avgHR: avgHR, isNow: isNow, hour: hour)
                 }
             }
         }
@@ -981,34 +828,33 @@ private struct StressScreen: View {
 
     @ViewBuilder
     private func dotWithLabel(avgHR: Double?, isNow: Bool, hour: Int) -> some View {
-        VStack(spacing: 2) {
-            // Dot
+        VStack(spacing: 3) {
             ZStack {
                 if let hr = avgHR {
                     let elevation = hr - restingHR
                     let color: Color = elevation < 5
                         ? Color(hex: 0x22C55E)
-                        : Color(hex: 0xF59E0B)
+                        : elevation < 15
+                            ? Color(hex: 0xF59E0B)
+                            : Color(hex: 0xEF4444)
                     Circle()
                         .fill(color)
-                        .frame(width: 12, height: 12)
+                        .frame(width: 14, height: 14)
                     if isNow {
                         Circle()
                             .stroke(Color.white.opacity(0.9), lineWidth: 1.5)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 18, height: 18)
                     }
                 } else {
-                    // No data — dim empty ring placeholder
                     Circle()
                         .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                        .frame(width: 10, height: 10)
+                        .frame(width: 12, height: 12)
                 }
             }
-            .frame(width: 18, height: 18)
+            .frame(width: 20, height: 20)
 
-            // Hour label: "2p", "3p", "now"
             Text(isNow ? "now" : hourLabel(hour))
-                .font(.system(size: 7, weight: isNow ? .heavy : .regular, design: .monospaced))
+                .font(.system(size: 8, weight: isNow ? .heavy : .regular, design: .monospaced))
                 .foregroundStyle(isNow ? Color.primary : Color.secondary.opacity(0.6))
         }
     }
@@ -1024,53 +870,37 @@ private struct StressScreen: View {
 
     // MARK: - HealthKit Fetch
 
-    /// Fetches heart-rate samples for the last 12 hours and buckets them by hour.
-    /// Also reads the most recent resting HR sample to use as the calm baseline.
     private func fetchHourlyHeartRate() {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
+        guard HKHealthStore.isHealthDataAvailable() else {
+            hourlyHR = Self.mockHourlyHR(restingHR: restingHR)
+            return
+        }
         fetchRestingHR()
         fetchHRSamples()
     }
 
-    /// Reads the latest resting HR value to use as the calm baseline.
     private func fetchRestingHR() {
         let type = HKQuantityType(.restingHeartRate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(
-            sampleType: type,
-            predicate: nil,
-            limit: 1,
-            sortDescriptors: [sort]
-        ) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
             guard let sample = (samples as? [HKQuantitySample])?.first else { return }
             let bpm = sample.quantity.doubleValue(for: .count().unitDivided(by: .minute()))
-            Task { @MainActor in
-                self.restingHR = bpm
-            }
+            Task { @MainActor in self.restingHR = bpm }
         }
         healthStore.execute(query)
     }
 
-    /// Fetches all HR samples from the last 12 hours and averages them per hour slot.
     private func fetchHRSamples() {
         let type = HKQuantityType(.heartRate)
         let now = Date()
-        let start = now.addingTimeInterval(-12 * 3600)
-        let predicate = HKQuery.predicateForSamples(
-            withStart: start, end: now, options: .strictStartDate
-        )
+        let start = now.addingTimeInterval(-6 * 3600)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: now, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-        let query = HKSampleQuery(
-            sampleType: type,
-            predicate: predicate,
-            limit: HKObjectQueryNoLimit,
-            sortDescriptors: [sort]
-        ) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
             guard let samples = samples as? [HKQuantitySample], !samples.isEmpty else {
-                // No HealthKit data (simulator) — seed realistic circadian mock values
                 Task { @MainActor in
                     withAnimation(.easeIn(duration: 0.4)) {
-                        self.hourlyHR = Self.mockHourlyHR(restingHR: self.restingHR, now: now)
+                        self.hourlyHR = Self.mockHourlyHR(restingHR: self.restingHR)
                     }
                 }
                 return
@@ -1080,63 +910,49 @@ private struct StressScreen: View {
             let currentHour = cal.component(.hour, from: now)
             let unit = HKUnit.count().unitDivided(by: .minute())
 
-            // Bucket samples into 12 slots: slot i covers the hour that is (11-i) hours ago
-            var buckets: [[Double]] = Array(repeating: [], count: 12)
+            var buckets: [[Double]] = Array(repeating: [], count: 6)
             for sample in samples {
                 let sampleHour = cal.component(.hour, from: sample.startDate)
-                // Map sampleHour to a slot 0…11
                 let hoursAgo = (currentHour - sampleHour + 24) % 24
-                guard hoursAgo < 12 else { continue }
-                let slotIndex = 11 - hoursAgo
-                let bpm = sample.quantity.doubleValue(for: unit)
-                buckets[slotIndex].append(bpm)
+                guard hoursAgo < 6 else { continue }
+                let slotIndex = 5 - hoursAgo
+                buckets[slotIndex].append(sample.quantity.doubleValue(for: unit))
             }
 
-            let averages: [Double?] = buckets.map { readings in
-                readings.isEmpty ? nil : readings.reduce(0, +) / Double(readings.count)
-            }
+            let averages: [Double?] = buckets.map { $0.isEmpty ? nil : $0.reduce(0, +) / Double($0.count) }
 
             Task { @MainActor in
-                withAnimation(.easeIn(duration: 0.4)) {
-                    self.hourlyHR = averages
-                }
+                withAnimation(.easeIn(duration: 0.4)) { self.hourlyHR = averages }
             }
         }
         healthStore.execute(query)
     }
 
-    /// Generates realistic circadian HR mock values for the last 12 hours.
-    /// Used when HealthKit returns no data (e.g., simulator).
-    private static func mockHourlyHR(restingHR: Double, now: Date) -> [Double?] {
+    private static func mockHourlyHR(restingHR: Double) -> [Double?] {
         let cal = Calendar.current
-        let currentHour = cal.component(.hour, from: now)
-
-        // Real observed avg HR per hour from Apple Watch data (Mar 11 2026).
-        // Hours 20–23 are unrecorded that day; filled with a light taper from resting.
+        let currentHour = cal.component(.hour, from: Date())
         let realHourlyAvg: [Int: Double] = [
             0: 62.7, 1: 63.1, 2: 56.5, 3: 57.6, 4: 56.2, 5: 50.4,
             6: 53.9, 7: 55.3, 8: 60.0, 9: 58.9, 10: 68.1, 11: 68.5,
             12: 67.3, 13: 65.3, 14: 88.3, 15: 76.3, 16: 85.8, 17: 99.7,
-            18: 99.8, 19: 141.5,
-            // Taper estimate for unrecorded late-evening hours
-            20: 85.0, 21: 75.0, 22: 68.0, 23: 64.0
+            18: 99.8, 19: 141.5, 20: 85.0, 21: 75.0, 22: 68.0, 23: 64.0
         ]
-
-        return (0..<12).map { slot in
-            let hoursAgo = 11 - slot
+        return (0..<6).map { slot in
+            let hoursAgo = 5 - slot
             let hour = (currentHour - hoursAgo + 24) % 24
             return realHourlyAvg[hour] ?? restingHR
         }
     }
 }
 
-// ─────────────────────────────────────────
-// MARK: - Screen 4: Sleep
-// ─────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MARK: - Screen 3: Sleep Summary
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// "How did I sleep?" — Big hours number + quality + trend arrow.
+// Sleep is the #2 most-viewed metric. Keep it to 3 data points max.
 
-/// Shows last night's sleep hours from HealthKit, a suggested bedtime,
-/// and a bedtime reminder button. All data is fetched locally on the watch.
-private struct SleepScreen: View {
+private struct SleepSummaryScreen: View {
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -1147,160 +963,121 @@ private struct SleepScreen: View {
     let needsRest: Bool
 
     @State private var appeared = false
-    @State private var reminderSet = false
-    /// Last 3 nights' sleep hours fetched from HealthKit (oldest first).
+    @State private var lastNightHours: Double?
     @State private var recentSleepHours: [Double] = []
-
-    /// True when all 3 recent nights were under 6.5 hours — flags a sleep debt trend.
-    private var hasSleepTrend: Bool {
-        guard recentSleepHours.count >= 3 else { return false }
-        return recentSleepHours.suffix(3).allSatisfy { $0 < 6.5 }
-    }
-
-    /// Formatted streak count, e.g. "3 nights".
-    private var streakLabel: String {
-        let count = recentSleepHours.suffix(3).filter { $0 < 6.5 }.count
-        return "\(count) nights"
-    }
-    /// Last night's total sleep in hours, loaded from HealthKit.
-    @State private var lastNightHours: Double? = nil
-    /// The wake-up time inferred from the last sleep sample end date.
-    @State private var wakeTime: Date? = nil
+    @State private var wakeTime: Date?
 
     private let healthStore = HKHealthStore()
 
-    // MARK: - Time mode
-
-    private var hour: Int { Calendar.current.component(.hour, from: Date()) }
-
-    /// 10 PM – 4:59 AM: user should be asleep, suppress all activity CTAs.
-    private var isSleepTime: Bool { hour >= 22 || hour < 5 }
-
-    /// 9 PM – 9:59 PM: wind-down window, shift tone to calm.
-    private var isWindDown: Bool { hour == 21 }
-
-    private var sleepHeadline: String {
-        if isSleepTime {
-            return hasSleepTrend ? "Building a better streak" : (needsRest ? "Sleep well tonight" : "Rest & recover")
-        } else if isWindDown {
-            return "Wind down soon"
-        } else {
-            return needsRest ? "Sleep more tonight" : "Well rested"
+    private var sleepQuality: String {
+        guard let hours = lastNightHours else { return "No data" }
+        switch hours {
+        case 7.5...: return "Excellent"
+        case 7..<7.5: return "Good"
+        case 6..<7:   return "Fair"
+        default:      return "Poor"
         }
     }
 
-    private var sleepSubMessage: String? {
-        if isSleepTime {
-            if hasSleepTrend {
-                return "Sleep has been light for \(streakLabel). An earlier bedtime tonight could help."
-            }
-            return needsRest
-                ? "Sleep is where recovery happens. Every hour counts."
-                : "Tonight's rest locks in today's progress. Sleep well."
-        } else if isWindDown {
-            return "Wind-down time — a calm evening sets up a good tomorrow."
+    private var sleepQualityColor: Color {
+        guard let hours = lastNightHours else { return .secondary }
+        switch hours {
+        case 7...:    return Color(hex: 0x22C55E)
+        case 6..<7:   return Color(hex: 0xF59E0B)
+        default:      return Color(hex: 0xEF4444)
         }
-        return nil
+    }
+
+    private var trendArrow: String {
+        guard recentSleepHours.count >= 2 else { return "" }
+        let recent = recentSleepHours.last ?? 0
+        let prev = recentSleepHours.dropLast().last ?? 0
+        if recent > prev + 0.3 { return "↑" }
+        if recent < prev - 0.3 { return "↓" }
+        return "→"
+    }
+
+    private var trendLabel: String {
+        guard recentSleepHours.count >= 2 else { return "Track more nights" }
+        let recent = recentSleepHours.last ?? 0
+        let prev = recentSleepHours.dropLast().last ?? 0
+        if recent > prev + 0.3 { return "Improving" }
+        if recent < prev - 0.3 { return "Declining" }
+        return "Stable"
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 2)
+            Spacer(minLength: 6)
 
-            ThumpBuddy(
-                mood: isSleepTime ? .tired : (needsRest ? .tired : .content),
-                size: 44,
-                showAura: false
-            )
-            .opacity(appeared ? 1 : 0)
-
-            Spacer(minLength: 4)
-
-            Text(sleepHeadline)
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
+            // ThumpBuddy — tired/sleeping face
+            ThumpBuddy(mood: .tired, size: 46, showAura: false)
                 .opacity(appeared ? 1 : 0)
+                .scaleEffect(appeared ? 1 : 0.7)
 
-            if let sub = sleepSubMessage {
-                Spacer(minLength: 4)
-                Text(sub)
-                    .font(.system(size: 10, weight: .regular, design: .rounded))
+            Spacer(minLength: 6)
+
+            // ── Big hours number ──
+            if let hours = lastNightHours {
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text(formattedHours(hours))
+                        .font(.system(size: 32, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+                .opacity(appeared ? 1 : 0)
+            } else {
+                Text("—")
+                    .font(.system(size: 32, weight: .heavy, design: .rounded))
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 10)
                     .opacity(appeared ? 1 : 0)
             }
 
-            // Trend warning pill — only during sleep hours when streak detected
-            if isSleepTime && hasSleepTrend {
-                Spacer(minLength: 6)
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0xF59E0B))
-                    Text("Poor sleep \(streakLabel) in a row")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color(hex: 0xF59E0B))
+            Spacer(minLength: 4)
+
+            // ── Quality badge ──
+            HStack(spacing: 6) {
+                Text(sleepQuality)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(sleepQualityColor)
+
+                if !trendArrow.isEmpty {
+                    Text(trendArrow)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(hex: 0xF59E0B).opacity(0.12), in: Capsule())
+            }
+            .opacity(appeared ? 1 : 0)
+
+            Spacer(minLength: 8)
+
+            // ── 3-night mini trend ──
+            if recentSleepHours.count >= 2 {
+                HStack(spacing: 4) {
+                    ForEach(Array(recentSleepHours.suffix(3).enumerated()), id: \.offset) { index, hours in
+                        let isLast = index == recentSleepHours.suffix(3).count - 1
+                        VStack(spacing: 2) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(barColor(hours))
+                                .frame(width: 16, height: appeared ? barHeight(hours) : 4)
+                                .animation(.spring(duration: 0.5).delay(Double(index) * 0.1), value: appeared)
+                            Text(shortHours(hours))
+                                .font(.system(size: 8, weight: isLast ? .heavy : .regular, design: .rounded))
+                                .foregroundStyle(isLast ? .primary : .secondary)
+                        }
+                    }
+                }
                 .opacity(appeared ? 1 : 0)
             }
 
             Spacer(minLength: 6)
 
-            // ── Sleep stats row: last night + target bedtime ──
-            // Hidden during sleep hours (nothing useful to show yet)
-            if !isSleepTime {
-                HStack(spacing: 10) {
-                    sleepStatCell(
-                        label: "Last night",
-                        value: lastNightHours.map { formattedHours($0) } ?? "–",
-                        icon: "moon.fill",
-                        color: Color(hex: 0x818CF8)
-                    )
-                    Divider()
-                        .frame(height: 28)
-                        .opacity(0.3)
-                    sleepStatCell(
-                        label: "Target bed",
-                        value: targetBedtime,
-                        icon: "bed.double.fill",
-                        color: Color(hex: 0x6366F1)
-                    )
-                }
+            // ── Trend label ──
+            Text(trendLabel)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
                 .opacity(appeared ? 1 : 0)
 
-                Spacer(minLength: 8)
-
-                // Bedtime reminder button — day & wind-down only
-                Button {
-                    withAnimation(.spring(duration: 0.3)) { reminderSet.toggle() }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: reminderSet ? "checkmark.circle.fill" : "moon.zzz.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(reminderSet ? "Reminder set" : "Remind me at bedtime")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                    }
-                    .foregroundStyle(reminderSet ? Color(hex: 0x22C55E) : .white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(reminderSet
-                                  ? Color(hex: 0x22C55E).opacity(0.2)
-                                  : Color(hex: 0x6366F1))
-                    )
-                    .padding(.horizontal, 12)
-                }
-                .buttonStyle(.plain)
-                .opacity(appeared ? 1 : 0)
-            }
-
-            Spacer(minLength: 2)
+            Spacer(minLength: 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(Color(hex: 0x6366F1).gradient.opacity(0.08), for: .tabView)
@@ -1311,39 +1088,26 @@ private struct SleepScreen: View {
         }
     }
 
-    // MARK: - Sleep Stat Cell
+    // MARK: - Bar helpers
 
-    private func sleepStatCell(label: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 9))
-                    .foregroundStyle(color)
-                Text(label)
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-            Text(value)
-                .font(.system(size: 14, weight: .heavy, design: .rounded))
-                .foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity)
+    private func barHeight(_ hours: Double) -> CGFloat {
+        let clamped = max(4, min(8.5, hours))
+        return CGFloat((clamped - 4) / 4.5) * 24 + 8  // 8-32pt range
     }
 
-    // MARK: - Computed helpers
-
-    /// Target bedtime: 8 hours before yesterday's wake time, or "10:00 PM" as a sensible default.
-    private var targetBedtime: String {
-        let cal = Calendar.current
-        if let wake = wakeTime {
-            // Target = wake time shifted back by 8 hours (same tonight)
-            let target = wake.addingTimeInterval(-8 * 3600)
-            return formatTime(target)
+    private func barColor(_ hours: Double) -> Color {
+        switch hours {
+        case 7...:  return Color(hex: 0x818CF8)
+        case 6..<7: return Color(hex: 0xF59E0B).opacity(0.7)
+        default:    return Color(hex: 0xEF4444).opacity(0.6)
         }
-        // Fallback: 10 PM tonight
-        var comps = cal.dateComponents([.year, .month, .day], from: Date())
-        comps.hour = 22; comps.minute = 0
-        return cal.date(from: comps).map { formatTime($0) } ?? "10:00 PM"
+    }
+
+    private func shortHours(_ h: Double) -> String {
+        let hrs = Int(h)
+        let mins = Int((h - Double(hrs)) * 60)
+        if mins < 10 { return "\(hrs)h" }
+        return "\(hrs):\(mins)"
     }
 
     private func formattedHours(_ h: Double) -> String {
@@ -1357,59 +1121,25 @@ private struct SleepScreen: View {
         Self.timeFormatter.string(from: date)
     }
 
-    // MARK: - HealthKit fetch
+    // MARK: - HealthKit
 
-    /// Reads last night's sleep samples (yesterday 6 PM → today noon) from HealthKit.
     private func fetchLastNightSleep() {
         guard HKHealthStore.isHealthDataAvailable() else { return }
-
-        let sleepType = HKCategoryType(.sleepAnalysis)
-
-        // Check authorization status without requesting (watch app reads, iOS grants)
-        let status = healthStore.authorizationStatus(for: sleepType)
-        guard status == .sharingAuthorized else {
-            // Try to read anyway — watch may have read-only access granted by the paired iPhone
-            performSleepQuery()
-            return
-        }
-        performSleepQuery()
-    }
-
-    private func performSleepQuery() {
         let sleepType = HKCategoryType(.sleepAnalysis)
         let cal = Calendar.current
         let now = Date()
-        // Window: yesterday at 6 PM → today at noon
         let startOfToday = cal.startOfDay(for: now)
-        let windowStart = startOfToday.addingTimeInterval(-18 * 3600) // 6 PM yesterday
-        let windowEnd   = startOfToday.addingTimeInterval(12 * 3600)  // noon today
+        let windowStart = startOfToday.addingTimeInterval(-18 * 3600)
+        let windowEnd = startOfToday.addingTimeInterval(12 * 3600)
 
-        let predicate = HKQuery.predicateForSamples(
-            withStart: windowStart,
-            end: windowEnd,
-            options: .strictStartDate
-        )
-        let sortDescriptor = NSSortDescriptor(
-            key: HKSampleSortIdentifierEndDate,
-            ascending: false
-        )
-        let query = HKSampleQuery(
-            sampleType: sleepType,
-            predicate: predicate,
-            limit: HKObjectQueryNoLimit,
-            sortDescriptors: [sortDescriptor]
-        ) { _, samples, _ in
+        let predicate = HKQuery.predicateForSamples(withStart: windowStart, end: windowEnd, options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
             guard let samples = samples as? [HKCategorySample], !samples.isEmpty else { return }
-
-            // Sum only asleep stages
             let asleepValues = HKCategoryValueSleepAnalysis.allAsleepValues.map { $0.rawValue }
             let asleepSamples = samples.filter { asleepValues.contains($0.value) }
-            let totalSeconds = asleepSamples.reduce(0.0) { acc, s in
-                acc + s.endDate.timeIntervalSince(s.startDate)
-            }
+            let totalSeconds = asleepSamples.reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
             let hours = totalSeconds / 3600
-
-            // Latest end date = when they woke up
             let latestEnd = samples.first?.endDate
 
             Task { @MainActor in
@@ -1422,107 +1152,145 @@ private struct SleepScreen: View {
         healthStore.execute(query)
     }
 
-    /// Fetches the last 3 nights' sleep totals from HealthKit for trend detection.
     private func fetchRecentSleepHistory() {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         let sleepType = HKCategoryType(.sleepAnalysis)
         let cal = Calendar.current
         let now = Date()
-        // Go back 4 days to capture 3 full nights
         let windowStart = cal.date(byAdding: .day, value: -4, to: cal.startOfDay(for: now))!
         let windowEnd = cal.startOfDay(for: now)
 
-        let predicate = HKQuery.predicateForSamples(
-            withStart: windowStart, end: windowEnd, options: .strictStartDate
-        )
+        let predicate = HKQuery.predicateForSamples(withStart: windowStart, end: windowEnd, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-        let query = HKSampleQuery(
-            sampleType: sleepType,
-            predicate: predicate,
-            limit: HKObjectQueryNoLimit,
-            sortDescriptors: [sort]
-        ) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
             guard let samples = samples as? [HKCategorySample], !samples.isEmpty else { return }
-
             let asleepValues = HKCategoryValueSleepAnalysis.allAsleepValues.map { $0.rawValue }
             let asleepSamples = samples.filter { asleepValues.contains($0.value) }
 
-            // Bucket by night (use the start date's calendar day)
             var nightBuckets: [Date: Double] = [:]
             for sample in asleepSamples {
                 let nightDate = cal.startOfDay(for: sample.startDate)
-                let duration = sample.endDate.timeIntervalSince(sample.startDate) / 3600
-                nightBuckets[nightDate, default: 0] += duration
+                nightBuckets[nightDate, default: 0] += sample.endDate.timeIntervalSince(sample.startDate) / 3600
             }
 
-            // Sort by date, take last 3 nights
-            let sortedNights = nightBuckets.sorted { $0.key < $1.key }
-                .suffix(3)
-                .map { $0.value }
+            let sortedNights = nightBuckets.sorted { $0.key < $1.key }.suffix(3).map { $0.value }
 
-            Task { @MainActor in
-                self.recentSleepHours = sortedNights
-            }
+            Task { @MainActor in self.recentSleepHours = sortedNights }
         }
         healthStore.execute(query)
     }
 }
 
-// ─────────────────────────────────────────
-// MARK: - Screen 6: Heart Metrics
-// ─────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MARK: - Screen 4: Trends + Coaching
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// "Am I getting better?" — HRV↑ RHR↓ deltas + coaching note + streak.
+// Gamification drives 28% increase in DAU (Strava data).
+// Coaching message = perceived value that justifies subscription.
 
-/// Screen 6: HRV + RHR tiles with trend direction and an action-oriented
-/// one-liner that connects the metric to what it means for today's behaviour.
-///
-/// Interpretation logic:
-///   HRV ↑  →  "Better recovery — yesterday's effort is paying off"
-///   HRV ↓  →  "Take it easy — your body is still catching up"
-///   RHR ↓  →  "Intensity was good — heart is less stressed today"
-///   RHR ↑  →  "Take it easy — your heart is still working"
-private struct HeartMetricsScreen: View {
+private struct TrendsScreen: View {
 
+    let assessment: HeartAssessment
+
+    @State private var appeared = false
     @State private var todayHRV: Double?
     @State private var todayRHR: Double?
     @State private var yesterdayHRV: Double?
     @State private var yesterdayRHR: Double?
 
-    @State private var appeared = false
     private let healthStore = HKHealthStore()
+
+    // Streak count from UserDefaults (days the user has opened the app)
+    private var streakCount: Int {
+        UserDefaults.standard.integer(forKey: "thump_daily_streak")
+    }
+
+    private var coachingNote: String {
+        if let scenario = assessment.scenario {
+            switch scenario {
+            case .overtrainingSignals: return "Recovery day — that's when you get stronger"
+            case .highStressDay:       return "Stress is high — a walk or breathe session helps"
+            case .greatRecoveryDay:    return "Great recovery — good day to push"
+            case .decliningTrend:      return "Check sleep and stress first"
+            case .improvingTrend:      return "Two weeks of progress — habits are paying off"
+            case .missingActivity:     return "Even a short walk changes the trajectory"
+            }
+        }
+        switch assessment.status {
+        case .improving:      return "Your numbers are trending in the right direction"
+        case .needsAttention: return "Body is asking for rest — listen to it"
+        default:              return "Consistency is your edge — keep showing up"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 4)
+            Spacer(minLength: 6)
 
-            Text("Heart Metrics")
+            // Title
+            Text("Trends")
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundStyle(.secondary)
                 .opacity(appeared ? 1 : 0)
 
             Spacer(minLength: 8)
 
-            VStack(spacing: 8) {
-                metricTile(
+            // HRV + RHR compact tiles
+            VStack(spacing: 6) {
+                compactMetricRow(
                     icon: "waveform.path.ecg",
                     label: "HRV",
                     unit: "ms",
                     value: todayHRV,
                     previous: yesterdayHRV,
-                    higherIsBetter: true
+                    higherIsBetter: true,
+                    accentColor: Color(hex: 0xA78BFA)
                 )
-                metricTile(
+                compactMetricRow(
                     icon: "heart.fill",
                     label: "RHR",
                     unit: "bpm",
                     value: todayRHR,
                     previous: yesterdayRHR,
-                    higherIsBetter: false
+                    higherIsBetter: false,
+                    accentColor: Color(hex: 0xEC4899)
                 )
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 10)
             .opacity(appeared ? 1 : 0)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 10)
+
+            // Coaching note
+            Text(coachingNote)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 14)
+                .opacity(appeared ? 1 : 0)
+
+            Spacer(minLength: 8)
+
+            // Streak counter
+            if streakCount > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xF59E0B))
+                    Text("\(streakCount) day streak")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color(hex: 0xF59E0B))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Color(hex: 0xF59E0B).opacity(0.12), in: Capsule())
+                .opacity(appeared ? 1 : 0)
+            }
+
+            Spacer(minLength: 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(Color(hex: 0xEC4899).gradient.opacity(0.07), for: .tabView)
@@ -1530,6 +1298,71 @@ private struct HeartMetricsScreen: View {
             withAnimation(.spring(duration: 0.5, bounce: 0.2)) { appeared = true }
             fetchMetrics()
         }
+    }
+
+    // MARK: - Compact Metric Row
+
+    private func compactMetricRow(
+        icon: String,
+        label: String,
+        unit: String,
+        value: Double?,
+        previous: Double?,
+        higherIsBetter: Bool,
+        accentColor: Color
+    ) -> some View {
+        let delta: Double? = {
+            guard let v = value, let p = previous else { return nil }
+            return v - p
+        }()
+        let improved: Bool? = delta.map { higherIsBetter ? $0 > 0 : $0 < 0 }
+
+        return HStack(spacing: 0) {
+            // Icon + label
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(accentColor)
+            Text("  \(label)")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            // Value
+            if let v = value {
+                Text("\(Int(v.rounded()))")
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(" \(unit)")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("—")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
+            // Delta arrow
+            if let d = delta {
+                let sign = d > 0 ? "+" : ""
+                let arrow = d > 0 ? "arrow.up" : "arrow.down"
+                HStack(spacing: 2) {
+                    Image(systemName: arrow)
+                        .font(.system(size: 8, weight: .bold))
+                    Text("\(sign)\(Int(d.rounded()))")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(improved == true ? Color(hex: 0x22C55E) : Color(hex: 0xEF4444))
+                .padding(.leading, 4)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(accentColor.opacity(0.2), lineWidth: 1))
+        )
     }
 
     // MARK: - HealthKit Fetch
@@ -1546,7 +1379,6 @@ private struct HeartMetricsScreen: View {
         }
     }
 
-    /// Fetches the most recent sample for today and yesterday for a given quantity type.
     private func fetchLatestSample(
         type quantityTypeId: HKQuantityTypeIdentifier,
         unit: HKUnit,
@@ -1558,16 +1390,9 @@ private struct HeartMetricsScreen: View {
         let startOfToday = cal.startOfDay(for: now)
         let startOfYesterday = cal.date(byAdding: .day, value: -1, to: startOfToday)!
 
-        let predicate = HKQuery.predicateForSamples(
-            withStart: startOfYesterday, end: now, options: .strictStartDate
-        )
+        let predicate = HKQuery.predicateForSamples(withStart: startOfYesterday, end: now, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(
-            sampleType: quantityType,
-            predicate: predicate,
-            limit: HKObjectQueryNoLimit,
-            sortDescriptors: [sort]
-        ) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
             guard let samples = samples as? [HKQuantitySample] else {
                 Task { @MainActor in completion(nil, nil) }
                 return
@@ -1587,134 +1412,6 @@ private struct HeartMetricsScreen: View {
             Task { @MainActor in completion(todayValue, yesterdayValue) }
         }
         healthStore.execute(query)
-    }
-
-    // MARK: - Metric tile
-
-    private func metricTile(
-        icon: String,
-        label: String,
-        unit: String,
-        value: Double?,
-        previous: Double?,
-        higherIsBetter: Bool
-    ) -> some View {
-        let delta: Double? = {
-            guard let v = value, let p = previous else { return nil }
-            return v - p
-        }()
-        let improved: Bool? = delta.map { higherIsBetter ? $0 > 0 : $0 < 0 }
-        let tileColor = tileAccent(label: label, improved: improved)
-
-        return VStack(alignment: .leading, spacing: 6) {
-            // Top row: icon + label + value + arrow + delta
-            HStack(spacing: 0) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(tileColor)
-
-                Text("  \(label)")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                if let v = value {
-                    Text("\(Int(v.rounded()))")
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text(" \(unit)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .alignmentGuide(.firstTextBaseline) { d in d[.lastTextBaseline] }
-                } else {
-                    Text("—")
-                        .font(.system(size: 16, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-
-                if let d = delta {
-                    let sign = d > 0 ? "+" : ""
-                    let arrow = d > 0 ? "arrow.up" : "arrow.down"
-                    HStack(spacing: 2) {
-                        Image(systemName: arrow)
-                            .font(.system(size: 9, weight: .bold))
-                        Text("\(sign)\(Int(d.rounded()))")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                    }
-                    .foregroundStyle(improved == true ? Color(hex: 0x22C55E) : Color(hex: 0xEF4444))
-                    .padding(.leading, 4)
-                }
-            }
-
-            // Interpretation — action-oriented one-liner
-            Text(interpretation(label: label, delta: delta, higherIsBetter: higherIsBetter))
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(tileColor.opacity(0.25), lineWidth: 1)
-                )
-        )
-    }
-
-    // MARK: - Interpretation logic
-
-    /// Action-oriented sentence: metric + direction → consequence for TODAY.
-    private func interpretation(label: String, delta: Double?, higherIsBetter: Bool) -> String {
-        guard let d = delta else {
-            return label == "HRV"
-                ? "Track your recovery over time."
-                : "Compare daily to spot trends."
-        }
-        let improved = higherIsBetter ? d > 0 : d < 0
-        let magnitude = abs(d)
-
-        if label == "HRV" {
-            if improved {
-                return magnitude >= 5
-                    ? "Better recovery — yesterday's effort is paying off."
-                    : "Slight recovery gain — body is adapting."
-            } else {
-                return magnitude >= 5
-                    ? "Take it easy — your body is still catching up."
-                    : "Minor dip — keep today's effort moderate."
-            }
-        } else {
-            // RHR
-            if improved {
-                return magnitude >= 3
-                    ? "Intensity was good — heart is less stressed today."
-                    : "Heart is settling — good sign."
-            } else {
-                return magnitude >= 3
-                    ? "Take it easy — your heart is still working."
-                    : "Slight rise — watch your load today."
-            }
-        }
-    }
-
-    // MARK: - Accent colour
-
-    private func tileAccent(label: String, improved: Bool?) -> Color {
-        if label == "HRV" {
-            return improved == true ? Color(hex: 0x22C55E)
-                : improved == false ? Color(hex: 0xF59E0B)
-                : Color(hex: 0xA78BFA)
-        } else {
-            return improved == true ? Color(hex: 0x22C55E)
-                : improved == false ? Color(hex: 0xEF4444)
-                : Color(hex: 0xEC4899)
-        }
     }
 }
 

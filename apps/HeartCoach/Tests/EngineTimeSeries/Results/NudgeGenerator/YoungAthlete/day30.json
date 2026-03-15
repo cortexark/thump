@@ -2,12 +2,13 @@
   "anomalyScore" : 1.053149309102281,
   "confidence" : "high",
   "multiNudgeCategories" : [
+    "walk",
     "hydrate",
     "rest"
   ],
-  "multiNudgeCount" : 2,
-  "nudgeCategory" : "hydrate",
-  "nudgeTitle" : "Quick Hydration Check-In",
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "Two Little Walks",
   "readinessLevel" : "primed",
   "readinessScore" : 87,
   "regressionFlag" : false,

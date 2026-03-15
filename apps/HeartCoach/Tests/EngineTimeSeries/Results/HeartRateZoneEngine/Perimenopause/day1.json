@@ -5,24 +5,24 @@
   "recommendation" : "needsMoreThreshold",
   "zoneBoundaries" : [
     {
-      "lower" : 119,
-      "upper" : 129
+      "lower" : 113,
+      "upper" : 123
     },
     {
-      "lower" : 129,
-      "upper" : 140
+      "lower" : 123,
+      "upper" : 133
     },
     {
-      "lower" : 140,
-      "upper" : 151
+      "lower" : 133,
+      "upper" : 142
     },
     {
-      "lower" : 151,
+      "lower" : 142,
+      "upper" : 152
+    },
+    {
+      "lower" : 152,
       "upper" : 162
-    },
-    {
-      "lower" : 162,
-      "upper" : 173
     }
   ],
   "zoneCount" : 5

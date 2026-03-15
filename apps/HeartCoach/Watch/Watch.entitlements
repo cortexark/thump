@@ -8,5 +8,9 @@
 	<array>
 		<string>health-data</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.thump.shared</string>
+	</array>
 </dict>
 </plist>

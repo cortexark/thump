@@ -5,24 +5,24 @@
   "recommendation" : "perfectBalance",
   "zoneBoundaries" : [
     {
-      "lower" : 122,
-      "upper" : 132
+      "lower" : 116,
+      "upper" : 125
     },
     {
-      "lower" : 132,
-      "upper" : 142
+      "lower" : 125,
+      "upper" : 135
     },
     {
-      "lower" : 142,
-      "upper" : 152
+      "lower" : 135,
+      "upper" : 144
     },
     {
-      "lower" : 152,
-      "upper" : 163
+      "lower" : 144,
+      "upper" : 153
     },
     {
-      "lower" : 163,
-      "upper" : 173
+      "lower" : 153,
+      "upper" : 162
     }
   ],
   "zoneCount" : 5

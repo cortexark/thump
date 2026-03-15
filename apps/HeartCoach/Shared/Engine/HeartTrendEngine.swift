@@ -90,10 +90,20 @@ public struct HeartTrendEngine: Sendable {
     ///   - current: Today's snapshot to assess.
     ///   - feedback: Optional user feedback from the previous day.
     /// - Returns: A fully populated `HeartAssessment`.
+    /// Produce a complete daily assessment from the snapshot history.
+    ///
+    /// - Parameters:
+    ///   - history: Array of historical snapshots, ordered oldest-first.
+    ///   - current: Today's snapshot to assess.
+    ///   - feedback: Optional user feedback from the previous day.
+    ///   - stressScore: Real stress score from StressEngine (0-100). When provided,
+    ///     this is passed directly to ReadinessEngine instead of the heuristic proxy.
+    ///     This fixes BUG-061 where the proxy (70/50/25) could diverge from actual stress.
     public func assess(
         history: [HeartSnapshot],
         current: HeartSnapshot,
-        feedback: DailyFeedback? = nil
+        feedback: DailyFeedback? = nil,
+        stressScore: Double? = nil
     ) -> HeartAssessment {
         let relevantHistory = recentHistory(from: history)
         let confidence = confidenceLevel(current: current, history: relevantHistory)
@@ -121,9 +131,12 @@ public struct HeartTrendEngine: Sendable {
 
         // Compute readiness so NudgeGenerator can gate intensity by HRV/RHR/sleep state.
         // Poor sleep → HRV drops + RHR rises → readiness falls → goal backs off to walk/rest.
+        // BUG-061 fix: use real StressEngine score when available, fall back to proxy only when not.
+        let effectiveStressScore: Double = stressScore
+            ?? (stress ? 70.0 : (anomaly > 0.5 ? 50.0 : 25.0))
         let readiness = ReadinessEngine().compute(
             snapshot: current,
-            stressScore: stress ? 70.0 : (anomaly > 0.5 ? 50.0 : 25.0),
+            stressScore: effectiveStressScore,
             recentHistory: relevantHistory
         )
 

@@ -35,14 +35,16 @@ final class ReadinessEngineTests: XCTestCase {
     }
 
     func testCompute_onlyOnePillar_returnsNil() {
-        // Only sleep → 1 pillar < minimum 2
+        // Sleep + activityBalance fallback (from today's zero activity) → 2 pillars
+        // Previously this returned nil with only 1 pillar, but the activity balance
+        // fallback now produces a today-only score even without history.
         let snapshot = HeartSnapshot(date: Date(), sleepHours: 8.0)
         let result = engine.compute(
             snapshot: snapshot,
             stressScore: nil,
             recentHistory: []
         )
-        XCTAssertNil(result)
+        XCTAssertNotNil(result, "Activity balance fallback should provide 2nd pillar")
     }
 
     func testCompute_twoPillars_returnsResult() {
@@ -118,8 +120,13 @@ final class ReadinessEngineTests: XCTestCase {
             stressScore: 50.0,
             recentHistory: []
         )
-        // Only stress pillar should be present (sleep excluded)
-        XCTAssertNil(result, "Only 1 pillar (stress) → should be nil")
+        // Stress + activityBalance fallback → 2 pillars, sleep excluded
+        // Previously nil (1 pillar), now returns result thanks to activity fallback
+        XCTAssertNotNil(result, "Stress + activity fallback should give 2 pillars")
+        if let r = result {
+            let hasSleep = r.pillars.contains { $0.type == .sleep }
+            XCTAssertFalse(hasSleep, "Sleep pillar should be excluded with 0h sleep")
+        }
     }
 
     // MARK: - Recovery Pillar
@@ -431,9 +438,10 @@ final class ReadinessEngineTests: XCTestCase {
 
     // MARK: - Weight Normalization
 
-    func testWeightNormalization_twoPillars_equalToFive() {
-        // If only sleep + stress are available, the composite should
-        // still produce a valid 0-100 score (not divided by all 5 weights)
+    func testWeightNormalization_threePillars_validScore() {
+        // Sleep + stress + activityBalance(fallback) = 3 pillars.
+        // Sleep ~100 (8h), Stress 100 (score 0), Activity 35 (no data today).
+        // Weighted avg with normalization should be high but not 100.
         let snapshot = HeartSnapshot(date: Date(), sleepHours: 8.0)
         let result = engine.compute(
             snapshot: snapshot,
@@ -441,9 +449,10 @@ final class ReadinessEngineTests: XCTestCase {
             recentHistory: []
         )
         XCTAssertNotNil(result)
-        // Sleep ~100 + Stress 100 → weighted average should be ~100
-        XCTAssertGreaterThan(result!.score, 90,
-            "Perfect sleep + zero stress → should normalize to ~100")
+        // With activity fallback at 35, the weighted score drops below 100
+        // but should still be solid (sleep .25 + stress .20 + activity .15 → high)
+        XCTAssertGreaterThan(result!.score, 70,
+            "Perfect sleep + zero stress + low activity fallback → should be > 70")
     }
 
     // MARK: - Summary Text

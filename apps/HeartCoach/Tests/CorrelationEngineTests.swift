@@ -59,13 +59,14 @@ final class CorrelationEngineTests: XCTestCase {
         )
 
         let results = engine.analyze(history: history)
-        XCTAssertEqual(results.count, 4, "14 days of complete data should yield 4 correlation pairs")
+        XCTAssertEqual(results.count, 5, "14 days of complete data should yield 5 correlation pairs (ZE-003 added Sleep↔RHR)")
 
         let factorNames = Set(results.map(\.factorName))
         XCTAssertTrue(factorNames.contains("Daily Steps"))
         XCTAssertTrue(factorNames.contains("Walk Minutes"))
         XCTAssertTrue(factorNames.contains("Activity Minutes"))
         XCTAssertTrue(factorNames.contains("Sleep Hours"))
+        XCTAssertTrue(factorNames.contains("Sleep Hours vs RHR"))
     }
 
     // MARK: - Test: Correlation Coefficient Range

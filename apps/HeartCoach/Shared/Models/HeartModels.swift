@@ -146,6 +146,11 @@ public struct HeartSnapshot: Codable, Equatable, Identifiable, Sendable {
     /// smart-scale sync). Used by BioAgeEngine for BMI-adjusted scoring.
     public let bodyMassKg: Double?
 
+    /// Height in meters. Sourced from HealthKit (`HKQuantityType(.height)`).
+    /// Used by BioAgeEngine for accurate BMI calculation instead of
+    /// estimated height from population averages (BUG-062 fix).
+    public let heightM: Double?
+
     public init(
         date: Date,
         restingHeartRate: Double? = nil,
@@ -158,7 +163,8 @@ public struct HeartSnapshot: Codable, Equatable, Identifiable, Sendable {
         walkMinutes: Double? = nil,
         workoutMinutes: Double? = nil,
         sleepHours: Double? = nil,
-        bodyMassKg: Double? = nil
+        bodyMassKg: Double? = nil,
+        heightM: Double? = nil
     ) {
         self.date = date
         self.restingHeartRate = Self.clamp(restingHeartRate, to: 30...220)
@@ -172,6 +178,7 @@ public struct HeartSnapshot: Codable, Equatable, Identifiable, Sendable {
         self.workoutMinutes = Self.clamp(workoutMinutes, to: 0...1440)
         self.sleepHours = Self.clamp(sleepHours, to: 0...24)
         self.bodyMassKg = Self.clamp(bodyMassKg, to: 20...350)
+        self.heightM = Self.clamp(heightM, to: 0.5...2.5)
     }
 
     /// Total activity minutes (walk + workout combined).

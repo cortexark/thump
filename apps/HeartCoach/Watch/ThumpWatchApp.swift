@@ -1,8 +1,8 @@
 // ThumpWatchApp.swift
 // Thump Watch
 //
-// Watch app entry point. Opens directly into the swipeable insight flow —
-// the 5-screen story experience is the primary interaction.
+// Watch app entry point. Opens into the insight flow where the
+// living face (screen 0) is the hook and data screens are the proof.
 // Platforms: watchOS 10+
 
 import SwiftUI
@@ -11,9 +11,9 @@ import SwiftUI
 
 /// The main entry point for the Thump watchOS application.
 ///
-/// Opens directly into `WatchInsightFlowView` — the swipeable story
-/// cards are the primary watch experience. WatchHomeView is accessible
-/// via navigation from the insight flow if needed.
+/// Opens into `WatchInsightFlowView` — the living buddy face is
+/// screen 0 (the billboard), followed by data screens that show
+/// the engine output backing the buddy's mood.
 @main
 struct ThumpWatchApp: App {
 

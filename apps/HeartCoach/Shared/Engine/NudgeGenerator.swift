@@ -58,14 +58,14 @@ public struct NudgeGenerator: Sendable {
             return selectStressNudge(current: current)
         }
 
-        // Priority 2: Regression
+        // Priority 2: Regression — readiness gates intensity
         if regression {
-            return selectRegressionNudge(current: current)
+            return selectRegressionNudge(current: current, readiness: readiness)
         }
 
         // Priority 3: Low confidence / sparse data
         if confidence == .low {
-            return selectLowDataNudge()
+            return selectLowDataNudge(current: current)
         }
 
         // Priority 4: Negative feedback adaptation
@@ -340,7 +340,15 @@ public struct NudgeGenerator: Sendable {
 
     // MARK: - Regression Nudges
 
-    private func selectRegressionNudge(current: HeartSnapshot) -> DailyNudge {
+    private func selectRegressionNudge(
+        current: HeartSnapshot,
+        readiness: ReadinessResult? = nil
+    ) -> DailyNudge {
+        // Readiness gate: when recovering or moderate, suppress moderate-intensity
+        // nudges and return a light backoff nudge instead.
+        if let r = readiness, r.level == .recovering || r.level == .moderate {
+            return selectReadinessBackoffNudge(current: current, readiness: r)
+        }
         let nudges = regressionNudgeLibrary()
         let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date) ?? Calendar.current.component(.day, from: current.date)
         return nudges[dayIndex % nudges.count]
@@ -357,13 +365,13 @@ public struct NudgeGenerator: Sendable {
                 icon: "figure.walk"
             ),
             DailyNudge(
-                category: .moderate,
-                title: "How About Some Movement Today?",
+                category: .walk,
+                title: "How About Some Easy Movement Today?",
                 description: "Your trend has been shifting a little. " +
-                    "Something like a brisk walk or a bike ride " +
-                    "could be just the thing to mix it up.",
+                    "A gentle walk or easy movement " +
+                    "could be just the thing to help recovery.",
                 durationMinutes: 20,
-                icon: "gauge.with.dots.needle.33percent"
+                icon: "figure.walk"
             ),
             DailyNudge(
                 category: .rest,
@@ -386,17 +394,18 @@ public struct NudgeGenerator: Sendable {
 
     // MARK: - Low Data Nudges
 
-    private func selectLowDataNudge() -> DailyNudge {
+    private func selectLowDataNudge(current: HeartSnapshot) -> DailyNudge {
         let nudges = lowDataNudgeLibrary()
-        // Use current hour for variation when date isn't helpful
-        let hour = Calendar.current.component(.hour, from: Date())
-        return nudges[hour % nudges.count]
+        // Use current.date for deterministic selection (not wall-clock Date())
+        let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: current.date)
+            ?? Calendar.current.component(.day, from: current.date)
+        return nudges[dayIndex % nudges.count]
     }
 
     private func lowDataNudgeLibrary() -> [DailyNudge] {
         [
             DailyNudge(
-                category: .moderate,
+                category: .seekGuidance,
                 title: "We're Getting to Know You",
                 description: "The more you wear your Apple Watch, the better we can spot " +
                     "your patterns. Try wearing it to sleep tonight and we'll have " +
@@ -414,7 +423,7 @@ public struct NudgeGenerator: Sendable {
                 icon: "figure.walk"
             ),
             DailyNudge(
-                category: .moderate,
+                category: .seekGuidance,
                 title: "Quick Sync Check",
                 description: "Make sure your Apple Watch is syncing with your " +
                     "iPhone. Pop into the Health app and check that Heart and Activity " +
