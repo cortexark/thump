@@ -54,6 +54,18 @@ struct SettingsView: View {
     /// Whether bug report was submitted.
     @State private var bugReportSubmitted: Bool = false
 
+    /// Controls presentation of the feature request sheet.
+    @State private var showFeatureRequest: Bool = false
+
+    /// Feature request text.
+    @State private var featureRequestText: String = ""
+
+    /// Whether feature request was submitted.
+    @State private var featureRequestSubmitted: Bool = false
+
+    /// Controls presentation of the debug trace share sheet.
+    @State private var showDebugTraceConfirmation: Bool = false
+
     /// Feedback preferences.
     @State private var feedbackPrefs: FeedbackPreferences = FeedbackPreferences()
 
@@ -358,18 +370,19 @@ struct SettingsView: View {
                 bugReportSheet
             }
 
-            if let supportURL = URL(string: "https://thump.app/feedback") {
-                Link(destination: supportURL) {
-                    Label("Send Feature Request", systemImage: "sparkles")
-                }
+            Button {
+                InteractionLog.log(.buttonTap, element: "feature_request_button", page: "Settings")
+                showFeatureRequest = true
+            } label: {
+                Label("Send Feature Request", systemImage: "sparkles")
+            }
+            .sheet(isPresented: $showFeatureRequest) {
+                featureRequestSheet
             }
         } header: {
             Text("Feedback")
         } footer: {
-            Text(
-                "Bug reports are sent via email. You can also leave feedback "
-                + "through the App Store review or our website."
-            )
+            Text("Bug reports and feature requests are sent to our team for review.")
         }
     }
 
@@ -449,9 +462,17 @@ struct SettingsView: View {
         }
     }
 
-    /// Submits a bug report via the system email compose sheet.
-    /// Falls back to copying to clipboard if no email is available.
+    /// Submits a bug report to Firestore and optionally via email.
     private func submitBugReport() {
+        // Upload to Firestore
+        FeedbackService.shared.submitBugReport(
+            description: bugReportText,
+            appVersion: appVersion,
+            deviceModel: UIDevice.current.model,
+            iosVersion: UIDevice.current.systemVersion
+        )
+
+        // Also try email as fallback
         let body = """
         Bug Report
         ----------
@@ -463,13 +484,88 @@ struct SettingsView: View {
         Device: \(UIDevice.current.model)
         iOS: \(UIDevice.current.systemVersion)
         """
-
-        // Try to compose an email
         if let emailURL = URL(string: "mailto:bugs@thump.app?subject=Bug%20Report&body=\(body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
             UIApplication.shared.open(emailURL)
         }
 
         bugReportSubmitted = true
+    }
+
+    // MARK: - Feature Request Sheet
+
+    private var featureRequestSheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("What would you like to see?")
+                    .font(.headline)
+
+                Text("Describe the feature or improvement you'd like. We read every request.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                TextEditor(text: $featureRequestText)
+                    .frame(minHeight: 150)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color(.separator), lineWidth: 0.5)
+                    )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("We'll include:")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+
+                    Label("App version: \(appVersion)", systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if featureRequestSubmitted {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Thanks! We'll consider this for a future update.")
+                            .font(.subheadline)
+                            .foregroundStyle(.green)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("Feature Request")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showFeatureRequest = false
+                        featureRequestText = ""
+                        featureRequestSubmitted = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Send") {
+                        submitFeatureRequest()
+                    }
+                    .disabled(featureRequestText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    /// Submits a feature request to Firestore.
+    private func submitFeatureRequest() {
+        FeedbackService.shared.submitFeatureRequest(
+            description: featureRequestText,
+            appVersion: appVersion
+        )
+        featureRequestSubmitted = true
     }
 
     // MARK: - Data Section
@@ -490,6 +586,22 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This will generate a CSV file containing your stored health snapshots and assessments.")
+            }
+
+            Button {
+                InteractionLog.log(.buttonTap, element: "debug_trace_export", page: "Settings")
+                showDebugTraceConfirmation = true
+            } label: {
+                Label("Export Debug Trace", systemImage: "ladybug.fill")
+            }
+            .accessibilityIdentifier("settings_debug_trace_button")
+            .alert("Export Debug Trace", isPresented: $showDebugTraceConfirmation) {
+                Button("Export JSON") {
+                    exportDebugTrace()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Generates a JSON file with raw health data and engine outputs for debugging. You control who receives this file.")
             }
         } header: {
             Text("Data")
@@ -657,6 +769,97 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version) (\(build))"
+    }
+
+    /// Generates a JSON debug trace with full raw health data and engine
+    /// outputs for local debugging. The user shares it manually via the
+    /// system share sheet — Apple-compliant because the user controls sharing.
+    private func exportDebugTrace() {
+        let history = localStore.loadHistory()
+        guard !history.isEmpty else { return }
+
+        let dateFormatter = ISO8601DateFormatter()
+        var entries: [[String: Any]] = []
+
+        for stored in history {
+            let snap = stored.snapshot
+            var entry: [String: Any] = [
+                "date": dateFormatter.string(from: snap.date)
+            ]
+
+            // Raw health data (only in local export, never uploaded)
+            var rawData: [String: Any] = [:]
+            if let rhr = snap.restingHeartRate { rawData["restingHeartRate"] = rhr }
+            if let hrv = snap.hrvSDNN { rawData["hrvSDNN"] = hrv }
+            if let rec1 = snap.recoveryHR1m { rawData["recoveryHR1m"] = rec1 }
+            if let rec2 = snap.recoveryHR2m { rawData["recoveryHR2m"] = rec2 }
+            if let vo2 = snap.vo2Max { rawData["vo2Max"] = vo2 }
+            if let steps = snap.steps { rawData["steps"] = steps }
+            if let walk = snap.walkMinutes { rawData["walkMinutes"] = walk }
+            if let workout = snap.workoutMinutes { rawData["workoutMinutes"] = workout }
+            if let sleep = snap.sleepHours { rawData["sleepHours"] = sleep }
+            if let mass = snap.bodyMassKg { rawData["bodyMassKg"] = mass }
+            if !snap.zoneMinutes.isEmpty { rawData["zoneMinutes"] = snap.zoneMinutes }
+            entry["rawData"] = rawData
+
+            // Engine outputs
+            if let assessment = stored.assessment {
+                var engineOutput: [String: Any] = [
+                    "status": assessment.status.rawValue,
+                    "confidence": assessment.confidence.rawValue,
+                    "anomalyScore": assessment.anomalyScore,
+                    "regressionFlag": assessment.regressionFlag,
+                    "stressFlag": assessment.stressFlag,
+                    "nudgeCategory": assessment.dailyNudge.category.rawValue,
+                    "nudgeTitle": assessment.dailyNudge.title
+                ]
+                if let cardio = assessment.cardioScore { engineOutput["cardioScore"] = cardio }
+                if let scenario = assessment.scenario { engineOutput["scenario"] = scenario.rawValue }
+
+                if let wow = assessment.weekOverWeekTrend {
+                    engineOutput["weekOverWeek"] = [
+                        "currentWeekMean": wow.currentWeekMean,
+                        "baselineMean": wow.baselineMean,
+                        "direction": String(describing: wow.direction)
+                    ]
+                }
+
+                entry["engineOutput"] = engineOutput
+            }
+
+            entries.append(entry)
+        }
+
+        let trace: [String: Any] = [
+            "exportDate": dateFormatter.string(from: Date()),
+            "appVersion": appVersion,
+            "deviceModel": UIDevice.current.model,
+            "iosVersion": UIDevice.current.systemVersion,
+            "historyDays": entries.count,
+            "entries": entries
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: trace, options: [.prettyPrinted, .sortedKeys]) else {
+            return
+        }
+
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thump-debug-trace.json")
+        do {
+            try jsonData.write(to: tempURL)
+        } catch {
+            debugPrint("[SettingsView] Failed to write debug trace: \(error)")
+            return
+        }
+
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first,
+              let rootVC = window.rootViewController else { return }
+        let activityVC = UIActivityViewController(
+            activityItems: [tempURL],
+            applicationActivities: nil
+        )
+        rootVC.present(activityVC, animated: true)
     }
 
     /// Generates a CSV export of the user's health snapshot history

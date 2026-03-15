@@ -281,6 +281,7 @@ final class DashboardViewModel: ObservableObject {
             if let recs = buddyRecommendations {
                 trace.buddy = BuddyTrace(from: recs, durationMs: buddyMs)
             }
+            trace.inputSummary = InputSummaryTrace(snapshot: snapshot, history: history)
             EngineTelemetryService.shared.uploadTrace(trace)
         } catch {
             AppLogger.engine.error("Dashboard refresh failed: \(error.localizedDescription)")

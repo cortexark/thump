@@ -40,6 +40,12 @@ struct PipelineTrace {
     var zoneAnalysis: ZoneAnalysisTrace?
     var buddy: BuddyTrace?
 
+    // MARK: - Input Summary (statistical, not raw)
+
+    /// Aggregated health input stats for remote debugging.
+    /// Contains means, categories, and completeness — never raw values.
+    var inputSummary: InputSummaryTrace?
+
     // MARK: - Firestore Conversion
 
     /// Converts the trace to a Firestore-compatible dictionary.
@@ -64,6 +70,7 @@ struct PipelineTrace {
         if let coaching { data["coaching"] = coaching.toDict() }
         if let zoneAnalysis { data["zoneAnalysis"] = zoneAnalysis.toDict() }
         if let buddy { data["buddy"] = buddy.toDict() }
+        if let inputSummary { data["inputSummary"] = inputSummary.toDict() }
 
         return data
     }
@@ -309,5 +316,109 @@ struct BuddyTrace {
         if let topPriority { d["topPriority"] = topPriority }
         if let topCategory { d["topCategory"] = topCategory }
         return d
+    }
+}
+
+// MARK: - Input Summary Trace
+
+/// Statistical summary of health inputs for remote debugging.
+///
+/// Contains aggregated means, categories, and completeness indicators —
+/// never raw HealthKit values. Apple HealthKit Section 5.1.3 compliant.
+struct InputSummaryTrace {
+    /// 7-day mean RHR category (e.g., "low", "normal", "elevated", "high").
+    let rhrCategory: String
+    /// 7-day mean HRV category.
+    let hrvCategory: String
+    /// Sleep category based on hours (e.g., "short", "adequate", "long").
+    let sleepCategory: String
+    /// Activity category based on steps (e.g., "sedentary", "light", "active", "veryActive").
+    let stepsCategory: String
+    /// Fraction of data fields that were non-nil in today's snapshot (0.0-1.0).
+    let dataCompleteness: Double
+    /// Number of history days available for engine calculations.
+    let historyDays: Int
+    /// Whether VO2 max data is available.
+    let hasVO2Max: Bool
+    /// Whether recovery HR data is available.
+    let hasRecoveryHR: Bool
+    /// Whether body mass data is available.
+    let hasBodyMass: Bool
+
+    /// Creates an input summary from the current snapshot and recent history.
+    init(snapshot: HeartSnapshot, history: [HeartSnapshot]) {
+        // RHR category from 7-day mean
+        let recentRHRs = history.suffix(7).compactMap { $0.restingHeartRate }
+        if recentRHRs.isEmpty {
+            rhrCategory = "unavailable"
+        } else {
+            let mean = recentRHRs.reduce(0, +) / Double(recentRHRs.count)
+            if mean < 55 { rhrCategory = "low" }
+            else if mean < 70 { rhrCategory = "normal" }
+            else if mean < 85 { rhrCategory = "elevated" }
+            else { rhrCategory = "high" }
+        }
+
+        // HRV category from 7-day mean
+        let recentHRVs = history.suffix(7).compactMap { $0.hrvSDNN }
+        if recentHRVs.isEmpty {
+            hrvCategory = "unavailable"
+        } else {
+            let mean = recentHRVs.reduce(0, +) / Double(recentHRVs.count)
+            if mean < 20 { hrvCategory = "low" }
+            else if mean < 40 { hrvCategory = "moderate" }
+            else if mean < 70 { hrvCategory = "good" }
+            else { hrvCategory = "excellent" }
+        }
+
+        // Sleep category
+        if let sleep = snapshot.sleepHours {
+            if sleep < 5 { sleepCategory = "short" }
+            else if sleep < 7 { sleepCategory = "adequate" }
+            else if sleep < 9 { sleepCategory = "good" }
+            else { sleepCategory = "long" }
+        } else {
+            sleepCategory = "unavailable"
+        }
+
+        // Steps category
+        if let steps = snapshot.steps {
+            if steps < 3000 { stepsCategory = "sedentary" }
+            else if steps < 7000 { stepsCategory = "light" }
+            else if steps < 12000 { stepsCategory = "active" }
+            else { stepsCategory = "veryActive" }
+        } else {
+            stepsCategory = "unavailable"
+        }
+
+        // Data completeness: count non-nil fields out of total
+        let fields: [Any?] = [
+            snapshot.restingHeartRate, snapshot.hrvSDNN,
+            snapshot.recoveryHR1m, snapshot.recoveryHR2m,
+            snapshot.vo2Max, snapshot.steps,
+            snapshot.walkMinutes, snapshot.workoutMinutes,
+            snapshot.sleepHours, snapshot.bodyMassKg
+        ]
+        let nonNilCount = fields.compactMap { $0 }.count
+        dataCompleteness = Double(nonNilCount) / Double(fields.count)
+
+        historyDays = history.count
+        hasVO2Max = snapshot.vo2Max != nil
+        hasRecoveryHR = snapshot.recoveryHR1m != nil
+        hasBodyMass = snapshot.bodyMassKg != nil
+    }
+
+    func toDict() -> [String: Any] {
+        [
+            "rhrCategory": rhrCategory,
+            "hrvCategory": hrvCategory,
+            "sleepCategory": sleepCategory,
+            "stepsCategory": stepsCategory,
+            "dataCompleteness": dataCompleteness,
+            "historyDays": historyDays,
+            "hasVO2Max": hasVO2Max,
+            "hasRecoveryHR": hasRecoveryHR,
+            "hasBodyMass": hasBodyMass
+        ]
     }
 }
