@@ -67,15 +67,17 @@ struct ThumpiOSApp: App {
         }
     }
 
-    // MARK: - Legal Acceptance State
+    // MARK: - Authentication & Legal State
+
+    /// Tracks whether the user has signed in with Apple.
+    @AppStorage("thump_signed_in") private var isSignedIn: Bool = false
 
     /// Tracks whether the user has accepted the Terms of Service and Privacy Policy.
     @AppStorage("thump_legal_accepted_v1") private var legalAccepted: Bool = false
 
     // MARK: - Root View Routing
 
-    /// Routes to legal gate, onboarding, or main tab view based on
-    /// the user's acceptance and onboarding state.
+    /// Routes through: Sign In → Legal Gate → Onboarding → Main Tab View.
     /// Whether the app is running in UI test mode (launched with `-UITestMode`).
     private var isUITestMode: Bool {
         CommandLine.arguments.contains("-UITestMode")
@@ -89,8 +91,12 @@ struct ThumpiOSApp: App {
     @ViewBuilder
     private var rootView: some View {
         if isUITestMode {
-            // Skip legal gate and onboarding for UI tests
+            // Skip all gates for UI tests
             MainTabView()
+        } else if !isSignedIn {
+            AppleSignInView {
+                isSignedIn = true
+            }
         } else if !legalAccepted {
             LegalGateView {
                 legalAccepted = true
@@ -120,6 +126,15 @@ struct ThumpiOSApp: App {
             try await notificationService.requestAuthorization()
         } catch {
             AppLogger.info("Notification authorization request failed: \(error.localizedDescription)")
+        }
+
+        // Verify Apple Sign-In credential is still valid
+        if isSignedIn {
+            let credentialValid = await AppleSignInService.isCredentialValid()
+            if !credentialValid {
+                await MainActor.run { isSignedIn = false }
+                AppLogger.info("Apple Sign-In credential revoked — returning to sign-in")
+            }
         }
 
         // Start MetricKit crash reporting and performance monitoring

@@ -44,7 +44,7 @@ final class ConnectivityService: NSObject, ObservableObject {
     /// Activates the WCSession if Watch Connectivity is supported.
     private func activateSessionIfSupported() {
         guard WCSession.isSupported() else {
-            debugPrint("[ConnectivityService] WCSession not supported on this device.")
+            AppLogger.sync.warning("[ConnectivityService] WCSession not supported on this device.")
             return
         }
         let wcSession = WCSession.default
@@ -85,7 +85,7 @@ final class ConnectivityService: NSObject, ObservableObject {
     /// - Parameter assessment: The assessment to transmit to the watch.
     func sendAssessment(_ assessment: HeartAssessment) {
         guard let session = session else {
-            debugPrint("[ConnectivityService] No active session.")
+            AppLogger.sync.warning("[ConnectivityService] No active session.")
             return
         }
 
@@ -93,7 +93,7 @@ final class ConnectivityService: NSObject, ObservableObject {
             assessment,
             type: .assessment
         ) else {
-            debugPrint("[ConnectivityService] Failed to encode assessment payload.")
+            AppLogger.sync.warning("[ConnectivityService] Failed to encode assessment payload.")
             return
         }
 
@@ -124,7 +124,7 @@ final class ConnectivityService: NSObject, ObservableObject {
     /// - Parameter nudge: The breathing nudge to send.
     func sendBreathPrompt(_ nudge: DailyNudge) {
         guard let session = session else {
-            debugPrint("[ConnectivityService] No active session for breath prompt.")
+            AppLogger.sync.warning("[ConnectivityService] No active session for breath prompt.")
             return
         }
 
@@ -160,7 +160,7 @@ final class ConnectivityService: NSObject, ObservableObject {
     /// - Parameter plan: The action plan to transmit.
     func sendActionPlan(_ plan: WatchActionPlan) {
         guard let session = session else {
-            debugPrint("[ConnectivityService] No active session for action plan.")
+            AppLogger.sync.warning("[ConnectivityService] No active session for action plan.")
             return
         }
 
@@ -168,7 +168,7 @@ final class ConnectivityService: NSObject, ObservableObject {
             plan,
             type: .actionPlan
         ) else {
-            debugPrint("[ConnectivityService] Failed to encode action plan payload.")
+            AppLogger.sync.warning("[ConnectivityService] Failed to encode action plan payload.")
             return
         }
 
@@ -219,7 +219,7 @@ final class ConnectivityService: NSObject, ObservableObject {
     /// Called from nonisolated WCSessionDelegate callbacks.
     nonisolated private func handleIncomingMessage(_ message: [String: Any]) {
         guard let type = message["type"] as? String else {
-            debugPrint("[ConnectivityService] Received message without type key.")
+            AppLogger.sync.warning("[ConnectivityService] Received message without type key.")
             return
         }
 
@@ -231,7 +231,7 @@ final class ConnectivityService: NSObject, ObservableObject {
             // This is handled via the reply handler in didReceiveMessage.
             break
         default:
-            debugPrint("[ConnectivityService] Unknown message type: \(type)")
+            AppLogger.sync.warning("[ConnectivityService] Unknown message type: \(type)")
         }
     }
 
@@ -241,7 +241,7 @@ final class ConnectivityService: NSObject, ObservableObject {
             WatchFeedbackPayload.self,
             from: message
         ) else {
-            debugPrint("[ConnectivityService] Feedback message missing or invalid payload.")
+            AppLogger.sync.warning("[ConnectivityService] Feedback message missing or invalid payload.")
             return
         }
 
@@ -275,9 +275,9 @@ extension ConnectivityService: WCSessionDelegate {
         }
 
         if let error = error {
-            debugPrint("[ConnectivityService] Activation error: \(error.localizedDescription)")
+            AppLogger.sync.warning("[ConnectivityService] Activation error: \(error.localizedDescription)")
         } else {
-            debugPrint("[ConnectivityService] Activation completed with state: \(activationState.rawValue)")
+            AppLogger.sync.warning("[ConnectivityService] Activation completed with state: \(activationState.rawValue)")
         }
     }
 
@@ -286,7 +286,7 @@ extension ConnectivityService: WCSessionDelegate {
     /// Required for iOS WCSessionDelegate conformance. No-op; the session
     /// will be reactivated automatically.
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
-        debugPrint("[ConnectivityService] Session became inactive.")
+        AppLogger.sync.warning("[ConnectivityService] Session became inactive.")
     }
 
     /// Called when the session transitions to the deactivated state.
@@ -294,7 +294,7 @@ extension ConnectivityService: WCSessionDelegate {
     /// Required for iOS WCSessionDelegate conformance. Reactivates the session
     /// to prepare for a new paired watch.
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
-        debugPrint("[ConnectivityService] Session deactivated. Reactivating...")
+        AppLogger.sync.warning("[ConnectivityService] Session deactivated. Reactivating...")
         session.activate()
     }
 

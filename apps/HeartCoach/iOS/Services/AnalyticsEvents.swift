@@ -38,6 +38,10 @@ enum AnalyticsEventName: String, CaseIterable, Sendable {
     // Watch
     case watchFeedbackReceived = "watch_feedback_received"
 
+    // Sign In
+    case appleSignInCompleted    = "apple_sign_in_completed"
+    case appleSignInFailed       = "apple_sign_in_failed"
+
     // AI / Assessment
     case assessmentGenerated = "assessment_generated"
 }

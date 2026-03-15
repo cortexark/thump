@@ -111,7 +111,7 @@ final class SubscriptionService: ObservableObject {
                 self.productLoadError = nil
             }
         } catch {
-            debugPrint("[SubscriptionService] Failed to load products: \(error.localizedDescription)")
+            AppLogger.subscription.warning("[SubscriptionService] Failed to load products: \(error.localizedDescription)")
             await MainActor.run {
                 self.productLoadError = error
             }
@@ -147,13 +147,13 @@ final class SubscriptionService: ObservableObject {
             await updateSubscriptionStatus()
 
         case .userCancelled:
-            debugPrint("[SubscriptionService] User cancelled purchase.")
+            AppLogger.subscription.info("[SubscriptionService] User cancelled purchase.")
 
         case .pending:
-            debugPrint("[SubscriptionService] Purchase pending (e.g., Ask to Buy).")
+            AppLogger.subscription.info("[SubscriptionService] Purchase pending (e.g., Ask to Buy).")
 
         @unknown default:
-            debugPrint("[SubscriptionService] Unknown purchase result.")
+            AppLogger.subscription.warning("[SubscriptionService] Unknown purchase result.")
         }
     }
 
@@ -264,7 +264,7 @@ final class SubscriptionService: ObservableObject {
     ) throws -> T {
         switch result {
         case .unverified(_, let error):
-            debugPrint("[SubscriptionService] Unverified transaction: \(error.localizedDescription)")
+            AppLogger.subscription.warning("[SubscriptionService] Unverified transaction: \(error.localizedDescription)")
             throw error
         case .verified(let value):
             return value

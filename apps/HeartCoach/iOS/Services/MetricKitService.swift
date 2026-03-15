@@ -78,6 +78,9 @@ final class MetricKitService: NSObject, MXMetricManagerSubscriber {
     ///
     /// - Parameter payloads: One or more diagnostic snapshots.
     func didReceive(_ payloads: [MXDiagnosticPayload]) {
+        // Dump interaction breadcrumbs so crash context is visible in logs
+        CrashBreadcrumbs.shared.dump()
+
         for payload in payloads {
             AppLogger.error("Received diagnostic payload (potential crash)")
 
