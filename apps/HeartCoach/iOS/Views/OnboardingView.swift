@@ -77,8 +77,16 @@ struct OnboardingView: View {
                     removal: .move(edge: .leading).combined(with: .opacity)
                 ))
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
+                // Consume horizontal drag gestures to prevent any swipe navigation
+                .gesture(DragGesture())
                 .onAppear {
                     InteractionLog.pageView("Onboarding")
+                }
+                // Safety gate: prevent skipping HealthKit page without granting
+                .onChange(of: currentPage) { _, newPage in
+                    if newPage >= 2 && !healthKitGranted {
+                        currentPage = 1
+                    }
                 }
 
                 pageIndicator
