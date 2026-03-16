@@ -69,6 +69,10 @@ struct SettingsView: View {
     /// Feedback preferences.
     @State private var feedbackPrefs: FeedbackPreferences = FeedbackPreferences()
 
+    /// A/B design variant toggle (false = Design A / current, true = Design B / new).
+    @AppStorage("thump_design_variant_b")
+    private var useDesignB: Bool = false
+
     // MARK: - Body
 
     var body: some View {
@@ -76,6 +80,7 @@ struct SettingsView: View {
             Form {
                 profileSection
                 subscriptionSection
+                designVariantSection
                 feedbackPreferencesSection
                 notificationsSection
                 analyticsSection
@@ -298,6 +303,26 @@ struct SettingsView: View {
             Text("Analytics")
         } footer: {
             Text("Help improve Thump by sharing anonymized engine scores and timing data. No raw health data (heart rate, HRV, steps, etc.) is ever shared.")
+        }
+    }
+
+    // MARK: - Design Variant Section
+
+    private var designVariantSection: some View {
+        Section {
+            Toggle(isOn: $useDesignB) {
+                Label("Design B (Beta)", systemImage: "paintbrush.fill")
+            }
+            .tint(.pink)
+            .onChange(of: useDesignB) { _, newValue in
+                InteractionLog.log(.toggleChange, element: "design_variant_b", page: "Settings")
+            }
+        } header: {
+            Text("Design Experiment")
+        } footer: {
+            Text(useDesignB
+                 ? "You're seeing Design B — a refreshed card layout with enhanced visuals."
+                 : "You're seeing Design A — the current standard layout.")
         }
     }
 

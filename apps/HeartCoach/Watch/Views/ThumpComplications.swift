@@ -371,6 +371,7 @@ struct StressHeatmapWidgetView: View {
             // Right: Activity + Breathe stacked icons
             VStack(spacing: 4) {
                 // Activity
+                // swiftlint:disable:next force_unwrapping -- static URL literal, always valid
                 Link(destination: URL(string: "workout://startWorkout?activityType=52")!) {
                     Image(systemName: "figure.walk")
                         .font(.system(size: 10, weight: .semibold))
@@ -382,6 +383,7 @@ struct StressHeatmapWidgetView: View {
                 }
 
                 // Breathe
+                // swiftlint:disable:next force_unwrapping -- static URL literal, always valid
                 Link(destination: URL(string: "mindfulness://")!) {
                     Image(systemName: "wind")
                         .font(.system(size: 10, weight: .semibold))

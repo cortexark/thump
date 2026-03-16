@@ -86,8 +86,6 @@ final class HealthKitService: ObservableObject {
             .vo2Max,
             .heartRate,
             .stepCount,
-            .distanceWalkingRunning,
-            .activeEnergyBurned,
             .appleExerciseTime,
             .bodyMass
         ]
@@ -99,6 +97,9 @@ final class HealthKitService: ObservableObject {
         if let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) {
             readTypes.insert(sleepType)
         }
+
+        // Workout type — needed for recovery HR, workout minutes, and zone analysis
+        readTypes.insert(HKWorkoutType.workoutType())
 
         // Characteristic types — biological sex and date of birth
         let characteristicIdentifiers: [HKCharacteristicTypeIdentifier] = [

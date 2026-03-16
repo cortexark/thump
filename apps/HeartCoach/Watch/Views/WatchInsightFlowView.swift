@@ -676,7 +676,10 @@ private struct WalkSuggestionScreen: View {
             quantityType: type,
             quantitySamplePredicate: predicate,
             options: .cumulativeSum
-        ) { _, result, _ in
+        ) { _, result, error in
+            if let error {
+                AppLogger.healthKit.warning("Watch step count query failed: \(error.localizedDescription)")
+            }
             let steps = result?.sumQuantity()?.doubleValue(for: .count()) ?? 0
             Task { @MainActor in
                 self.stepCount = steps > 0 ? Int(steps) : self.mockStepCount()
@@ -882,7 +885,8 @@ private struct StressPulseScreen: View {
     private func fetchRestingHR() {
         let type = HKQuantityType(.restingHeartRate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, samples, error in
+            if let error { AppLogger.healthKit.warning("Watch RHR query failed: \(error.localizedDescription)") }
             guard let sample = (samples as? [HKQuantitySample])?.first else { return }
             let bpm = sample.quantity.doubleValue(for: .count().unitDivided(by: .minute()))
             Task { @MainActor in self.restingHR = bpm }
@@ -896,7 +900,8 @@ private struct StressPulseScreen: View {
         let start = now.addingTimeInterval(-6 * 3600)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: now, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-        let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+            if let error { AppLogger.healthKit.warning("Watch HR samples query failed: \(error.localizedDescription)") }
             guard let samples = samples as? [HKQuantitySample], !samples.isEmpty else {
                 Task { @MainActor in
                     withAnimation(.easeIn(duration: 0.4)) {
@@ -1134,7 +1139,8 @@ private struct SleepSummaryScreen: View {
 
         let predicate = HKQuery.predicateForSamples(withStart: windowStart, end: windowEnd, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+            if let error { AppLogger.healthKit.warning("Watch sleep query failed: \(error.localizedDescription)") }
             guard let samples = samples as? [HKCategorySample], !samples.isEmpty else { return }
             let asleepValues = HKCategoryValueSleepAnalysis.allAsleepValues.map { $0.rawValue }
             let asleepSamples = samples.filter { asleepValues.contains($0.value) }
@@ -1162,7 +1168,8 @@ private struct SleepSummaryScreen: View {
 
         let predicate = HKQuery.predicateForSamples(withStart: windowStart, end: windowEnd, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+            if let error { AppLogger.healthKit.warning("Watch sleep history query failed: \(error.localizedDescription)") }
             guard let samples = samples as? [HKCategorySample], !samples.isEmpty else { return }
             let asleepValues = HKCategoryValueSleepAnalysis.allAsleepValues.map { $0.rawValue }
             let asleepSamples = samples.filter { asleepValues.contains($0.value) }
@@ -1392,7 +1399,8 @@ private struct TrendsScreen: View {
 
         let predicate = HKQuery.predicateForSamples(withStart: startOfYesterday, end: now, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+            if let error { AppLogger.healthKit.warning("Watch \(quantityTypeId.rawValue) query failed: \(error.localizedDescription)") }
             guard let samples = samples as? [HKQuantitySample] else {
                 Task { @MainActor in completion(nil, nil) }
                 return
