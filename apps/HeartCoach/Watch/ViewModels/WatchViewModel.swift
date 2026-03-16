@@ -70,6 +70,14 @@ final class WatchViewModel: ObservableObject {
     /// Local feedback persistence service.
     private let feedbackService = WatchFeedbackService()
 
+    /// Shared HealthKit store for all watch-side queries.
+    /// Apple recommends a single `HKHealthStore` per app — this instance is
+    /// also used by `ThumpWatchApp.requestWatchHealthKitAccess()`.
+    static let sharedHealthStore = HKHealthStore()
+
+    /// Convenience accessor for instance methods.
+    private var healthStore: HKHealthStore { Self.sharedHealthStore }
+
     // MARK: - Nudge Date Tracking
 
     /// The date when the nudge was last marked complete.
@@ -360,16 +368,16 @@ final class WatchViewModel: ObservableObject {
             completion(nil)
             return
         }
-        let store = HKHealthStore()
         let type = HKQuantityType(.heartRateVariabilitySDNN)
         let start = Calendar.current.startOfDay(for: Date())
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
+        let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1, sortDescriptors: [sort]) { _, samples, error in
+            if let error { AppLogger.healthKit.warning("Watch HRV query failed: \(error.localizedDescription)") }
             let hrv = (samples as? [HKQuantitySample])?.first?.quantity.doubleValue(for: .secondUnit(with: .milli))
             Task { @MainActor in completion(hrv) }
         }
-        store.execute(query)
+        healthStore.execute(query)
     }
 
     /// Resets session-specific state (feedback submitted, nudge completed)

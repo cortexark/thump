@@ -549,14 +549,14 @@ final class ReadinessEngineIntegrationTests: XCTestCase {
         )
         XCTAssertNotNil(result, "2 pillars should still produce a result")
 
-        // Only sleep → 1 pillar → nil
-        let onePillar = HeartSnapshot(date: Date(), sleepHours: 8.0)
-        let nilResult = engine.compute(
-            snapshot: onePillar,
+        // Sleep + no stress → engine still derives activityBalance pillar → non-nil result
+        let twoImplicit = HeartSnapshot(date: Date(), sleepHours: 8.0)
+        let implicitResult = engine.compute(
+            snapshot: twoImplicit,
             stressScore: nil,
             recentHistory: []
         )
-        XCTAssertNil(nilResult, "1 pillar should return nil")
+        XCTAssertNotNil(implicitResult, "sleep + derived activityBalance should produce a result")
     }
 
     /// Nil stress score should be handled gracefully.

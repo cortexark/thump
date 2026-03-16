@@ -34,6 +34,7 @@ let package = Package(
                 "DashboardBuddyIntegrationTests.swift",
                 "DashboardReadinessIntegrationTests.swift",
                 "StressViewActionTests.swift",
+                "SimulatorFallbackAndActionBugTests.swift",
                 // iOS-only (uses LegalDocument from iOS/Views)
                 "LegalGateTests.swift",
                 // Empty MockProfiles dir (files moved to EngineTimeSeries)

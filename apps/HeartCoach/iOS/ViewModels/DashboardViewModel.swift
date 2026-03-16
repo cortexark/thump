@@ -134,36 +134,67 @@ final class DashboardViewModel: ObservableObject {
                 AppLogger.healthKit.info("HealthKit authorization granted")
             }
 
-            // Fetch today's snapshot — fall back to mock data in simulator, surface error on device
-            let snapshot: HeartSnapshot
+            // Fetch today's snapshot — fall back to mock data in simulator, retry once on device
+            var snapshot: HeartSnapshot
             do {
                 snapshot = try await healthDataProvider.fetchTodaySnapshot()
             } catch {
                 #if targetEnvironment(simulator)
                 snapshot = MockData.mockTodaySnapshot
                 #else
-                AppLogger.engine.error("Today snapshot fetch failed: \(error.localizedDescription)")
-                errorMessage = "Unable to read today's health data. Please check Health permissions in Settings."
-                isLoading = false
-                return
+                AppLogger.engine.warning("First snapshot attempt failed: \(error.localizedDescription). Retrying after re-authorization…")
+                // Re-request authorization and retry once — handles race condition
+                // where HealthKit hasn't fully propagated auth after onboarding
+                do {
+                    try await healthDataProvider.requestAuthorization()
+                    try await Task.sleep(nanoseconds: 500_000_000) // 0.5s for auth propagation
+                    snapshot = try await healthDataProvider.fetchTodaySnapshot()
+                } catch {
+                    AppLogger.engine.error("Retry also failed: \(error.localizedDescription)")
+                    errorMessage = "Unable to read today's health data. Please check Health permissions in Settings."
+                    isLoading = false
+                    return
+                }
                 #endif
             }
+
+            // Simulator fallback: if snapshot has nil HRV (no real HealthKit data), use mock data
+            #if targetEnvironment(simulator)
+            if snapshot.hrvSDNN == nil {
+                snapshot = MockData.mockTodaySnapshot
+            }
+            #endif
             todaySnapshot = snapshot
 
-            // Fetch historical snapshots — fall back to mock history in simulator, surface error on device
-            let history: [HeartSnapshot]
+            // Fetch historical snapshots — fall back to mock history in simulator, retry once on device
+            var history: [HeartSnapshot]
             do {
                 history = try await healthDataProvider.fetchHistory(days: historyDays)
             } catch {
                 #if targetEnvironment(simulator)
                 history = MockData.mockHistory(days: historyDays)
                 #else
-                AppLogger.engine.error("History fetch failed: \(error.localizedDescription)")
-                errorMessage = "Unable to read health history. Please check Health permissions in Settings."
-                isLoading = false
-                return
+                AppLogger.engine.warning("First history attempt failed: \(error.localizedDescription). Retrying after re-authorization…")
+                do {
+                    try await healthDataProvider.requestAuthorization()
+                    try await Task.sleep(nanoseconds: 500_000_000)
+                    history = try await healthDataProvider.fetchHistory(days: historyDays)
+                } catch {
+                    AppLogger.engine.error("History retry also failed: \(error.localizedDescription)")
+                    errorMessage = "Unable to read health history. Please check Health permissions in Settings."
+                    isLoading = false
+                    return
+                }
                 #endif
             }
+
+            // Simulator fallback: if all snapshots have nil HRV (no real HealthKit data), use mock data
+            #if targetEnvironment(simulator)
+            let hasRealHistoryData = history.contains(where: { $0.hrvSDNN != nil })
+            if !hasRealHistoryData {
+                history = MockData.mockHistory(days: historyDays)
+            }
+            #endif
 
             // Load any persisted feedback for today
             let feedbackPayload = localStore.loadLastFeedback()
