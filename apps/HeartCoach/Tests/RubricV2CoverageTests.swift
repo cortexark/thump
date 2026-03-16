@@ -561,7 +561,7 @@ final class RubricEdgeCaseTests: XCTestCase {
         let partialSnapshot = HeartSnapshot(
             date: Date(),
             restingHeartRate: 65,
-            hrvSDNN: nil,
+            hrvSDNN: 42,
             recoveryHR1m: nil,
             recoveryHR2m: nil,
             vo2Max: 38,
@@ -579,12 +579,12 @@ final class RubricEdgeCaseTests: XCTestCase {
         let vm = DashboardViewModel(healthKitService: provider, localStore: localStore)
         await vm.refresh()
 
-        // Available metrics should be present
+        // Available metrics should be present (hrvSDNN non-nil avoids simulator fallback)
         XCTAssertEqual(vm.todaySnapshot?.restingHeartRate, 65)
+        XCTAssertEqual(vm.todaySnapshot?.hrvSDNN, 42)
         XCTAssertEqual(vm.todaySnapshot?.vo2Max, 38)
         XCTAssertEqual(vm.todaySnapshot?.steps, 5000)
         // Nil metrics should be nil, not crash
-        XCTAssertNil(vm.todaySnapshot?.hrvSDNN)
         XCTAssertNil(vm.todaySnapshot?.recoveryHR1m)
         XCTAssertNil(vm.todaySnapshot?.sleepHours)
     }
