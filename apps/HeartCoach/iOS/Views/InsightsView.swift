@@ -169,27 +169,38 @@ struct InsightsView: View {
                 }
 
                 ForEach(Array(plan.items.prefix(3).enumerated()), id: \.offset) { index, item in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .frame(width: 22, height: 22)
-                            .background(Circle().fill(Color(hex: 0x22C55E)))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-
-                            Text(item.detail)
+                    Button {
+                        InteractionLog.log(.cardTap, element: "action_item_\(index)", page: "Insights", details: item.title)
+                        showingReportDetail = true
+                    } label: {
+                        HStack(alignment: .top, spacing: 10) {
+                            Text("\(index + 1)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .frame(width: 22, height: 22)
+                                .background(Circle().fill(Color(hex: 0x22C55E)))
 
-                        Spacer()
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.primary)
+
+                                Text(item.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
+                    .buttonStyle(CardButtonStyle())
+                    .accessibilityHint("Double tap to view full action plan")
                 }
 
                 if plan.items.count > 3 {

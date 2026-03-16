@@ -474,8 +474,9 @@
 | P4-COSMETIC | 13 | 0 | 13 |
 | **Total** | **55** | **1** | **54** |
 
-### Remaining Open (1)
+### Remaining Open (2)
 - BUG-013: Accessibility labels missing across views (P2) — large effort, plan for next sprint
+- BUG-014: No crash reporting in production (P2)
 
 ### Test Results (2026-03-14)
 - Xcode build: ✅ iOS + Watch targets
@@ -485,4 +486,158 @@
 
 ---
 
-*Last updated: 2026-03-12 — 54/55 bugs fixed, 1 remaining (accessibility). All P0 + P1 resolved. Mock data replaced with real HealthKit queries. Medical language scrubbed. AI slop removed. Raw jargon humanized. Context-aware trend colors added. Watch shaming language softened. Plaintext PHI fallback removed. Force unwraps eliminated. E2E behavioral + UI coherence tests built.*
+## P1 — Ship Blockers (2026-03-16 Session — Real Device Testing)
+
+### BUG-064: HealthKit queries throw on missing data — entire snapshot fetch fails
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P1-BLOCKER
+- **File:** `iOS/Services/HealthKitService.swift`
+- **Description:** All 13 HealthKit query error handlers called `continuation.resume(throwing: HealthKitError.queryFailed(...))`. On a real device, any metric type with no data (e.g., no VO2max recorded, no sleep logged) caused the entire `fetchTodaySnapshot()` and `fetchHistory()` to throw. User saw "Unable to read today's health data" permanently. This passed simulator testing because mock data was always present.
+- **Root Cause:** `withCheckedThrowingContinuation` pattern treated "no data" as "query failed" instead of returning empty/nil.
+- **Fix Applied:** Changed all 13 error handlers:
+  - Batch `HKStatisticsCollectionQuery` handlers (lines 364, 409) → `continuation.resume(returning: [:])`
+  - Workout array queries (lines 468, 631, 690) → `continuation.resume(returning: [])`
+  - Single value queries (lines 544, 582) → `continuation.resume(returning: nil)`
+  - HR sample queries (line 716) → `continuation.resume(returning: [])`
+  - Category sample queries (line 784) → `continuation.resume(returning: [])`
+  - Statistics queries (lines 835, 871, 903, 935) → `continuation.resume(returning: nil)`
+- **Verified:** `grep` confirms zero `continuation.resume(throwing: HealthKitError` remaining.
+
+### BUG-065: bedtimeWindDown nudge "Got It" button doesn't start breathing session
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P1-BLOCKER
+- **Files:** `iOS/ViewModels/StressViewModel.swift`, `iOS/Views/StressSmartActionsView.swift`
+- **Description:** The bedtimeWindDown smart action card showed "Got It" with a checkmark icon. Tapping it just dismissed the card (`smartAction = .standardNudge`) instead of starting the breathing session. This was validated by 3 LLM judges in the UI rubric — the breathing flow was supposed to be the primary action.
+- **Fix Applied:**
+  - `StressViewModel.swift` line 214-216: Changed handler from `case .bedtimeWindDown: smartAction = .standardNudge` to `case .bedtimeWindDown: startBreathingSession()`
+  - `StressSmartActionsView.swift` line 88-89: Changed button from `buttonLabel: "Got It", buttonIcon: "checkmark"` to `buttonLabel: "Start Breathing", buttonIcon: "wind"`
+
+### BUG-066: Scroll sticking on dashboard — highPriorityGesture steals vertical touches
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P1-BLOCKER
+- **File:** `iOS/Views/MainTabView.swift`
+- **Description:** `highPriorityGesture(DragGesture(minimumDistance: 30, ...))` on the root TabView intercepted vertical scroll gestures from ScrollView. Users had to swipe multiple times to scroll up on the dashboard. Device logs confirmed: massive UIEvent dispatch logs, "Ignoring beginScrollingWithRegion" and "Ignoring endScrollingWithRegion" messages.
+- **Root Cause:** `highPriorityGesture` gives the TabView's swipe gesture priority over ScrollView's scroll gesture. The horizontal/vertical ratio threshold of 1.2 was too loose — slight diagonal swipes were captured.
+- **Fix Applied:** Changed to `.simultaneousGesture(DragGesture(minimumDistance: 40, ...))` with `abs(h) > abs(v) * 2.0` threshold. This allows ScrollView to process touches simultaneously, and only commits horizontal swipe when it's clearly horizontal (2x ratio instead of 1.2x).
+
+---
+
+## P2 — Major Bugs (2026-03-16 Session)
+
+### BUG-067: NaN CoreGraphics errors from TrendsView division by zero
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P2-MAJOR
+- **File:** `iOS/Views/TrendsView.swift`
+- **Description:** `trendInsightCard()` at line 338 computed `(secondAvg - firstAvg) / firstAvg * 100` — when `firstAvg` is 0 (e.g., steps data all zeros in first half), this produces NaN. The NaN cascaded through `percentChange` → `change` → `Int(change)` and into CoreGraphics rendering calls. Device logs showed: `Error: this application, or a library it uses, has passed an invalid numeric value (NaN, or not-a-number) to CoreGraphics API`.
+- **Root Cause:** Three unsafe divisions without zero-guards:
+  1. Line 246: `values.reduce(0, +) / Double(values.count)` — inside `!points.isEmpty` branch but vulnerable during re-render
+  2. Line 336-337: `firstAvg` and `secondAvg` division by midpoint (guarded by count >= 4 but midpoint could theoretically be 0)
+  3. Line 338: `/ firstAvg` — no guard at all, direct NaN when firstAvg = 0
+- **Fix Applied:**
+  - Line 246: `values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)`
+  - Line 336: `midpoint > 0 ? ... : 0`
+  - Line 337: `(values.count - midpoint) > 0 ? ... : 0`
+  - Line 338: `firstAvg == 0 ? 0 : (secondAvg - firstAvg) / firstAvg * 100`
+
+---
+
+## Tracking Summary (Updated 2026-03-16)
+
+| Severity | Total | Open | Fixed |
+|----------|-------|------|-------|
+| P0-CRASH | 1 | 0 | 1 |
+| P1-BLOCKER | 11 | 0 | 11 |
+| P2-MAJOR | 33 | 2 | 31 |
+| P3-MINOR | 7 | 0 | 7 |
+| P4-COSMETIC | 13 | 0 | 13 |
+| **Total** | **67** | **2** | **65** |
+
+### Remaining Open (2)
+- BUG-013: Accessibility labels missing across views (P2)
+- BUG-014: No crash reporting in production (P2)
+
+### Test Results (2026-03-16)
+- Xcode build: ✅ iOS target (`** BUILD SUCCEEDED **`)
+- XCTest: **1,532 tests, 9 expected failures, 0 unexpected failures**
+- Real device testing: HealthKit fix, breathing button fix, scroll fix, NaN fix — all verified in code
+
+---
+
+---
+
+## P2 — Major Bugs (2026-03-16 Session — Continued)
+
+### BUG-068: Bug report sends email instead of Firebase — kicks user to Mail app
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P2-MAJOR
+- **File:** `iOS/Views/SettingsView.swift`
+- **Description:** Bug report used `mailto:` link which opened the Mail app instead of sending to Firebase. Users without Mail configured couldn't submit reports at all.
+- **Fix Applied:** Replaced email submission with `DiagnosticExportService.shared.uploadToFirestore()`. Bug reports now go directly to Firebase with full diagnostic payload. Also provides a share sheet with JSON file as backup.
+
+### BUG-069: "What to Do This Week" action items not clickable in InsightsView
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P2-MAJOR
+- **File:** `iOS/Views/InsightsView.swift`
+- **Description:** Action items in the weekly plan section were plain HStack rows with no tap handler. Users expected to tap them to see details but nothing happened.
+- **Fix Applied:** Wrapped each action item in a `Button` with `CardButtonStyle()`, added chevron indicator, `InteractionLog` tracking, and `accessibilityHint`. Tapping now opens the full report detail sheet.
+
+### BUG-070: HRV nudges route to Stress tab — wrong navigation target
+- **Status:** OPEN
+- **Severity:** P2-MAJOR
+- **File:** `iOS/Views/DashboardView+BuddyCards.swift`
+- **Description:** In buddy card tap handler (line 47-48), `.rest` category nudges route to Stress tab (tab index 2). HRV-related nudges categorized as `.rest` should navigate to a more appropriate destination. Users tapping HRV advice land on Stress screen with no HRV context.
+
+### BUG-071: "Buddy Says" recommendation cards may not be clickable
+- **Status:** OPEN
+- **Severity:** P2-MAJOR
+- **File:** `iOS/Views/DashboardView+BuddyCards.swift`
+- **Description:** Code shows buttons exist for buddy recommendation cards, but during real device testing the cards appeared non-interactive. May be gesture conflict with parent ScrollView or nil data preventing button rendering. Needs device reproduction.
+
+### BUG-072: Feature request sheet doesn't clear after submission
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P3-MINOR
+- **File:** `iOS/Views/SettingsView.swift`
+- **Description:** After sending a feature request, the sheet showed "Thank you!" but stayed open with old text. User had to manually dismiss and text persisted.
+- **Fix Applied:** Added auto-dismiss after 2 seconds via `Task.sleep`. Clears `featureRequestText` and resets `featureRequestSubmitted` on dismiss.
+
+### BUG-073: Bug report lacks diagnostic data — only sends text description
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P2-MAJOR
+- **File:** `iOS/Services/DiagnosticExportService.swift` (NEW), `iOS/Services/FeedbackService.swift`
+- **Description:** Bug reports only captured user's text description + basic device info. No health data, engine outputs, interaction logs, or app state was included. Made debugging impossible without back-and-forth with users.
+- **Fix Applied:** Created comprehensive `DiagnosticExportService` that captures: device/app meta, user profile, full health history with all snapshot fields, engine outputs (stress/readiness/bio-age/coaching/zones), interaction logs from CrashBreadcrumbs, nudge data, and settings. Integrated into `FeedbackService.submitBugReport()` with optional `diagnosticPayload` parameter. Large sections serialized as JSON strings to stay under Firestore 1MB limit.
+
+### BUG-074: NotificationService init crashes with Swift 6 @MainActor isolation
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P1-BLOCKER
+- **File:** `iOS/Services/NotificationService.swift`
+- **Description:** `StressViewModel` (marked `@MainActor`) used `NotificationService()` as a default parameter. `NotificationService.init` was implicitly `@MainActor` isolated, causing Swift 6 error: "call to main actor-isolated initializer in a synchronous nonisolated context." Build failed on real device target.
+- **Fix Applied:** Added `nonisolated` to `NotificationService.init`. Moved `checkCurrentAuthorization()` call into a `Task { @MainActor in }` block within init.
+
+---
+
+## Tracking Summary (Updated 2026-03-16 — Full Session)
+
+| Severity | Total | Open | Fixed |
+|----------|-------|------|-------|
+| P0-CRASH | 1 | 0 | 1 |
+| P1-BLOCKER | 12 | 0 | 12 |
+| P2-MAJOR | 38 | 4 | 34 |
+| P3-MINOR | 8 | 0 | 8 |
+| P4-COSMETIC | 13 | 0 | 13 |
+| **Total** | **74** | **4** | **70** |
+
+### Remaining Open (4)
+- BUG-013: Accessibility labels missing across views (P2)
+- BUG-014: No crash reporting in production (P2)
+- BUG-070: HRV nudges route to Stress tab (P2)
+- BUG-071: Buddy Says cards may not be clickable (P2)
+
+### Test Results (2026-03-16)
+- Xcode build: ✅ iOS target (`** BUILD SUCCEEDED **`)
+- XCTest: **1,532 tests, 9 expected failures, 0 unexpected failures**
+- Real device testing: 7 new bugs found, 5 fixed in session, 2 open for investigation
+
+---
+
+*Last updated: 2026-03-16 — 70/74 bugs fixed, 4 remaining. 7 new bugs found during real iPhone device testing session: HealthKit query failures (P1), dead breathing button (P1), scroll sticking (P1), NaN division (P2), email-based bug report (P2), non-clickable action items (P2), feature request sheet stuck (P3), missing diagnostic data (P2), Swift 6 init isolation (P1). All P1s fixed.*

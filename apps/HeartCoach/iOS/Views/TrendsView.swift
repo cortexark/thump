@@ -243,7 +243,7 @@ struct TrendsView: View {
 
     private func highlightStatsRow(points: [(date: Date, value: Double)]) -> some View {
         let values = points.map(\.value)
-        let avg = values.reduce(0, +) / Double(values.count)
+        let avg = values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
         let minVal = values.min() ?? 0
         let maxVal = values.max() ?? 0
 
@@ -333,9 +333,9 @@ struct TrendsView: View {
         }
 
         let midpoint = values.count / 2
-        let firstAvg = values.prefix(midpoint).reduce(0, +) / Double(midpoint)
-        let secondAvg = values.suffix(values.count - midpoint).reduce(0, +) / Double(values.count - midpoint)
-        let percentChange = (secondAvg - firstAvg) / firstAvg * 100
+        let firstAvg = midpoint > 0 ? values.prefix(midpoint).reduce(0, +) / Double(midpoint) : 0
+        let secondAvg = (values.count - midpoint) > 0 ? values.suffix(values.count - midpoint).reduce(0, +) / Double(values.count - midpoint) : 0
+        let percentChange = firstAvg == 0 ? 0 : (secondAvg - firstAvg) / firstAvg * 100
 
         let lowerIsBetter = viewModel.selectedMetric == .restingHR
         let improving = lowerIsBetter ? percentChange < -2 : percentChange > 2

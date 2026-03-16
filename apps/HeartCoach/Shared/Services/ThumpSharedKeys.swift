@@ -14,7 +14,7 @@ import Foundation
 /// Keys for the shared app group UserDefaults used by complications,
 /// Smart Stack widgets, and Siri AppIntents.
 enum ThumpSharedKeys {
-    static let suiteName = "group.com.thump.shared"
+    static let suiteName = "group.com.health.thump.shared"
 
     // Core assessment data
     static let moodKey = "thump_mood"

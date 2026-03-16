@@ -2,12 +2,13 @@
   "anomalyScore" : 0.30625636467003925,
   "confidence" : "high",
   "multiNudgeCategories" : [
+    "walk",
     "hydrate",
     "rest"
   ],
-  "multiNudgeCount" : 2,
-  "nudgeCategory" : "hydrate",
-  "nudgeTitle" : "Keep That Water Bottle Handy",
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "How About Some Easy Movement Today?",
   "readinessLevel" : "ready",
   "readinessScore" : 76,
   "regressionFlag" : true,
