@@ -17,24 +17,17 @@ import SwiftUI
 /// from `InsightsViewModel`.
 struct InsightsView: View {
 
-    // MARK: - Date Formatters (static to avoid per-render allocation)
-
-    private static let monthDayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f
-    }()
-
     // MARK: - View Model
 
-    @StateObject private var viewModel = InsightsViewModel()
+    @StateObject var viewModel = InsightsViewModel()
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
     @EnvironmentObject private var localStore: LocalStore
 
     // MARK: - State
 
-    @State private var showingReportDetail = false
+    @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
+    @State var showingReportDetail = false
     @State private var selectedCorrelation: CorrelationResult?
 
     // MARK: - Body
@@ -68,6 +61,8 @@ struct InsightsView: View {
     private var contentView: some View {
         if viewModel.isLoading {
             loadingView
+        } else if useDesignB {
+            scrollContentB
         } else {
             scrollContent
         }
@@ -146,47 +141,16 @@ struct InsightsView: View {
         .accessibilityIdentifier("insights_hero_card")
     }
 
-    private var heroSubtitle: String {
-        guard let report = viewModel.weeklyReport else { return "Building your first weekly report" }
-        switch report.trendDirection {
-        case .up: return "You're building momentum"
-        case .flat: return "Consistency is your strength"
-        case .down: return "A few small changes can help"
-        }
+    var heroSubtitle: String {
+        InsightsHelpers.heroSubtitle(report: viewModel.weeklyReport)
     }
 
-    private var heroInsightText: String {
-        if let report = viewModel.weeklyReport {
-            return report.topInsight
-        }
-        return "Wear your Apple Watch for 7 days and we'll show you personalized insights about patterns in your data and ideas for your routine."
+    var heroInsightText: String {
+        InsightsHelpers.heroInsightText(report: viewModel.weeklyReport)
     }
 
-    /// Picks the action plan item most relevant to the hero insight topic.
-    /// Falls back to the first item if no match is found.
-    private var heroActionText: String? {
-        guard let plan = viewModel.actionPlan, !plan.items.isEmpty else { return nil }
-
-        // Try to match the action to the hero insight topic
-        let insight = heroInsightText.lowercased()
-        let matched = plan.items.first { item in
-            let title = item.title.lowercased()
-            let detail = item.detail.lowercased()
-            // Match activity-related insights to activity actions
-            if insight.contains("step") || insight.contains("walk") || insight.contains("activity") || insight.contains("exercise") {
-                return item.category == .activity || title.contains("walk") || title.contains("step") || title.contains("active") || detail.contains("walk")
-            }
-            // Match sleep insights to sleep actions
-            if insight.contains("sleep") {
-                return item.category == .sleep
-            }
-            // Match stress/HRV insights to breathe actions
-            if insight.contains("stress") || insight.contains("hrv") || insight.contains("heart rate variability") || insight.contains("recovery") {
-                return item.category == .breathe
-            }
-            return false
-        }
-        return (matched ?? plan.items.first)?.title
+    var heroActionText: String? {
+        InsightsHelpers.heroActionText(plan: viewModel.actionPlan, insightText: heroInsightText)
     }
 
     // MARK: - Top Action Card
@@ -284,13 +248,13 @@ struct InsightsView: View {
         VStack(alignment: .leading, spacing: 14) {
             // Date range header
             HStack {
-                Text(reportDateRange(report))
+                Text(InsightsHelpers.reportDateRange(report))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
                 Spacer()
 
-                trendBadge(direction: report.trendDirection)
+                TrendBadgeView(direction: report.trendDirection)
             }
 
             // Average cardio score
@@ -366,7 +330,7 @@ struct InsightsView: View {
 
     // MARK: - Correlations Section
 
-    private var correlationsSection: some View {
+    var correlationsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "How Activities Affect Your Numbers", icon: "arrow.triangle.branch")
                 .accessibilityIdentifier("correlations_section")
@@ -459,45 +423,6 @@ struct InsightsView: View {
         return parts.joined(separator: " ")
     }
 
-    /// Formats the week date range for display.
-    private func reportDateRange(_ report: WeeklyReport) -> String {
-        "\(Self.monthDayFormatter.string(from: report.weekStart)) - \(Self.monthDayFormatter.string(from: report.weekEnd))"
-    }
-
-    /// A capsule badge showing the weekly trend direction.
-    private func trendBadge(direction: WeeklyReport.TrendDirection) -> some View {
-        let icon: String
-        let color: Color
-        let label: String
-
-        switch direction {
-        case .up:
-            icon = "arrow.up.right"
-            color = .green
-            label = "Building Momentum"
-        case .flat:
-            icon = "minus"
-            color = .blue
-            label = "Holding Steady"
-        case .down:
-            icon = "arrow.down.right"
-            color = .orange
-            label = "Worth Watching"
-        }
-
-        return HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption2)
-            Text(label)
-                .font(.caption2)
-                .fontWeight(.medium)
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(color.opacity(0.12), in: Capsule())
-    }
-
     // MARK: - Focus for the Week (Engine-Driven Targets)
 
     /// Engine-driven weekly targets: bedtime, activity, walk, sun time.
@@ -509,7 +434,7 @@ struct InsightsView: View {
                 sectionHeader(title: "Focus for the Week", icon: "target")
                     .accessibilityIdentifier("focus_card_section")
 
-                let targets = weeklyFocusTargets(from: plan)
+                let targets = InsightsHelpers.weeklyFocusTargets(from: plan)
                 ForEach(Array(targets.enumerated()), id: \.offset) { _, target in
                     HStack(spacing: 12) {
                         Image(systemName: target.icon)
@@ -555,64 +480,6 @@ struct InsightsView: View {
                 }
             }
         }
-    }
-
-    private struct FocusTarget {
-        let icon: String
-        let title: String
-        let reason: String
-        let targetValue: String?
-        let color: Color
-    }
-
-    private func weeklyFocusTargets(from plan: WeeklyActionPlan) -> [FocusTarget] {
-        var targets: [FocusTarget] = []
-
-        // Bedtime target from sleep action
-        if let sleep = plan.items.first(where: { $0.category == .sleep }) {
-            targets.append(FocusTarget(
-                icon: "moon.stars.fill",
-                title: "Bedtime Target",
-                reason: sleep.detail,
-                targetValue: sleep.suggestedReminderHour.map { "\($0 > 12 ? $0 - 12 : $0) PM" },
-                color: Color(hex: 0x8B5CF6)
-            ))
-        }
-
-        // Activity target
-        if let activity = plan.items.first(where: { $0.category == .activity }) {
-            targets.append(FocusTarget(
-                icon: "figure.walk",
-                title: "Activity Goal",
-                reason: activity.detail,
-                targetValue: "30 min",
-                color: Color(hex: 0x3B82F6)
-            ))
-        }
-
-        // Breathing / stress management
-        if let breathe = plan.items.first(where: { $0.category == .breathe }) {
-            targets.append(FocusTarget(
-                icon: "wind",
-                title: "Breathing Practice",
-                reason: breathe.detail,
-                targetValue: "5 min",
-                color: Color(hex: 0x0D9488)
-            ))
-        }
-
-        // Sunlight
-        if let sun = plan.items.first(where: { $0.category == .sunlight }) {
-            targets.append(FocusTarget(
-                icon: "sun.max.fill",
-                title: "Daylight Exposure",
-                reason: sun.detail,
-                targetValue: "3 windows",
-                color: Color(hex: 0xF59E0B)
-            ))
-        }
-
-        return targets
     }
 
     // MARK: - How Activity Affects Your Numbers (Educational)

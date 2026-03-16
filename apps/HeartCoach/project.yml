@@ -111,8 +111,7 @@ targets:
         excludes:
           - "**/*.json"
           - "**/*.md"
-          # SIGSEGV: String(format: "%s") crash in testFullComparisonSummary
-          - "AlgorithmComparisonTests.swift"
+          - "**/*.sh"
           # Dataset validation needs external CSV files — uncomment to skip:
           # - "Validation/DatasetValidationTests.swift"
           - "Validation/Data/**"
