@@ -134,10 +134,12 @@ final class DashboardViewModel: ObservableObject {
                 AppLogger.healthKit.info("HealthKit authorization granted")
             }
 
-            // Fetch today's snapshot — fall back to mock data in simulator, retry once on device
+            // Fetch today's snapshot with timeout — HealthKit queries can hang on real devices
             var snapshot: HeartSnapshot
             do {
-                snapshot = try await healthDataProvider.fetchTodaySnapshot()
+                snapshot = try await withTimeout(seconds: 15) {
+                    try await self.healthDataProvider.fetchTodaySnapshot()
+                }
             } catch {
                 #if targetEnvironment(simulator)
                 snapshot = MockData.mockTodaySnapshot
@@ -148,7 +150,9 @@ final class DashboardViewModel: ObservableObject {
                 do {
                     try await healthDataProvider.requestAuthorization()
                     try await Task.sleep(nanoseconds: 500_000_000) // 0.5s for auth propagation
-                    snapshot = try await healthDataProvider.fetchTodaySnapshot()
+                    snapshot = try await withTimeout(seconds: 15) {
+                        try await self.healthDataProvider.fetchTodaySnapshot()
+                    }
                 } catch {
                     AppLogger.engine.error("Retry also failed: \(error.localizedDescription)")
                     errorMessage = "Unable to read today's health data. Please check Health permissions in Settings."
@@ -169,7 +173,9 @@ final class DashboardViewModel: ObservableObject {
             // Fetch historical snapshots — fall back to mock history in simulator, retry once on device
             var history: [HeartSnapshot]
             do {
-                history = try await healthDataProvider.fetchHistory(days: historyDays)
+                history = try await withTimeout(seconds: 20) {
+                    try await self.healthDataProvider.fetchHistory(days: self.historyDays)
+                }
             } catch {
                 #if targetEnvironment(simulator)
                 history = MockData.mockHistory(days: historyDays)
@@ -178,12 +184,14 @@ final class DashboardViewModel: ObservableObject {
                 do {
                     try await healthDataProvider.requestAuthorization()
                     try await Task.sleep(nanoseconds: 500_000_000)
-                    history = try await healthDataProvider.fetchHistory(days: historyDays)
+                    history = try await withTimeout(seconds: 20) {
+                        try await self.healthDataProvider.fetchHistory(days: self.historyDays)
+                    }
                 } catch {
                     AppLogger.engine.error("History retry also failed: \(error.localizedDescription)")
-                    errorMessage = "Unable to read health history. Please check Health permissions in Settings."
-                    isLoading = false
-                    return
+                    // Don't block dashboard — proceed with empty history
+                    AppLogger.engine.warning("Proceeding with empty history after timeout")
+                    history = []
                 }
                 #endif
             }
@@ -666,5 +674,30 @@ final class DashboardViewModel: ObservableObject {
                 self?.currentTier = newTier
             }
             .store(in: &cancellables)
+    }
+}
+
+// MARK: - Timeout Helper
+
+/// Wraps an async operation with a timeout. Throws `CancellationError` if the
+/// operation exceeds the given duration. Prevents HealthKit queries from
+/// hanging the dashboard indefinitely on real devices.
+private func withTimeout<T: Sendable>(
+    seconds: TimeInterval,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask {
+            try await operation()
+        }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw CancellationError()
+        }
+
+        // Return whichever finishes first
+        let result = try await group.next()!
+        group.cancelAll()
+        return result
     }
 }

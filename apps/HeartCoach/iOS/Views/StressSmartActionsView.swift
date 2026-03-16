@@ -85,8 +85,8 @@ extension StressView {
                 title: nudge.title,
                 message: nudge.description,
                 detail: nil,
-                buttonLabel: "Got It",
-                buttonIcon: "checkmark",
+                buttonLabel: "Set Bedtime Reminder",
+                buttonIcon: "bell.fill",
                 action: action
             )
 
@@ -299,8 +299,11 @@ extension StressView {
     func handleGuidanceAction(_ action: QuickAction) {
         InteractionLog.log(.buttonTap, element: "stress_guidance_action", page: "Stress", details: action.label)
         switch action.label {
-        case "Breathe", "Rest":
+        case "Breathe":
             viewModel.startBreathingSession()
+        case "Rest":
+            // Dismiss — rest is acknowledgment, not a breathing prompt
+            break
         case "Take a Walk", "Step Outside", "Workout":
             viewModel.showWalkSuggestion()
         case "Focus Time":

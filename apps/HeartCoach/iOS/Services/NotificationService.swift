@@ -55,14 +55,14 @@ final class NotificationService: ObservableObject {
 
     // MARK: - Initialization
 
-    init(
+    nonisolated init(
         localStore: LocalStore = LocalStore(),
         alertPolicy: AlertPolicy = ConfigService.defaultAlertPolicy
     ) {
         self.localStore = localStore
         self.alertPolicy = alertPolicy
-        Task {
-            await checkCurrentAuthorization()
+        Task { @MainActor in
+            await self.checkCurrentAuthorization()
         }
     }
 

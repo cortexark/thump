@@ -436,7 +436,7 @@ struct SettingsView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("We'll include:")
+                    Text("We'll include with your report:")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
@@ -445,22 +445,44 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Label("Device: \(UIDevice.current.model)", systemImage: "iphone")
+                    Label("Device: \(UIDevice.current.model), iOS \(UIDevice.current.systemVersion)", systemImage: "iphone")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Label("iOS: \(UIDevice.current.systemVersion)", systemImage: "gearshape")
+                    Label("Health data & engine outputs (all screens)", systemImage: "heart.text.square")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Label("Readiness, stress, bio age results", systemImage: "chart.bar.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Label("All nudges & coaching text shown", systemImage: "text.bubble.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Label("Last 50 interaction logs (taps, navigation)", systemImage: "list.bullet.rectangle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Label("Settings & preferences", systemImage: "gearshape")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 if bugReportSubmitted {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("Thanks! We'll look into this.")
-                            .font(.subheadline)
-                            .foregroundStyle(.green)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("Report sent with full diagnostic data!")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.green)
+                        }
+                        Text("A shareable JSON file will also open so you can send it directly.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -487,33 +509,24 @@ struct SettingsView: View {
         }
     }
 
-    /// Submits a bug report to Firestore and optionally via email.
+    /// Submits a bug report to Firestore with full diagnostic data
+    /// (health history, engine outputs, interaction logs, screen state).
     private func submitBugReport() {
-        // Upload to Firestore
-        FeedbackService.shared.submitBugReport(
-            description: bugReportText,
-            appVersion: appVersion,
-            deviceModel: UIDevice.current.model,
-            iosVersion: UIDevice.current.systemVersion
+        // Upload full diagnostic payload to Firestore — no email
+        DiagnosticExportService.shared.uploadToFirestore(
+            localStore: localStore,
+            bugDescription: bugReportText
         )
 
-        // Also try email as fallback
-        let body = """
-        Bug Report
-        ----------
-        \(bugReportText)
-
-        Device Info
-        ----------
-        App: \(appVersion)
-        Device: \(UIDevice.current.model)
-        iOS: \(UIDevice.current.systemVersion)
-        """
-        if let emailURL = URL(string: "mailto:bugs@thump.app?subject=Bug%20Report&body=\(body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-            UIApplication.shared.open(emailURL)
-        }
-
         bugReportSubmitted = true
+
+        // Auto-dismiss after 2 seconds so the user sees confirmation
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            showBugReport = false
+            bugReportText = ""
+            bugReportSubmitted = false
+        }
     }
 
     // MARK: - Feature Request Sheet
@@ -584,13 +597,21 @@ struct SettingsView: View {
         }
     }
 
-    /// Submits a feature request to Firestore.
+    /// Submits a feature request to Firestore and auto-dismisses.
     private func submitFeatureRequest() {
         FeedbackService.shared.submitFeatureRequest(
             description: featureRequestText,
             appVersion: appVersion
         )
         featureRequestSubmitted = true
+
+        // Auto-dismiss after 2 seconds so user sees confirmation
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            showFeatureRequest = false
+            featureRequestText = ""
+            featureRequestSubmitted = false
+        }
     }
 
     // MARK: - Data Section

@@ -2,13 +2,13 @@
   "anomalyScore" : 0.42443949498889433,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "walk",
+    "moderate",
     "hydrate",
     "rest"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "Keep That Walking Groove Going",
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Feeling Up for a Little Extra?",
   "readinessLevel" : "primed",
   "readinessScore" : 89,
   "regressionFlag" : false,

@@ -360,8 +360,9 @@ final class HealthKitService: ObservableObject {
             )
 
             query.initialResultsHandler = { _, collection, error in
-                if let error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No data for this metric range — return empty instead of failing
+                    continuation.resume(returning: [:])
                     return
                 }
 
@@ -405,8 +406,9 @@ final class HealthKitService: ObservableObject {
             )
 
             query.initialResultsHandler = { _, collection, error in
-                if let error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No data for this metric range — return empty instead of failing
+                    continuation.resume(returning: [:])
                     return
                 }
 
@@ -464,8 +466,9 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No workout data — return empty instead of failing
+                    continuation.resume(returning: [])
                     return
                 }
                 let results = (samples as? [HKWorkout]) ?? []
@@ -540,8 +543,9 @@ final class HealthKitService: ObservableObject {
                 limit: 1,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No VO2Max data — return nil instead of failing
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let sample = samples?.first as? HKQuantitySample else {
@@ -578,8 +582,9 @@ final class HealthKitService: ObservableObject {
                 limit: 1,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No body mass data — return nil instead of failing
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let sample = samples?.first as? HKQuantitySample else {
@@ -627,8 +632,9 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No workout data — return empty instead of failing
+                    continuation.resume(returning: [])
                     return
                 }
                 let results = (samples as? [HKWorkout]) ?? []
@@ -686,8 +692,9 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
             ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No workout data for zone calc — return empty instead of failing
+                    continuation.resume(returning: [])
                     return
                 }
                 continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
@@ -712,8 +719,9 @@ final class HealthKitService: ObservableObject {
                     limit: HKObjectQueryNoLimit,
                     sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
                 ) { _, samples, error in
-                    if let error {
-                        continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                    if error != nil {
+                        // No HR samples during workout — return empty instead of failing
+                        continuation.resume(returning: [])
                         return
                     }
                     continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
@@ -780,8 +788,9 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
             ) { _, results, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No sleep data — return empty instead of failing
+                    continuation.resume(returning: [])
                     return
                 }
                 let categorySamples = (results as? [HKCategorySample]) ?? []
@@ -831,8 +840,9 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .discreteAverage
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No data for this metric — return nil instead of failing
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let average = statistics?.averageQuantity() else {
@@ -867,8 +877,9 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .cumulativeSum
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No data for this metric — return nil instead of failing
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let sum = statistics?.sumQuantity() else {
@@ -899,8 +910,9 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .discreteMax
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No max HR data — return nil instead of failing
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let max = statistics?.maximumQuantity() else {
@@ -930,8 +942,9 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .discreteAverage
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    // No avg HR data — return nil instead of failing
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let avg = statistics?.averageQuantity() else {

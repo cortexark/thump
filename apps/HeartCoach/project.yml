@@ -5,7 +5,7 @@ name: Thump
 ############################################################
 
 options:
-  bundleIdPrefix: com.thump
+  bundleIdPrefix: com.health.thump
   deploymentTarget:
     iOS: "17.0"
     watchOS: "10.0"
@@ -58,13 +58,13 @@ targets:
       base:
         INFOPLIST_FILE: iOS/Info.plist
         CODE_SIGN_ENTITLEMENTS: iOS/iOS.entitlements
-        PRODUCT_BUNDLE_IDENTIFIER: com.thump.ios
+        PRODUCT_BUNDLE_IDENTIFIER: com.health.thump.ios
+        DEVELOPMENT_TEAM: RSF2UZJ4Y3
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: false
     dependencies:
       - sdk: HealthKit.framework
       - sdk: WatchConnectivity.framework
-      - sdk: StoreKit.framework
       - sdk: AppIntents.framework
       - sdk: AuthenticationServices.framework
       - package: Firebase
@@ -90,7 +90,8 @@ targets:
       base:
         INFOPLIST_FILE: Watch/Info.plist
         CODE_SIGN_ENTITLEMENTS: Watch/Watch.entitlements
-        PRODUCT_BUNDLE_IDENTIFIER: com.thump.ios.watchkitapp
+        PRODUCT_BUNDLE_IDENTIFIER: com.health.thump.ios.watchkitapp
+        DEVELOPMENT_TEAM: RSF2UZJ4Y3
         TARGETED_DEVICE_FAMILY: "4"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
     dependencies:
@@ -120,7 +121,8 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
-        PRODUCT_BUNDLE_IDENTIFIER: com.thump.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.health.thump.tests
+        DEVELOPMENT_TEAM: RSF2UZJ4Y3
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Thump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thump"
         BUNDLE_LOADER: "$(TEST_HOST)"
 

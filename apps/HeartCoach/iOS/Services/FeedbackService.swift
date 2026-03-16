@@ -7,6 +7,7 @@
 // Platforms: iOS 17+
 
 import Foundation
+import UIKit
 import FirebaseFirestore
 
 // MARK: - Feedback Service
@@ -27,18 +28,43 @@ final class FeedbackService {
 
     private init() {}
 
+    // MARK: - User Identification
+
+    /// Returns a stable user ID for feedback documents.
+    /// Prefers the hashed Apple Sign-In ID from EngineTelemetryService;
+    /// falls back to a persistent UUID stored in UserDefaults so
+    /// feedback is always attributable even without Apple Sign-In.
+    private var feedbackUserId: String {
+        if let hashedId = EngineTelemetryService.shared.hashedUserId {
+            return hashedId
+        }
+
+        let key = "thump_feedback_device_id"
+        if let existing = UserDefaults.standard.string(forKey: key) {
+            return existing
+        }
+
+        // Generate a stable ID from vendor ID + random UUID fallback
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString
+            ?? UUID().uuidString
+        let stableId = "device_\(deviceId)"
+        UserDefaults.standard.set(stableId, forKey: key)
+        return stableId
+    }
+
     // MARK: - Bug Reports
 
-    /// Uploads a bug report document to Firestore.
+    /// Uploads a bug report document to Firestore with optional diagnostic payload.
     func submitBugReport(
         description: String,
         appVersion: String,
         deviceModel: String,
-        iosVersion: String
+        iosVersion: String,
+        diagnosticPayload: [String: Any]? = nil
     ) {
-        let userId = EngineTelemetryService.shared.hashedUserId ?? "anonymous"
+        let userId = feedbackUserId
 
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "description": description,
             "appVersion": appVersion,
             "deviceModel": deviceModel,
@@ -46,6 +72,13 @@ final class FeedbackService {
             "timestamp": FieldValue.serverTimestamp(),
             "status": "new"
         ]
+
+        // Merge diagnostic payload if provided
+        if let diagnostic = diagnosticPayload {
+            for (key, value) in diagnostic where key != "description" {
+                data[key] = value
+            }
+        }
 
         db.collection("users")
             .document(userId)
@@ -92,7 +125,7 @@ final class FeedbackService {
         description: String,
         appVersion: String
     ) {
-        let userId = EngineTelemetryService.shared.hashedUserId ?? "anonymous"
+        let userId = feedbackUserId
 
         let data: [String: Any] = [
             "description": description,
