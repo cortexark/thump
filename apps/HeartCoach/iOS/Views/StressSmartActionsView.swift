@@ -297,13 +297,18 @@ extension StressView {
     // MARK: - Guidance Action Handler
 
     func handleGuidanceAction(_ action: QuickAction) {
+        InteractionLog.log(.buttonTap, element: "stress_guidance_action", page: "Stress", details: action.label)
         switch action.label {
-        case "Breathe":
+        case "Breathe", "Rest":
             viewModel.startBreathingSession()
         case "Take a Walk", "Step Outside", "Workout":
             viewModel.showWalkSuggestion()
-        case "Rest":
+        case "Focus Time":
+            // Gentle breathing session for focused calm
             viewModel.startBreathingSession()
+        case "Stretch":
+            // Light movement suggestion — same as walk prompt
+            viewModel.showWalkSuggestion()
         default:
             break
         }
