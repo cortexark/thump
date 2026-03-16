@@ -597,7 +597,7 @@ final class AlgorithmComparisonTests: XCTestCase {
         print(String(repeating: "=", count: 80))
 
         print("\n--- STRESS SCORES ---")
-        print(String(format: "%-22s %8s %8s %8s %12s", "Persona", "LogSDNN", "Reciprcl", "MultiSig", "Expected"))
+        print(String(format: "%-22@ %8@ %8@ %8@ %12@", "Persona" as NSString, "LogSDNN" as NSString, "Reciprcl" as NSString, "MultiSig" as NSString, "Expected" as NSString))
 
         var stressRankA = 0, stressRankB = 0, stressRankC = 0
         var stressCalA = 0, stressCalB = 0, stressCalC = 0
@@ -614,18 +614,16 @@ final class AlgorithmComparisonTests: XCTestCase {
             if let bVal = b, gt.stressRange.contains(bVal) { stressCalB += 1 }
             if let cVal = c, gt.stressRange.contains(cVal) { stressCalC += 1 }
 
-            print(String(
-                format: "%-22s %8s %8s %8s %12s",
-                gt.persona.rawValue,
-                a.map { String(format: "%.1f", $0) } ?? "nil",
-                b.map { String(format: "%.1f", $0) } ?? "nil",
-                c.map { String(format: "%.1f", $0) } ?? "nil",
-                "\(Int(gt.stressRange.lowerBound))-\(Int(gt.stressRange.upperBound))"
-            ))
+            let col1 = gt.persona.rawValue as NSString
+            let col2 = (a.map { String(format: "%.1f", $0) } ?? "nil") as NSString
+            let col3 = (b.map { String(format: "%.1f", $0) } ?? "nil") as NSString
+            let col4 = (c.map { String(format: "%.1f", $0) } ?? "nil") as NSString
+            let col5 = "\(Int(gt.stressRange.lowerBound))-\(Int(gt.stressRange.upperBound))" as NSString
+            print(String(format: "%-22@ %8@ %8@ %8@ %12@", col1, col2, col3, col4, col5))
         }
 
         print("\n--- BIOAGE OFFSETS ---")
-        print(String(format: "%-22s %8s %8s %8s %12s", "Persona", "NTNU", "Composit", "Current", "Expected"))
+        print(String(format: "%-22@ %8@ %8@ %8@ %12@", "Persona" as NSString, "NTNU" as NSString, "Composit" as NSString, "Current" as NSString, "Expected" as NSString))
 
         for gt in groundTruth {
             let history = MockData.personaHistory(gt.persona, days: 30)
@@ -635,14 +633,12 @@ final class AlgorithmComparisonTests: XCTestCase {
             let b = compositeBioAge(snapshot: today, chronoAge: gt.persona.age, sex: gt.persona.sex).map { $0 - gt.persona.age }
             let c = bioAgeEngine.estimate(snapshot: today, chronologicalAge: gt.persona.age, sex: gt.persona.sex)?.difference
 
-            print(String(
-                format: "%-22s %8s %8s %8s %12s",
-                gt.persona.rawValue,
-                a.map { String($0) } ?? "nil",
-                b.map { String($0) } ?? "nil",
-                c.map { String($0) } ?? "nil",
-                "\(gt.bioAgeOffsetRange.lowerBound) to \(gt.bioAgeOffsetRange.upperBound)"
-            ))
+            let col1 = gt.persona.rawValue as NSString
+            let col2 = (a.map { String($0) } ?? "nil") as NSString
+            let col3 = (b.map { String($0) } ?? "nil") as NSString
+            let col4 = (c.map { String($0) } ?? "nil") as NSString
+            let col5 = "\(gt.bioAgeOffsetRange.lowerBound) to \(gt.bioAgeOffsetRange.upperBound)" as NSString
+            print(String(format: "%-22@ %8@ %8@ %8@ %12@", col1, col2, col3, col4, col5))
         }
 
         print("\n--- CALIBRATION SCORES ---")

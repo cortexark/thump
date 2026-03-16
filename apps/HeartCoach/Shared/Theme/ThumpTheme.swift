@@ -117,3 +117,45 @@ enum ThumpRadius {
     /// Circular elements
     static let full: CGFloat = 999
 }
+
+// MARK: - Shared Date Formatters
+
+/// Centralized DateFormatters to avoid duplicating identical formatters
+/// across multiple views. DateFormatter allocation is expensive — sharing
+/// static instances is both a DRY and performance win.
+enum ThumpFormatters {
+    /// "Jan 5" — used for date ranges in reports and insights.
+    static let monthDay: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
+
+    /// "Mon" — abbreviated weekday name.
+    static let weekday: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE"
+        return f
+    }()
+
+    /// "Monday, Jan 5" — full day header.
+    static let dayHeader: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMM d"
+        return f
+    }()
+
+    /// "Mon, Jan 5" — short date with weekday.
+    static let shortDate: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d"
+        return f
+    }()
+
+    /// "9AM" — hour only.
+    static let hour: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "ha"
+        return f
+    }()
+}

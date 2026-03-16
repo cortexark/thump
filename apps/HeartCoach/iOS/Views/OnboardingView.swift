@@ -63,13 +63,19 @@ struct OnboardingView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                TabView(selection: $currentPage) {
-                    welcomePage.tag(0)
-                    healthKitPage.tag(1)
-                    disclaimerPage.tag(2)
-                    profilePage.tag(3)
+                Group {
+                    switch currentPage {
+                    case 0:  welcomePage
+                    case 1:  healthKitPage
+                    case 2:  disclaimerPage
+                    case 3:  profilePage
+                    default: welcomePage
+                    }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
                 .onAppear {
                     InteractionLog.pageView("Onboarding")
@@ -190,9 +196,8 @@ struct OnboardingView: View {
                 featureRow(icon: "heart.fill", text: "Heart Rate")
                 featureRow(icon: "waveform.path.ecg", text: "Resting Heart Rate & HRV")
                 featureRow(icon: "lungs.fill", text: "VO2 Max (Cardio Fitness)")
-                featureRow(icon: "figure.walk", text: "Steps & Walking Distance")
-                featureRow(icon: "flame.fill", text: "Active Energy Burned")
-                featureRow(icon: "figure.run", text: "Exercise Minutes")
+                featureRow(icon: "figure.walk", text: "Steps")
+                featureRow(icon: "figure.run", text: "Exercise Minutes & Workouts")
                 featureRow(icon: "bed.double.fill", text: "Sleep Analysis")
                 featureRow(icon: "scalemass.fill", text: "Body Weight")
                 featureRow(icon: "person.fill", text: "Biological Sex & Date of Birth")

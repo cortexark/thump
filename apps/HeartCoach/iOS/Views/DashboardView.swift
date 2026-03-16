@@ -31,6 +31,10 @@ struct DashboardView: View {
     // MARK: - View Model
 
     @StateObject var viewModel = DashboardViewModel()
+
+    /// A/B design variant toggle.
+    @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
+
     // MARK: - Sheet State
 
     /// Controls the Bio Age detail sheet presentation.
@@ -102,18 +106,19 @@ struct DashboardView: View {
 
                     // Main content cards
                     VStack(alignment: .leading, spacing: 16) {
-                        checkInSection               // 1. Daily check-in right after hero
-                        readinessSection              // 2. Thump Check (readiness)
-                        howYouRecoveredCard           // 3. How You Recovered (replaces Weekly RHR)
-                        consecutiveAlertCard          // 4. Alert if elevated
-                        dailyGoalsSection             // 5. Daily Goals (engine-driven)
-                        buddyRecommendationsSection   // 6. Buddy Recommendations
-                        zoneDistributionSection       // 7. Heart Rate Zones (dynamic targets)
-                        buddyCoachSection             // 8. Buddy Coach (was "Your Heart Coach")
-                        streakSection                 // 9. Streak
-                        // metricsSection — moved to Trends tab
-                        // bioAgeSection — parked (see FEATURE_REQUESTS.md FR-001)
-                        // nudgeSection — replaced by buddyRecommendationsSection
+                        if useDesignB {
+                            designBCardStack
+                        } else {
+                            checkInSection               // 1. Daily check-in right after hero
+                            readinessSection              // 2. Thump Check (readiness)
+                            howYouRecoveredCard           // 3. How You Recovered (replaces Weekly RHR)
+                            consecutiveAlertCard          // 4. Alert if elevated
+                            dailyGoalsSection             // 5. Daily Goals (engine-driven)
+                            buddyRecommendationsSection   // 6. Buddy Recommendations
+                            zoneDistributionSection       // 7. Heart Rate Zones (dynamic targets)
+                            buddyCoachSection             // 8. Buddy Coach (was "Your Heart Coach")
+                            streakSection                 // 9. Streak
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)

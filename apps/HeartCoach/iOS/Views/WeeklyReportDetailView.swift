@@ -19,13 +19,6 @@ import UserNotifications
 /// reminder at its suggested hour.
 struct WeeklyReportDetailView: View {
 
-    // MARK: - Date Formatters (static to avoid per-render allocation)
-
-    private static let monthDayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f
-    }()
     private static let shortTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.timeStyle = .short
@@ -482,7 +475,7 @@ struct WeeklyReportDetailView: View {
     // MARK: - Helpers
 
     private var dateRange: String {
-        "\(Self.monthDayFormatter.string(from: plan.weekStart)) – \(Self.monthDayFormatter.string(from: plan.weekEnd))"
+        "\(ThumpFormatters.monthDay.string(from: plan.weekStart)) – \(ThumpFormatters.monthDay.string(from: plan.weekEnd))"
     }
 
     private func formattedHour(_ hour: Int) -> String {
