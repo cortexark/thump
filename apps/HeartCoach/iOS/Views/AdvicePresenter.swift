@@ -14,7 +14,7 @@ import Foundation
 
 /// Maps semantic AdviceState to user-facing strings.
 ///
-/// All coaching copy originates here — views never build
+/// All coaching copy originates here  - views never build
 /// text from business logic directly.
 struct AdvicePresenter {
 
@@ -27,7 +27,7 @@ struct AdvicePresenter {
             return "Stress is running high. A rest day would do you good."
         case "hero_rough_night":
             let hrs = snapshot.sleepHours.map { String(format: "%.1f", $0) } ?? "not enough"
-            return "Rough night (\(hrs) hrs). Take it easy — a walk is enough today."
+            return "Rough night (\(hrs) hrs). Take it easy  - a walk is enough today."
         case "hero_recovery_low":
             return "Recovery is low. A light day is the smartest move."
         case "hero_zone_overload":
@@ -55,7 +55,7 @@ struct AdvicePresenter {
         case "insight_stress_rest":
             return "Stress is running high. A rest day would do you good."
         case "insight_rough_night":
-            return "Rough night. Take it easy — a walk is enough today."
+            return "Rough night. Take it easy  - a walk is enough today."
         case "insight_recovery_low":
             return "Recovery is low. A light day is the smartest move."
         case "insight_zone_overload":
@@ -87,11 +87,11 @@ struct AdvicePresenter {
         // Sleep override (critical)
         if let hours = sleepHours {
             if hours < policy.view.sleepSkipWorkoutHours {
-                return "Skip the workout — rest is the only thing that will help right now. "
+                return "Skip the workout  - rest is the only thing that will help right now. "
                     + "Your body needs sleep more than exercise today."
             }
             if hours < policy.view.sleepLightOnlyHours {
-                return "Keep it very light today — a short walk at most. "
+                return "Keep it very light today  - a short walk at most. "
                     + "Low sleep means your body isn't ready for real effort."
             }
         }
@@ -99,7 +99,7 @@ struct AdvicePresenter {
         // Low recovery
         if readinessScore < 45 {
             if state.stressGuidanceLevel == .elevated {
-                return "Recovery is low and stress is up — take a full rest day. "
+                return "Recovery is low and stress is up  - take a full rest day. "
                     + "Even gentle movement should feel optional."
             }
             return "Recovery is low. A gentle walk or stretching is fine, "
@@ -109,11 +109,11 @@ struct AdvicePresenter {
         // Moderate recovery
         if readinessScore < 65 {
             if let hours = sleepHours, hours < 6.0 {
-                return "Take it easy — a walk is fine, but skip anything intense. "
+                return "Take it easy  - a walk is fine, but skip anything intense. "
                     + "Sleep was short, so recovery is limited."
             }
             if state.stressGuidanceLevel == .elevated {
-                return "Stress is elevated. Keep it light — a walk or stretching, "
+                return "Stress is elevated. Keep it light  - a walk or stretching, "
                     + "nothing that raises your heart rate much."
             }
             return "Decent recovery. A moderate effort works well today."
@@ -123,14 +123,14 @@ struct AdvicePresenter {
         if readinessScore >= 80 {
             if let hours = sleepHours, hours < 6.0 {
                 return "Your metrics look good, but sleep was short. "
-                    + "A moderate session is fine — save the big effort for a better-rested day."
+                    + "A moderate session is fine  - save the big effort for a better-rested day."
             }
-            return "You're primed. Push it if you want — your body is ready for a challenge."
+            return "You're primed. Push it if you want  - your body is ready for a challenge."
         }
 
         if let hours = sleepHours, hours < 6.0 {
             return "Your metrics look good, but sleep was short. "
-                + "A moderate session is fine — save the big effort for a better-rested day."
+                + "A moderate session is fine  - save the big effort for a better-rested day."
         }
 
         return "Solid recovery. You can go moderate to hard today."
@@ -149,13 +149,13 @@ struct AdvicePresenter {
 
         switch driver {
         case .lowSleep:
-            return "Prioritize rest tonight — sleep is the biggest lever for recovery."
+            return "Prioritize rest tonight  - sleep is the biggest lever for recovery."
         case .lowHRV:
-            return "HRV dipped — body is still catching up. Easy day recommended."
+            return "HRV dipped  - body is still catching up. Easy day recommended."
         case .highStress:
-            return "Stress is high — an easy walk and early bedtime will help."
+            return "Stress is high  - an easy walk and early bedtime will help."
         case .overtraining:
-            return "Rest day recommended — your body needs time to recover."
+            return "Rest day recommended  - your body needs time to recover."
         case .highRHR:
             return "Your body could use a bit more rest."
         }
@@ -213,7 +213,7 @@ struct AdvicePresenter {
         case "active_start":
             return "Even 10 minutes of movement counts."
         case "active_almost":
-            return "Almost there — keep moving!"
+            return "Almost there  - keep moving!"
 
         // Sleep
         case "sleep_achieved":
@@ -222,7 +222,7 @@ struct AdvicePresenter {
             return "Try winding down 30 minutes earlier tonight."
         case "sleep_almost":
             let target = String(format: "%.1f", goal.target)
-            return "Almost there — aim for \(target) hrs tonight."
+            return "Almost there  - aim for \(target) hrs tonight."
 
         // Zone
         case "zone_achieved":
