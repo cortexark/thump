@@ -1,9 +1,14 @@
 {
   "version": "1.0",
-  "total_criteria": 37,
-  "max_score": 185,
+  "total_criteria": 48,
+  "max_score": 240,
   "scoring_range": [1, 5],
-  "source_agents": ["customer", "engineer", "qae"],
+  "source_agents": ["customer", "engineer", "qae", "report_quality"],
+  "hard_fail_dimensions": ["RPT-001", "RPT-003"],
+  "hard_fail_threshold": 4,
+  "audience_gate_dimensions": ["RPT-004", "RPT-005"],
+  "audience_gate_threshold": 3,
+  "weighted_pass_threshold": 4.0,
   "groups": {
     "customer": {
       "perspective": "Non-expert consumer who does not know heart rate terminology",
@@ -19,6 +24,17 @@
       "perspective": "QA engineer validating completeness, safety, and regression behavior",
       "criteria_count": 12,
       "criteria_ids": ["QAE-001", "QAE-002", "QAE-003", "QAE-004", "QAE-005", "QAE-006", "QAE-007", "QAE-008", "QAE-009", "QAE-010", "QAE-011", "QAE-012"]
+    },
+    "report_quality": {
+      "perspective": "Holistic report quality: outcome correctness, safety, audience fit, and usability",
+      "criteria_count": 11,
+      "criteria_ids": ["RPT-001", "RPT-002", "RPT-003", "RPT-004", "RPT-005", "RPT-006", "RPT-007", "RPT-008", "RPT-009", "RPT-010", "RPT-011"],
+      "scoring_rules": {
+        "weighted_pass_threshold": 4.0,
+        "hard_fail": "RPT-001 or RPT-003 < 4 → sample fails regardless of other scores",
+        "audience_gate": "RPT-004 or RPT-005 < 3 → flagged as needs-revision-for-audience-fit",
+        "audience_fit_score": "min(RPT-004, RPT-005)"
+      }
     }
   },
   "criteria": [
@@ -908,6 +924,253 @@
         "Day 1: 'Solid start. Your body is in a good rhythm.' / Day 7: 'Best recovery week in a month. Whatever you did, it worked.'",
         "Crash day: 'Recovery took a hit today. Rest is the one lever that actually works right now.' / Recovery day: 'Bouncing back. Your body responded fast.'",
         "Each day's text reflects the specific intersection of that day's metrics and the week's trajectory"
+      ]
+    },
+    {
+      "id": "RPT-001",
+      "source_agent": "report_quality",
+      "category": "data_correctness_consistency",
+      "description": "Data correctness & internal consistency — all text and visuals accurately reflect the underlying data; no contradictions between sections",
+      "weight_pct": 0.20,
+      "hard_fail": true,
+      "scoring_guide": {
+        "1": "Clear contradictions or incorrect claims — text says 'improving' when data is declining",
+        "2": "Significant mismatches in one section; loose phrasing that misleads about data state",
+        "3": "Mostly accurate with minor mismatches that don't truly mislead",
+        "4": "All claims accurate; only cosmetic inconsistencies in tone or word choice",
+        "5": "All text and visuals consistently match the data and each other; zero contradictions"
+      },
+      "fail_examples": [
+        "Hero says 'strong recovery week' but readiness declined from 75 to 40 over 7 days",
+        "Graph shows RHR trending down but text says 'your RHR has been rising'"
+      ],
+      "pass_examples": [
+        "Readiness dropped 30 points and hero correctly reads 'Recovery has taken a hit — rest is the call today'",
+        "All sections — hero, banner, goals, nudges — reflect the same story from the same data"
+      ]
+    },
+    {
+      "id": "RPT-002",
+      "source_agent": "report_quality",
+      "category": "goal_alignment_appropriateness",
+      "description": "Goal alignment & appropriateness — recommended goals and daily moves match the user's situation, constraints, fitness level, and current risk",
+      "weight_pct": 0.15,
+      "scoring_guide": {
+        "1": "Goals are inappropriate or unsafe — intense running goal for injured or overtrained user",
+        "2": "Goals are generic and partially misaligned with persona constraints or current data",
+        "3": "Goals are generic but not harmful or obviously unrealistic",
+        "4": "Goals are mostly tailored and realistic with one minor misalignment",
+        "5": "Goals are tailored, realistic, and clearly linked to the user's current state and constraints"
+      },
+      "fail_examples": [
+        "Goal suggests 10,000 steps for a user with readiness=18 and 3h sleep",
+        "Sleep goal targets 9h for a new parent who structurally cannot sleep more than 5h"
+      ],
+      "pass_examples": [
+        "Overtrained user: 'Today's goal: gentle movement only. Even 1,500 steps counts.'",
+        "Sleep-deprived user: step goal auto-reduced, primary goal reframed as 'rest before 10pm'"
+      ]
+    },
+    {
+      "id": "RPT-003",
+      "source_agent": "report_quality",
+      "category": "risk_handling_safety",
+      "description": "Risk handling & safety — report never encourages unsafe behavior; appropriately escalates when risk is high; medical framing is cautious and non-diagnostic",
+      "weight_pct": 0.20,
+      "hard_fail": true,
+      "safety_critical": true,
+      "scoring_guide": {
+        "1": "Encourages high-intensity activity when risk signals are severe; dangerous recommendation",
+        "2": "Under-emphasizes risk in a way that could lead to harm; missing escalation when warranted",
+        "3": "Some risk under-emphasized but no clearly dangerous recommendation",
+        "4": "All risk states correctly reflected; no unsafe nudges; escalation present when needed",
+        "5": "Risk correctly identified; no unsafe encouragement; calm escalation where appropriate; no diagnostic claims"
+      },
+      "fail_examples": [
+        "Readiness=12, sleep=2h, stress=critical: 'Push yourself today — your body can handle it!'",
+        "RHR 40% above baseline for 3 days: 'heart rate looks a bit high, no action needed'"
+      ],
+      "pass_examples": [
+        "Readiness=12: 'Very low recovery. Rest is the only right call today.'",
+        "Sustained RHR elevation: 'Patterns like this are worth mentioning to your doctor if you feel unwell.'"
+      ]
+    },
+    {
+      "id": "RPT-004",
+      "source_agent": "report_quality",
+      "category": "audience_fit_layperson",
+      "description": "Audience fit — layperson clarity: non-technical user can read the report, understand their status, and know what to do",
+      "weight_pct": 0.10,
+      "audience_gate": true,
+      "scoring_guide": {
+        "1": "Relies heavily on jargon; a typical user cannot interpret or act on the report",
+        "2": "Some accessible language but key sections use unexplained terms or abstract advice",
+        "3": "Generally understandable; some jargon or dense text may confuse a non-expert",
+        "4": "Mostly plain language; 1-3 clear actions; one minor phrasing could be simpler",
+        "5": "A layperson instantly grasps status, why it matters, and next steps without technical knowledge"
+      },
+      "fail_examples": [
+        "'Your HRV RMSSD dropped 18ms below your 28-day baseline, indicating parasympathetic suppression'",
+        "Three paragraphs of data before any clear action or human outcome"
+      ],
+      "pass_examples": [
+        "'Your heart had a tough night. A calm, easy day helps it reset.' + 'Try: short walk after dinner'",
+        "Main screen: status in one sentence, why in one sentence, do-this in one sentence"
+      ]
+    },
+    {
+      "id": "RPT-005",
+      "source_agent": "report_quality",
+      "category": "audience_fit_professional",
+      "description": "Audience fit — professional transparency: a health or technical professional can see how conclusions were reached and verify they are reasonable",
+      "weight_pct": 0.10,
+      "audience_gate": true,
+      "scoring_guide": {
+        "1": "Conclusions are opaque; no data visible; appear to overstate what the inputs support",
+        "2": "Some data visible but traceability from data to recommendations is only partially clear",
+        "3": "Key inputs are named; professional can broadly verify but not fully audit",
+        "4": "Data signals visible and reasoning clearly stated; narrative doesn't overclaim",
+        "5": "Professional can inspect the rationale and verify narrative-data alignment"
+      },
+      "fail_examples": [
+        "Report says 'recovery is low' with no indication of which signals drove it",
+        "Trend claim made with no supporting data visible anywhere"
+      ],
+      "pass_examples": [
+        "'Recovery signal lower than usual — mainly driven by shorter sleep (5h vs typical 7h) and slightly elevated resting heart rate'",
+        "Detail view shows 7-day RHR trend, sleep hours, and HRV range"
+      ]
+    },
+    {
+      "id": "RPT-006",
+      "source_agent": "report_quality",
+      "category": "progressive_detail_explainability",
+      "description": "Progressive detail & explainability — users can drill into any element for a plain explanation; layered from summary to details without forcing complexity on casual users",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "No drill-down; user is stuck at surface or dumped into raw graphs with no explanation",
+        "2": "Some detail available but navigation unclear or explanations skip plain-language step",
+        "3": "Detail path exists but uneven — some cards explain well, others don't",
+        "4": "Interactive elements discoverable; first expansion clear; second step leads to graphs",
+        "5": "Three clear layers: summary → plain 'why' → data graphs. Lay users stop at 1-2; professionals go to 3"
+      },
+      "fail_examples": [
+        "Tapping 'Heart Mode: Caution' opens a raw HRV chart with no explanation",
+        "No tap targets — report is static with no drill-down available"
+      ],
+      "pass_examples": [
+        "Tap 'Caution' → plain one-sentence why → 'View your 7-day trend'",
+        "Every card has a chevron; first tap: plain sentence; second tap: graph"
+      ]
+    },
+    {
+      "id": "RPT-007",
+      "source_agent": "report_quality",
+      "category": "graph_clarity_text_alignment",
+      "description": "Graph clarity & text-graph alignment — visuals are interpretable by non-experts and consistent with the text narrative",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "Graphs confusing, unlabeled, or clearly contradict the text",
+        "2": "Graphs correct but under-explained; text and graph tell different stories",
+        "3": "Graphs correct and labeled but require domain knowledge to interpret",
+        "4": "Graphs clear and mostly reinforce text; one minor mismatch",
+        "5": "Graphs simple, labeled in plain language, and clearly reinforce the written story"
+      },
+      "fail_examples": [
+        "Text says 'RHR has been trending up' but graph shows a flat or declining line",
+        "Graph has no axis labels; values shown with no units or reference bands"
+      ],
+      "pass_examples": [
+        "Banded bar chart shows sleep hours with a green 'target' band; caption explains gap in plain English",
+        "RHR line with 'your typical range' shaded; text reads 'this week ran a little above your usual range'"
+      ]
+    },
+    {
+      "id": "RPT-008",
+      "source_agent": "report_quality",
+      "category": "focus_prioritization",
+      "description": "Focus & prioritization — report surfaces the 1-2 most important issues immediately; secondary details stay in supporting roles",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "Important issues buried or equal in visual weight to minor metrics",
+        "2": "Main issue present but shares too much space with secondary points",
+        "3": "Main issue visible but takes work to identify; too many equally-weighted items",
+        "4": "Clear primary issue highlighted with secondary context subordinated",
+        "5": "User immediately sees the top 1-2 issues; everything else is clearly secondary"
+      },
+      "fail_examples": [
+        "Sleep debt of 3h listed 5th after step count, active calories, HRV, and zone breakdown",
+        "Bad day with readiness=15 shows 8 different cards at equal visual weight"
+      ],
+      "pass_examples": [
+        "Sleep debt leads the report on a bad night; steps and other metrics clearly secondary",
+        "Crash day: one large card 'Rest is the call today'; everything else collapses"
+      ]
+    },
+    {
+      "id": "RPT-009",
+      "source_agent": "report_quality",
+      "category": "tone_empathy_motivation",
+      "description": "Tone, empathy & motivation — message is emotionally appropriate, supportive, and motivating; avoids blame; supports autonomy",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "Critical, shaming, or dismissive tone; likely to make users feel worse or defensive",
+        "2": "Neutral but cold; tone doesn't match the user's situation",
+        "3": "Neutral, not harmful, but generic and impersonal",
+        "4": "Warm and respectful; one missed opportunity for empathy",
+        "5": "Warm, respectful, motivating; acknowledges effort; hopeful and realistic; invites rather than commands"
+      },
+      "fail_examples": [
+        "Crashed day: 'You have not met your goals this week. Try harder tomorrow.'",
+        "Commands: 'You must sleep 8 hours. You must reduce stress.'"
+      ],
+      "pass_examples": [
+        "Crashed day: 'Rough week — your body worked hard. Rest today is doing real work, even if it doesn't feel like it.'",
+        "'A short walk could help, even just around the block.' not 'You need to walk.'"
+      ]
+    },
+    {
+      "id": "RPT-010",
+      "source_agent": "report_quality",
+      "category": "brevity_cognitive_load",
+      "description": "Brevity & cognitive load — report is concise enough to be usable when tired or stressed; on bad days doesn't pile on",
+      "weight_pct": 0.03,
+      "scoring_guide": {
+        "1": "Overly long, dense, or cluttered; likely to overwhelm or be skipped",
+        "2": "Noticeably wordy; bad-day reports list too many negatives",
+        "3": "A bit wordy but digestible with effort",
+        "4": "Concise with one section that could be trimmed",
+        "5": "Concise and focused; 1-3 main points; bad days get shorter not longer reports"
+      },
+      "fail_examples": [
+        "Bad day: 8 separate issues at equal weight over 4 scrollable cards",
+        "Same insight repeated in hero, banner, and goals without adding new information"
+      ],
+      "pass_examples": [
+        "Bad day: one card, one action, one sentence of context",
+        "Guidance text: 2 sentences max; action item: 1 concrete thing"
+      ]
+    },
+    {
+      "id": "RPT-011",
+      "source_agent": "report_quality",
+      "category": "breathing_coherence",
+      "description": "Breathing feature coherence — breathing usage reflected correctly; no praise for habits that don't exist; no overclaiming",
+      "weight_pct": 0.02,
+      "scoring_guide": {
+        "1": "Praises breathing habit for a user who hasn't used it; claims breathing always fixes stress",
+        "2": "Some mismatch or overclaiming about breathing benefits",
+        "3": "Technically correct but messaging doesn't match usage patterns",
+        "4": "Messages align with actual behavior; correlation claims appropriately hedged",
+        "5": "Usage, messaging, and correlation claims coherent and cautious; goals sized for actual habit"
+      },
+      "fail_examples": [
+        "User has never used breathing: 'Great job keeping up your breathing practice this week!'",
+        "'Breathing always reduces your stress — it's the single best tool you have'"
+      ],
+      "pass_examples": [
+        "New user: 'Breathing exercises can help — even 2 minutes makes a difference for some people'",
+        "Regular user: 'On days you've used breathing, your calm signal tends to recover faster'"
       ]
     }
   ]

@@ -61,6 +61,8 @@ struct TextCaptureVerifier {
         violations += checkDataTextConsistency(capture)
         violations += checkNoDashHyphens(capture)
         violations += checkTrendLanguage(capture)
+        violations += checkSafetyPushGate(capture)
+        violations += checkCognitiveOverload(capture)
 
         let captureID = "\(capture.personaName)_\(capture.journeyID)_d\(capture.dayIndex)_\(capture.timeStampLabel)"
         return VerificationResult(captureID: captureID, violations: violations)
@@ -390,6 +392,59 @@ struct TextCaptureVerifier {
             v.append(.init(ruleID: "V-013", severity: .low,
                 message: "Day \(cap.dayIndex): engine has week of history but no trend language found in hero/recovery/coaching",
                 field: "heroMessage"))
+        }
+
+        return v
+    }
+
+    // V-014: Safety push gate (RPT-003 deterministic proxy)
+    // If readiness is critically low AND the text contains push/exercise encouragement,
+    // flag as critical — this is the core safety invariant.
+    static func checkSafetyPushGate(_ cap: SuperReviewerCapture) -> [VerificationResult.Violation] {
+        var v: [VerificationResult.Violation] = []
+
+        guard let readiness = cap.readinessScore, readiness < 25 else { return [] }
+
+        let pushPhrases = [
+            "push yourself", "push hard", "go all out", "give it everything",
+            "high intensity", "max effort", "personal best", "beat yesterday",
+            "crush your goal", "time to push",
+        ]
+
+        let allText = gatherAllText(cap)
+
+        for phrase in pushPhrases {
+            for (field, text) in allText {
+                if text.localizedCaseInsensitiveContains(phrase) {
+                    v.append(.init(ruleID: "V-014", severity: .critical,
+                        message: "Readiness=\(readiness) (critical) but push language '\(phrase)' found in \(field)",
+                        field: field))
+                }
+            }
+        }
+
+        return v
+    }
+
+    // V-015: Cognitive overload — too many concurrent action items on one screen
+    // More than 5 total actionable items (nudges + buddy recs) at once overwhelms users,
+    // especially Sarah Kovacs and Jordan Rivera personas on bad days.
+    static func checkCognitiveOverload(_ cap: SuperReviewerCapture) -> [VerificationResult.Violation] {
+        var v: [VerificationResult.Violation] = []
+
+        let totalActionItems = cap.nudges.count + cap.buddyRecs.count
+
+        if totalActionItems > 5 {
+            v.append(.init(ruleID: "V-015", severity: .medium,
+                message: "Cognitive overload: \(cap.nudges.count) nudges + \(cap.buddyRecs.count) buddy recs = \(totalActionItems) concurrent action items (max 5)",
+                field: "nudges+buddyRecs"))
+        }
+
+        // On a crash/rest day, even 3+ is too many
+        if let readiness = cap.readinessScore, readiness < 35, totalActionItems > 3 {
+            v.append(.init(ruleID: "V-015", severity: .high,
+                message: "Rest day (readiness=\(readiness)) with \(totalActionItems) action items — should be ≤3 on low-recovery days",
+                field: "nudges+buddyRecs"))
         }
 
         return v
