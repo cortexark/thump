@@ -150,7 +150,7 @@ final class StressViewModel: ObservableObject {
             }
 
             let fetchDays = selectedRange.days + engine.baselineWindow + 7
-            let snapshots: [HeartSnapshot]
+            var snapshots: [HeartSnapshot]
             do {
                 snapshots = try await healthKitService.fetchHistory(
                     days: fetchDays
@@ -165,6 +165,14 @@ final class StressViewModel: ObservableObject {
                 return
                 #endif
             }
+
+            // Simulator fallback: if all snapshots have nil HRV (no real HealthKit data), use mock data
+            #if targetEnvironment(simulator)
+            let hasRealData = snapshots.contains(where: { $0.hrvSDNN != nil })
+            if !hasRealData {
+                snapshots = MockData.mockHistory(days: fetchDays)
+            }
+            #endif
 
             history = snapshots
             computeStressMetrics()
@@ -208,11 +216,13 @@ final class StressViewModel: ObservableObject {
             showWalkSuggestion()
 
         case .morningCheckIn:
-            // Dismiss the card
+            // Dismiss the card from both primary action and list
+            smartActions.removeAll { if case .morningCheckIn = $0 { return true } else { return false } }
             smartAction = .standardNudge
 
         case .bedtimeWindDown:
-            // Acknowledge and dismiss
+            // Acknowledge and dismiss the card from both primary action and list
+            smartActions.removeAll { if case .bedtimeWindDown = $0 { return true } else { return false } }
             smartAction = .standardNudge
 
         case .restSuggestion:
@@ -283,8 +293,12 @@ final class StressViewModel: ObservableObject {
     // MARK: - Computed Properties
 
     /// Average stress score across the current trend points.
+    /// On the day view, falls back to currentStress when trend data is empty
+    /// (stressTrend requires multi-day history which isn't available for daily range).
     var averageStress: Double? {
-        guard !trendPoints.isEmpty else { return nil }
+        if trendPoints.isEmpty {
+            return currentStress?.score
+        }
         let sum = trendPoints.map(\.score).reduce(0, +)
         return sum / Double(trendPoints.count)
     }

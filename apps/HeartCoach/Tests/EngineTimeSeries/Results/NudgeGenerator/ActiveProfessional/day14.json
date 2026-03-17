@@ -2,12 +2,13 @@
   "anomalyScore" : 0.95335286889876447,
   "confidence" : "medium",
   "multiNudgeCategories" : [
-    "hydrate",
-    "moderate"
+    "seekGuidance",
+    "intensity",
+    "hydrate"
   ],
-  "multiNudgeCount" : 2,
-  "nudgeCategory" : "hydrate",
-  "nudgeTitle" : "Quick Hydration Check-In",
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "seekGuidance",
+  "nudgeTitle" : "Peek at Your Trends",
   "readinessLevel" : "primed",
   "readinessScore" : 85,
   "regressionFlag" : false,

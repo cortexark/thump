@@ -2,15 +2,15 @@
   "anomalyScore" : 0.0099102347657667074,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "walk",
+    "breathe",
     "rest",
-    "hydrate"
+    "celebrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "Keep It Light Today",
-  "readinessLevel" : "moderate",
-  "readinessScore" : 40,
+  "nudgeCategory" : "breathe",
+  "nudgeTitle" : "A Breathing Reset",
+  "readinessLevel" : "recovering",
+  "readinessScore" : 35,
   "regressionFlag" : false,
   "stressFlag" : false
 }

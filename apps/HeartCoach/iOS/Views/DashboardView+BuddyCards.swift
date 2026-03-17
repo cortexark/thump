@@ -64,40 +64,29 @@ extension DashboardView {
 
     // MARK: - Check-In Section
 
+    @ViewBuilder
     var checkInSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Daily Check-In", systemImage: "face.smiling.fill")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+        if !viewModel.hasCheckedInToday {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("Daily Check-In", systemImage: "face.smiling.fill")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
 
-                Spacer()
+                    Spacer()
 
-                Text("How are you feeling?")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if viewModel.hasCheckedInToday {
-                HStack(spacing: 10) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color(hex: 0x22C55E))
-                    Text("You checked in today. Nice!")
-                        .font(.subheadline)
+                    Text("How are you feeling?")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(hex: 0x22C55E).opacity(0.08))
-                )
-            } else {
+
                 HStack(spacing: 10) {
                     ForEach(CheckInMood.allCases, id: \.self) { mood in
                         Button {
                             InteractionLog.log(.buttonTap, element: "checkin_\(mood.label.lowercased())", page: "Dashboard")
-                            viewModel.submitCheckIn(mood: mood)
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                viewModel.submitCheckIn(mood: mood)
+                            }
                         } label: {
                             VStack(spacing: 8) {
                                 Image(systemName: moodIcon(for: mood))
@@ -128,8 +117,9 @@ extension DashboardView {
                     }
                 }
             }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+            .accessibilityIdentifier("dashboard_checkin")
         }
-        .accessibilityIdentifier("dashboard_checkin")
     }
 
     func moodIcon(for mood: CheckInMood) -> String {
@@ -235,6 +225,7 @@ extension DashboardView {
         case .seekGuidance: return "stethoscope"
         case .celebrate:    return "party.popper.fill"
         case .sunlight:     return "sun.max.fill"
+        case .intensity:    return "bolt.heart.fill"
         }
     }
 
@@ -248,6 +239,7 @@ extension DashboardView {
         case .seekGuidance: return Color(hex: 0xEF4444)
         case .celebrate:    return Color(hex: 0x22C55E)
         case .sunlight:     return Color(hex: 0xF59E0B)
+        case .intensity:    return Color(hex: 0xE11D48)
         }
     }
 
@@ -262,6 +254,7 @@ extension DashboardView {
         case .celebrate:    return "Keep it up!"
         case .seekGuidance: return "Protect your heart health"
         case .sunlight:     return "Improves sleep & circadian rhythm"
+        case .intensity:    return "Builds cardiovascular fitness"
         }
     }
 
@@ -275,6 +268,7 @@ extension DashboardView {
         case .celebrate:    return "star.fill"
         case .seekGuidance: return "shield.fill"
         case .sunlight:     return "moon.zzz.fill"
+        case .intensity:    return "bolt.heart.fill"
         }
     }
 }

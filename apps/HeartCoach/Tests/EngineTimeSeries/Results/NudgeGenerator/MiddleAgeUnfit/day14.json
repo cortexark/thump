@@ -4,13 +4,13 @@
   "multiNudgeCategories" : [
     "breathe",
     "rest",
-    "hydrate"
+    "celebrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "breathe",
   "nudgeTitle" : "A Breathing Reset",
   "readinessLevel" : "recovering",
-  "readinessScore" : 27,
+  "readinessScore" : 26,
   "regressionFlag" : true,
   "stressFlag" : false
 }

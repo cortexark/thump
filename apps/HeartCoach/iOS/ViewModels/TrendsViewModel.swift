@@ -56,6 +56,7 @@ final class TrendsViewModel: ObservableObject {
 
     /// Predefined time ranges for the history chart.
     enum TimeRange: Int, CaseIterable {
+        case today = 1
         case week = 7
         case twoWeeks = 14
         case month = 30
@@ -63,6 +64,7 @@ final class TrendsViewModel: ObservableObject {
         /// Human-readable label for the time range.
         var label: String {
             switch self {
+            case .today:    return "Today"
             case .week:     return "7 Days"
             case .twoWeeks: return "14 Days"
             case .month:    return "30 Days"
@@ -124,7 +126,7 @@ final class TrendsViewModel: ObservableObject {
                 try await healthKitService.requestAuthorization()
             }
 
-            let snapshots: [HeartSnapshot]
+            var snapshots: [HeartSnapshot]
             do {
                 snapshots = try await healthKitService.fetchHistory(days: timeRange.rawValue)
             } catch {
@@ -137,6 +139,14 @@ final class TrendsViewModel: ObservableObject {
                 return
                 #endif
             }
+
+            // Simulator fallback: if all snapshots have nil HRV (no real HealthKit data), use mock data
+            #if targetEnvironment(simulator)
+            let hasRealData = snapshots.contains(where: { $0.hrvSDNN != nil })
+            if !hasRealData {
+                snapshots = MockData.mockHistory(days: timeRange.rawValue)
+            }
+            #endif
             history = snapshots
             isLoading = false
         } catch {

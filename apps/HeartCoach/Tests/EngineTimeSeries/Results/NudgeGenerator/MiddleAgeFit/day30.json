@@ -3,14 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "walk",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
-  "nudgeTitle" : "Two Little Walks",
+  "nudgeTitle" : "A Walk Could Feel Great",
   "readinessLevel" : "primed",
-  "readinessScore" : 85,
+  "readinessScore" : 82,
   "regressionFlag" : false,
   "stressFlag" : false
 }

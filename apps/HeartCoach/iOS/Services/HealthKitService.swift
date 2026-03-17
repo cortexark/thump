@@ -29,6 +29,25 @@ final class HealthKitService: ObservableObject {
     private let healthStore: HKHealthStore
     private let calendar = Calendar.current
 
+    // MARK: - Query Warnings (BUG-070 enhancement)
+
+    /// Accumulates HealthKit query warnings during a refresh cycle so the bug
+    /// report can explain *why* metrics are nil (auth denied? query error? no data?).
+    /// Call `clearQueryWarnings()` at the start of each refresh, read via `queryWarnings`.
+    private(set) var queryWarnings: [String] = []
+
+    /// Clears accumulated query warnings. Call at the start of each refresh cycle.
+    func clearQueryWarnings() {
+        queryWarnings = []
+    }
+
+    /// Thread-safe append to the warnings array from HealthKit callback threads.
+    private func appendWarning(_ warning: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.queryWarnings.append(warning)
+        }
+    }
+
     // MARK: - History Cache
 
     /// Cached history snapshots keyed by the number of days fetched.
@@ -76,6 +95,18 @@ final class HealthKitService: ObservableObject {
     /// - Throws: `HealthKitError.notAvailable` if HealthKit is unavailable,
     ///           or any underlying HealthKit error.
     func requestAuthorization() async throws {
+        // In simulator UITest mode, skip HealthKit authorization to avoid system dialog
+        #if targetEnvironment(simulator)
+        if CommandLine.arguments.contains("-UITestMode") {
+            // Seed HealthKit with real user data so the production code path runs
+            #if DEBUG
+            await DebugHealthDataSeeder.seedIfNeeded()
+            #endif
+            await MainActor.run { isAuthorized = true }
+            return
+        }
+        #endif
+
         guard HKHealthStore.isHealthDataAvailable() else {
             throw HealthKitError.notAvailable
         }
@@ -360,8 +391,11 @@ final class HealthKitService: ObservableObject {
             )
 
             query.initialResultsHandler = { _, collection, error in
-                if let error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: [:])
                     return
                 }
 
@@ -405,8 +439,11 @@ final class HealthKitService: ObservableObject {
             )
 
             query.initialResultsHandler = { _, collection, error in
-                if let error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: [:])
                     return
                 }
 
@@ -464,8 +501,11 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: [])
                     return
                 }
                 let results = (samples as? [HKWorkout]) ?? []
@@ -540,8 +580,11 @@ final class HealthKitService: ObservableObject {
                 limit: 1,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let sample = samples?.first as? HKQuantitySample else {
@@ -578,8 +621,11 @@ final class HealthKitService: ObservableObject {
                 limit: 1,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let sample = samples?.first as? HKQuantitySample else {
@@ -627,8 +673,11 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
             ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: [])
                     return
                 }
                 let results = (samples as? [HKWorkout]) ?? []
@@ -686,8 +735,11 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
             ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: [])
                     return
                 }
                 continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
@@ -712,8 +764,11 @@ final class HealthKitService: ObservableObject {
                     limit: HKObjectQueryNoLimit,
                     sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
                 ) { _, samples, error in
-                    if let error {
-                        continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                    if error != nil {
+                        let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                        continuation.resume(returning: [])
                         return
                     }
                     continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
@@ -780,8 +835,11 @@ final class HealthKitService: ObservableObject {
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
             ) { _, results, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: [])
                     return
                 }
                 let categorySamples = (results as? [HKCategorySample]) ?? []
@@ -831,8 +889,11 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .discreteAverage
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let average = statistics?.averageQuantity() else {
@@ -867,8 +928,11 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .cumulativeSum
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let sum = statistics?.sumQuantity() else {
@@ -899,8 +963,11 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .discreteMax
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let max = statistics?.maximumQuantity() else {
@@ -930,8 +997,11 @@ final class HealthKitService: ObservableObject {
                 quantitySamplePredicate: predicate,
                 options: .discreteAverage
             ) { _, statistics, error in
-                if let error = error {
-                    continuation.resume(throwing: HealthKitError.queryFailed(error.localizedDescription))
+                if error != nil {
+                    let msg = "[HealthKit] Query error: \(error!.localizedDescription)"
+                    AppLogger.healthKit.warning("\(msg) — returning empty")
+                    self.appendWarning(msg)
+                    continuation.resume(returning: nil)
                     return
                 }
                 guard let avg = statistics?.averageQuantity() else {

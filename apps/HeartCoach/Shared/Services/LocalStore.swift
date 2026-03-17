@@ -51,6 +51,10 @@ public final class LocalStore: ObservableObject {
     /// Alert-frequency metadata used by the alert throttle.
     @Published public var alertMeta: AlertMeta
 
+    /// Latest engine outputs and UI display strings for bug report diagnostics.
+    /// Written by DashboardViewModel after each refresh. Not persisted to disk.
+    public var diagnosticSnapshot: [String: Any] = [:]
+
     // MARK: - Private
 
     private let defaults: UserDefaults

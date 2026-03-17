@@ -621,11 +621,16 @@ final class EngineKPIValidationTests: XCTestCase {
         let readinessAllNil = readinessEngine.compute(
             snapshot: allNilSnapshot, stressScore: nil, recentHistory: []
         )
+        // With floor scores for missing sleep+recovery, all-nil now returns a
+        // conservative result instead of nil.
         Self.kpi.recordEdgeCase(
             engine: "ReadinessEngine", testName: "all_nil_metrics",
-            passed: readinessAllNil == nil
+            passed: readinessAllNil != nil && readinessAllNil!.score <= 50
         )
-        XCTAssertNil(readinessAllNil, "ReadinessEngine should return nil with no metrics")
+        XCTAssertNotNil(readinessAllNil, "ReadinessEngine should return floor score result with no metrics")
+        if let r = readinessAllNil {
+            XCTAssertLessThanOrEqual(r.score, 50, "All-nil should produce conservative score")
+        }
 
         // f) Nil steps and walk minutes for correlation
         let nilActivityHistory = fullHistory.map { snap in

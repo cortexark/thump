@@ -137,3 +137,22 @@ swift test --filter DatasetValidationTests
 ```
 
 (Requires SWELL, PhysioNet, and WESAD CSV files in `Tests/Validation/Data/`)
+
+---
+
+## Session 4 — 2026-03-17: Baseline Fallback for Day View
+
+### BUG-072: Stress Day heatmap shows "Need 3+ days of data" even with HRV data
+
+**Root cause:** `hourlyStressForDay()` computed `computeBaseline(snapshots: preceding)` which required prior days' HRV data. On day 1 (no historical snapshots), this returned nil → function returned empty `[HourlyStressPoint]` → heatmap showed error message.
+
+**Fix:** Added fallback in `hourlyStressForDay()`:
+```swift
+let baseline = computeBaseline(snapshots: preceding) ?? dailyHRV
+```
+
+When no historical baseline exists, today's own HRV is used as the reference. This means day-1 stress estimates compare against the user's own current HRV (resulting in neutral/balanced stress levels), but the heatmap populates instead of showing an error.
+
+**Trade-off:** Day-1 stress estimates are less meaningful since self-reference produces neutral scores. As history accumulates (day 2+), the real multi-day baseline takes over automatically. The behavioral benefit of showing a populated heatmap on day 1 outweighs the lower accuracy.
+
+**Also changed:** `StressHeatmapViews.swift` empty state message updated from "Need 3+ days of data for this view" to "Wear your watch today to see stress data here" — friendlier for the user, doesn't imply a waiting period that may not be accurate.

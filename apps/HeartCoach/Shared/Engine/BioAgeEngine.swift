@@ -370,6 +370,8 @@ public struct BioAgeEngine: Sendable {
             parts.append("Improving your \(worst.metric.displayName.lowercased()) could make the biggest difference.")
         }
 
+        parts.append("Bio Age is a wellness estimate, not a medical measurement.")
+
         return parts.joined(separator: " ")
     }
 }
