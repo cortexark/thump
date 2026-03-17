@@ -3,14 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "moderate",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "moderate",
   "nudgeTitle" : "Feeling Up for a Little Extra?",
   "readinessLevel" : "primed",
-  "readinessScore" : 89,
+  "readinessScore" : 88,
   "regressionFlag" : false,
   "stressFlag" : false
 }

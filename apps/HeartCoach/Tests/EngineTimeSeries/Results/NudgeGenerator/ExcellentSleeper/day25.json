@@ -3,14 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "rest",
-    "hydrate",
-    "celebrate"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "rest",
   "nudgeTitle" : "A Cozy Bedtime Routine",
   "readinessLevel" : "primed",
-  "readinessScore" : 86,
+  "readinessScore" : 83,
   "regressionFlag" : true,
   "stressFlag" : false
 }

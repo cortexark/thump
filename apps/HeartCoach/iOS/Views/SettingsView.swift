@@ -54,6 +54,9 @@ struct SettingsView: View {
     /// Whether bug report was submitted.
     @State private var bugReportSubmitted: Bool = false
 
+    /// Whether to include a screenshot with the bug report.
+    @State private var includeScreenshot: Bool = true
+
     /// Controls presentation of the feature request sheet.
     @State private var showFeatureRequest: Bool = false
 
@@ -119,10 +122,22 @@ struct SettingsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(localStore.profile.displayName.isEmpty
-                         ? "Thump User"
-                         : localStore.profile.displayName)
-                        .font(.headline)
+                    TextField(
+                        "Your name",
+                        text: Binding(
+                            get: { localStore.profile.displayName },
+                            set: { newName in
+                                // Strip newlines to keep name single-line
+                                let cleaned = newName.replacingOccurrences(of: "\n", with: " ")
+                                localStore.profile.displayName = cleaned
+                                localStore.saveProfile()
+                            }
+                        ),
+                        axis: .vertical
+                    )
+                    .lineLimit(1...2)
+                    .font(.headline)
+                    .accessibilityIdentifier("settings_name")
 
                     Text("Joined \(formattedJoinDate)")
                         .font(.caption)
@@ -159,7 +174,7 @@ struct SettingsView: View {
                 Label("Date of Birth", systemImage: "birthday.cake.fill")
                     .foregroundStyle(.primary)
             }
-            .accessibilityIdentifier("settings_dob_picker")
+            .accessibilityIdentifier("settings_dob")
             .onChange(of: localStore.profile.dateOfBirth) { _, _ in
                 InteractionLog.log(.datePickerChange, element: "dob_picker", page: "Settings", details: "changed")
             }
@@ -436,7 +451,7 @@ struct SettingsView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("We'll include with your report:")
+                    Text("We'll include:")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
@@ -445,45 +460,35 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Label("Device: \(UIDevice.current.model), iOS \(UIDevice.current.systemVersion)", systemImage: "iphone")
+                    Label("Device: \(UIDevice.current.model)", systemImage: "iphone")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Label("Health data & engine outputs (all screens)", systemImage: "heart.text.square")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Label("Readiness, stress, bio age results", systemImage: "chart.bar.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Label("All nudges & coaching text shown", systemImage: "text.bubble.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Label("Last 50 interaction logs (taps, navigation)", systemImage: "list.bullet.rectangle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Label("Settings & preferences", systemImage: "gearshape")
+                    Label("iOS: \(UIDevice.current.systemVersion)", systemImage: "gearshape")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
+                Toggle(isOn: $includeScreenshot) {
+                    Label("Include screenshot", systemImage: "camera.viewfinder")
+                        .font(.caption)
+                }
+                .tint(.pink)
+
+                Text("Your current health metrics and app state will be included to help us investigate.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+
                 if bugReportSubmitted {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                            Text("Report sent with full diagnostic data!")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.green)
-                        }
-                        Text("A shareable JSON file will also open so you can send it directly.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Submitted successfully. Thank you!")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.green)
                     }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
 
                 Spacer()
@@ -491,6 +496,7 @@ struct SettingsView: View {
             .padding(20)
             .navigationTitle("Report a Bug")
             .navigationBarTitleDisplayMode(.inline)
+            .animation(.easeInOut(duration: 0.3), value: bugReportSubmitted)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -503,30 +509,160 @@ struct SettingsView: View {
                     Button("Send") {
                         submitBugReport()
                     }
-                    .disabled(bugReportText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(
+                        bugReportSubmitted ||
+                        bugReportText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
                 }
             }
         }
     }
 
-    /// Submits a bug report to Firestore with full diagnostic data
-    /// (health history, engine outputs, interaction logs, screen state).
+    /// Collects all current health metrics and UI state from LocalStore,
+    /// then uploads the bug report with full diagnostic context to Firestore.
     private func submitBugReport() {
-        // Upload full diagnostic payload to Firestore — no email
-        DiagnosticExportService.shared.uploadToFirestore(
-            localStore: localStore,
-            bugDescription: bugReportText
-        )
+        var metrics = collectHealthMetrics()
 
-        bugReportSubmitted = true
-
-        // Auto-dismiss after 2 seconds so the user sees confirmation
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
-            showBugReport = false
-            bugReportText = ""
-            bugReportSubmitted = false
+        // Capture screenshot of the main window (behind the sheet)
+        if includeScreenshot, let screenshot = captureScreenshot() {
+            metrics["screenshotBase64"] = screenshot
         }
+
+        FeedbackService.shared.submitBugReport(
+            description: bugReportText,
+            appVersion: appVersion,
+            deviceModel: UIDevice.current.model,
+            iosVersion: UIDevice.current.systemVersion,
+            healthMetrics: metrics
+        ) { error in
+            DispatchQueue.main.async {
+                if error == nil {
+                    bugReportSubmitted = true
+                    // Auto-dismiss after showing success
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        showBugReport = false
+                        bugReportText = ""
+                        bugReportSubmitted = false
+                    }
+                }
+            }
+        }
+    }
+
+    /// Captures the app's main window as a compressed JPEG base64 string.
+    /// Returns nil if the window is unavailable or rendering fails.
+    private func captureScreenshot() -> String? {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first(where: { $0.isKeyWindow }) else {
+            return nil
+        }
+
+        let renderer = UIGraphicsImageRenderer(size: window.bounds.size)
+        let image = renderer.image { _ in
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: false)
+        }
+
+        // Compress to JPEG at 40% quality to stay under Firestore's 1MB doc limit
+        guard let data = image.jpegData(compressionQuality: 0.4) else { return nil }
+
+        // Cap at 500KB to be safe with Firestore document size limits
+        guard data.count < 500_000 else {
+            // Re-compress at lower quality
+            guard let smallerData = image.jpegData(compressionQuality: 0.2) else { return nil }
+            guard smallerData.count < 500_000 else { return nil }
+            return smallerData.base64EncodedString()
+        }
+
+        return data.base64EncodedString()
+    }
+
+    /// Gathers every health metric currently stored — today's snapshot,
+    /// engine outputs, goals, streak, and display state — so the team
+    /// can see exactly what the user saw when they filed the report.
+    private func collectHealthMetrics() -> [String: Any] {
+        var metrics: [String: Any] = [:]
+
+        let history = localStore.loadHistory()
+
+        // Today's raw HealthKit snapshot
+        if let today = history.last {
+            let s = today.snapshot
+            var snapshot: [String: Any] = [
+                "date": ISO8601DateFormatter().string(from: s.date),
+                "zoneMinutes": s.zoneMinutes
+            ]
+            if let v = s.restingHeartRate { snapshot["restingHeartRate_bpm"] = v }
+            if let v = s.hrvSDNN { snapshot["hrvSDNN_ms"] = v }
+            if let v = s.recoveryHR1m { snapshot["recoveryHR1m_bpm"] = v }
+            if let v = s.recoveryHR2m { snapshot["recoveryHR2m_bpm"] = v }
+            if let v = s.vo2Max { snapshot["vo2Max_mlkgmin"] = v }
+            if let v = s.steps { snapshot["steps"] = v }
+            if let v = s.walkMinutes { snapshot["walkMinutes"] = v }
+            if let v = s.workoutMinutes { snapshot["workoutMinutes"] = v }
+            if let v = s.sleepHours { snapshot["sleepHours"] = v }
+            if let v = s.bodyMassKg { snapshot["bodyMassKg"] = v }
+            if let v = s.heightM { snapshot["heightM"] = v }
+            metrics["todaySnapshot"] = snapshot
+
+            // Assessment (engine output)
+            if let a = today.assessment {
+                var assessment: [String: Any] = [
+                    "statusRaw": a.status.rawValue,
+                    "nudgeCategory": a.dailyNudge.category.rawValue,
+                    "nudgeTitle": a.dailyNudge.title,
+                    "nudgeDescription": a.dailyNudge.description,
+                    "anomalyScore": a.anomalyScore,
+                    "confidence": a.confidence.rawValue,
+                    "explanation": a.explanation
+                ]
+                if let score = a.cardioScore {
+                    assessment["cardioScore"] = score
+                }
+                metrics["assessment"] = assessment
+            }
+        }
+
+        // User profile context
+        let profile = localStore.profile
+        metrics["streakDays"] = profile.streakDays
+        metrics["onboardingComplete"] = profile.onboardingComplete
+
+        // Recent history summary (last 7 days of key metrics)
+        let recentDays = history.suffix(7)
+        var historyArray: [[String: Any]] = []
+        for stored in recentDays {
+            var day: [String: Any] = [
+                "date": ISO8601DateFormatter().string(from: stored.snapshot.date)
+            ]
+            if let v = stored.snapshot.restingHeartRate { day["rhr"] = v }
+            if let v = stored.snapshot.hrvSDNN { day["hrv"] = v }
+            if let v = stored.snapshot.sleepHours { day["sleep"] = v }
+            if let v = stored.snapshot.steps { day["steps"] = v }
+            if let v = stored.snapshot.walkMinutes { day["walkMin"] = v }
+            if let v = stored.snapshot.workoutMinutes { day["workoutMin"] = v }
+            if let a = stored.assessment {
+                day["status"] = a.status.rawValue
+            }
+            historyArray.append(day)
+        }
+        if !historyArray.isEmpty {
+            metrics["recentHistory_7d"] = historyArray
+        }
+
+        // Active screen state
+        metrics["currentTab"] = "Settings"
+        metrics["designVariantB"] = UserDefaults.standard.bool(forKey: "thump_design_variant_b")
+        metrics["anomalyAlertsEnabled"] = anomalyAlertsEnabled
+        metrics["nudgeRemindersEnabled"] = nudgeRemindersEnabled
+        metrics["telemetryConsent"] = telemetryConsent
+
+        // Engine outputs and all UI display strings (written by DashboardViewModel)
+        let diag = localStore.diagnosticSnapshot
+        if !diag.isEmpty {
+            metrics["uiDisplayState"] = diag
+        }
+
+        return metrics
     }
 
     // MARK: - Feature Request Sheet
@@ -597,21 +733,13 @@ struct SettingsView: View {
         }
     }
 
-    /// Submits a feature request to Firestore and auto-dismisses.
+    /// Submits a feature request to Firestore.
     private func submitFeatureRequest() {
         FeedbackService.shared.submitFeatureRequest(
             description: featureRequestText,
             appVersion: appVersion
         )
         featureRequestSubmitted = true
-
-        // Auto-dismiss after 2 seconds so user sees confirmation
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
-            showFeatureRequest = false
-            featureRequestText = ""
-            featureRequestSubmitted = false
-        }
     }
 
     // MARK: - Data Section

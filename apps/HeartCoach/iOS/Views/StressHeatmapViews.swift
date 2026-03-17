@@ -307,7 +307,7 @@ extension StressView {
                 .font(.title2)
                 .foregroundStyle(.secondary)
 
-            Text("Need 3+ days of data for this view")
+            Text("Wear your watch today to see stress data here")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

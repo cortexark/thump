@@ -3,13 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "hydrate",
+    "intensity",
     "moderate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "hydrate",
   "nudgeTitle" : "Keep That Water Bottle Handy",
   "readinessLevel" : "ready",
-  "readinessScore" : 67,
+  "readinessScore" : 66,
   "regressionFlag" : true,
   "stressFlag" : false
 }

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 198 242" width="198" height="242">
+  <defs>
+    <clipPath id="watchClipN">
+      <rect width="198" height="242" rx="39" ry="39"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#watchClipN)">
+    <!-- Background -->
+    <rect width="198" height="242" fill="#000000" rx="39" ry="39"/>
+
+    <!-- Category icon circle -->
+    <circle cx="99" cy="46" r="26" fill="rgba(139,92,246,0.25)"/>
+    <text x="99" y="54" text-anchor="middle" font-size="24">&#x1F634;</text>
+
+    <!-- Title -->
+    <text x="99" y="92" text-anchor="middle" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="16" font-weight="700">Time to Rest</text>
+
+    <!-- Description -->
+    <text x="99" y="112" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">
+      <tspan x="99" dy="0">Your recovery score is low.</tspan>
+      <tspan x="99" dy="14">Take 15 minutes to sit</tspan>
+      <tspan x="99" dy="14">quietly or meditate.</tspan>
+    </text>
+
+    <!-- Duration badge -->
+    <rect x="68" y="150" width="62" height="20" rx="10" fill="rgba(255,255,255,0.1)"/>
+    <text x="82" y="164" font-size="10">&#x1F550;</text>
+    <text x="94" y="164" fill="rgba(255,255,255,0.7)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">15 min</text>
+
+    <!-- Mark Complete button -->
+    <rect x="20" y="180" width="158" height="32" rx="16" fill="#22C55E"/>
+    <text x="92" y="196" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="10" font-weight="600">&#x2713;</text>
+    <text x="105" y="200" text-anchor="middle" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="12" font-weight="600">Mark Complete</text>
+
+    <!-- Give Feedback link -->
+    <text x="99" y="226" text-anchor="middle" fill="#3B82F6" font-family="-apple-system, SF Pro, Helvetica" font-size="10">&#x1F4AC; Give Feedback</text>
+
+    <!-- Click annotations -->
+    <text x="178" y="196" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="5" font-style="italic" text-anchor="end">&#x2192; Completion Animation</text>
+    <text x="178" y="228" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="5" font-style="italic" text-anchor="end">&#x2192; Feedback View</text>
+  </g>
+</svg>

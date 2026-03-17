@@ -192,3 +192,81 @@ Three major deliverables completed:
 - `Tests/LegalGateTests.swift` — test isolation fix (TEST-001)
 - `Tests/ReadinessEngineTests.swift` — updated for activity balance fallback
 - `Tests/EngineTimeSeries/ReadinessEngineTimeSeriesTests.swift` — updated for activity balance fallback
+
+---
+
+# Session 3 — 2026-03-16 (Real Device Testing)
+
+## Summary
+
+8 bugs found and fixed during real device testing and LLM judge text quality review. All P0 severity.
+
+## Bug Fixes
+
+| Bug ID | Description | File(s) |
+|---|---|---|
+| BUG-064 | Pull-to-refresh crashes with "Something went wrong" — 13 HealthKit query error handlers changed from throwing to graceful defaults | `HealthKitService.swift` (13 locations) |
+| BUG-065 | "Heart is getting stronger this week" — FDA cardiac efficiency claim | `DashboardView+Recovery.swift` |
+| BUG-066 | Recovery narrative contradicts sleep assessment — "Short on sleep" + "Recovery is on track" on same card | `DashboardView+Recovery.swift` |
+| BUG-067 | "Steady" recovery badge when readiness is Recovering (2.2h sleep) | `DashboardView+Recovery.swift` |
+| BUG-068 | Activity data mismatch — Thump Check shows zone score "63" while Daily Goals shows "10 min" | `DashboardView+ThumpCheck.swift` |
+| BUG-069 | Bug report opens Mail app, yanking user out of Thump | `SettingsView.swift` |
+| BUG-070 | Bug report sends no health metrics — team cannot reproduce | `FeedbackService.swift`, `SettingsView.swift` |
+| BUG-071 | Bug report sheet doesn't close after submission | `SettingsView.swift` |
+
+## Bug Report Feature Overhaul (BUG-069/070/071)
+
+Transformed from a text-only mailto submission into a comprehensive diagnostic tool:
+- Uploads to Firebase Firestore with full health metrics payload
+- Includes today's HealthKit snapshot (RHR, HRV, recovery, VO2, steps, sleep, etc.)
+- Includes all engine outputs via `LocalStore.diagnosticSnapshot` (readiness, stress, bio age, coaching, zone analysis, buddy recommendations — every text string the user sees)
+- Includes 7-day history, user profile, app state settings
+- Auto-dismisses sheet 1.5s after successful upload with success message
+- Disables Send button after first tap to prevent duplicates
+
+## Infrastructure Added
+
+- `LocalStore.diagnosticSnapshot: [String: Any]` — in-memory dictionary for engine output diagnostics
+- `DashboardViewModel.writeDiagnosticSnapshot()` — captures all engine outputs as display strings after each refresh
+- `FeedbackService.submitBugReport()` — updated to accept healthMetrics payload and completion handler
+
+## IAP/Entitlements
+
+- Disabled In-App Purchase and Sign in with Apple capabilities for personal dev team builds (TODO-002)
+- Documented re-enablement steps for production release (TODO-001)
+
+---
+
+# Session 4 — 2026-03-17 (Diagnostic Enhancement)
+
+## Summary
+
+QAE defect management assessment identified 3 diagnostic gaps in the bug report data collection. All 3 gaps closed. 1 additional bug fixed (stress heatmap).
+
+## Bug Fixes
+
+| Bug ID | Description | File(s) |
+|---|---|---|
+| BUG-072 | Stress Day heatmap shows "Need 3+ days" even with HRV data — baseline fallback to today's HRV | `StressEngine.swift`, `StressHeatmapViews.swift` |
+
+## Diagnostic Enhancements
+
+| Enhancement | Description | File(s) |
+|---|---|---|
+| ENH-001 | HealthKit query warnings collector — explains why metrics are nil | `HealthKitService.swift`, `HealthDataProviding.swift`, `DashboardViewModel.swift` |
+| ENH-002 | Stress hourly data availability — heatmap debugging | `DashboardViewModel.swift` |
+| ENH-003 | Optional screenshot capture in bug reports | `SettingsView.swift` |
+
+## QAE Assessment Result
+
+Bug report data collection coverage: **85% → 95%** of documented bug types diagnosable.
+
+| Data Gap | Before | After |
+|---|---|---|
+| Why metrics are nil (auth? error? no data?) | Not collected | `healthKitQueryWarnings` array with error messages |
+| Stress heatmap empty state reason | Not collected | `stressHourlyPointCount` + `stressHourlyEmptyReason` |
+| Visual rendering issues | Not collected | Optional JPEG screenshot (base64, <500KB) |
+
+## Build Status
+
+BUILD SUCCEEDED — iPhone 17 Pro simulator, 2026-03-17

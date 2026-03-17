@@ -1,0 +1,298 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="393" height="2150" viewBox="0 0 393 2150">
+  <defs>
+    <style>
+      text { font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif; }
+    </style>
+    <g id="toggleOn">
+      <rect x="0" y="0" width="51" height="31" rx="15.5" fill="#EC4899"/>
+      <circle cx="35" cy="15.5" r="13.5" fill="white"/>
+    </g>
+    <g id="toggleOff">
+      <rect x="0" y="0" width="51" height="31" rx="15.5" fill="#E5E5EA"/>
+      <circle cx="16" cy="15.5" r="13.5" fill="white"/>
+    </g>
+    <g id="chevron">
+      <path d="M0 0 L6 7 L0 14" stroke="#C7C7CC" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </defs>
+
+  <!-- Background -->
+  <rect width="393" height="2150" fill="#F2F2F7"/>
+
+  <!-- ==================== STATUS BAR ==================== -->
+  <text x="32" y="36" font-size="15" font-weight="600" fill="#000">9:41</text>
+  <g transform="translate(310, 20)">
+    <rect x="0" y="8" width="3" height="4" rx="0.5" fill="#000"/>
+    <rect x="5" y="5" width="3" height="7" rx="0.5" fill="#000"/>
+    <rect x="10" y="2" width="3" height="10" rx="0.5" fill="#000"/>
+    <rect x="15" y="0" width="3" height="12" rx="0.5" fill="#000"/>
+  </g>
+  <g transform="translate(338, 20)">
+    <path d="M6 10 A1 1 0 1 1 6.01 10" fill="#000"/>
+    <path d="M2.5 7 Q6 3.5 9.5 7" stroke="#000" stroke-width="1.2" fill="none"/>
+    <path d="M-0.5 4 Q6 -1 12.5 4" stroke="#000" stroke-width="1.2" fill="none"/>
+  </g>
+  <g transform="translate(356, 22)">
+    <rect x="0" y="0" width="25" height="11" rx="2.5" stroke="#000" stroke-width="1" fill="none"/>
+    <rect x="2" y="2" width="19" height="7" rx="1" fill="#000"/>
+    <rect x="25" y="3" width="2" height="5" rx="1" fill="#000"/>
+  </g>
+
+  <!-- ==================== LARGE TITLE ==================== -->
+  <text x="20" y="100" font-size="34" font-weight="700" fill="#000">Settings</text>
+
+  <!-- ==================== SECTION 1: PROFILE ==================== -->
+  <g transform="translate(16, 120)">
+    <rect width="361" height="208" rx="12" fill="white"/>
+
+    <!-- Row 1: Avatar + Name -->
+    <g transform="translate(16, 12)">
+      <circle cx="25" cy="25" r="25" fill="rgba(236,72,153,0.15)"/>
+      <g transform="translate(12, 12)">
+        <circle cx="13" cy="8" r="6" stroke="#EC4899" stroke-width="1.5" fill="none"/>
+        <path d="M3 24 Q3 16 13 16 Q23 16 23 24" stroke="#EC4899" stroke-width="1.5" fill="none"/>
+      </g>
+      <text x="62" y="21" font-size="17" font-weight="600" fill="#000">Thump User</text>
+      <text x="62" y="40" font-size="13" fill="#8E8E93">Joined Mar 2026</text>
+    </g>
+
+    <line x1="16" y1="64" x2="345" y2="64" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Row 2: Streak -->
+    <text x="16" y="92" font-size="17" fill="#000">Current Streak: 3 days</text>
+    <text x="330" y="92" font-size="17">&#x1F525;</text>
+
+    <line x1="16" y1="110" x2="345" y2="110" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Row 3: Date of Birth -->
+    <text x="16" y="140" font-size="17" fill="#000">Date of Birth</text>
+    <rect x="240" y="122" width="105" height="28" rx="6" fill="#F2F2F7"/>
+    <text x="252" y="141" font-size="15" fill="#007AFF">Jan 1, 1990</text>
+
+    <line x1="16" y1="158" x2="345" y2="158" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Row 4: Biological Sex -->
+    <text x="16" y="188" font-size="17" fill="#000">Biological Sex</text>
+    <text x="300" y="188" font-size="17" fill="#8E8E93">Male</text>
+    <use href="#chevron" x="339" y="178"/>
+  </g>
+
+  <!-- ==================== SECTION 2: SUBSCRIPTION ==================== -->
+  <g transform="translate(16, 363)">
+    <rect width="361" height="72" rx="12" fill="white"/>
+    <g transform="translate(16, 16)">
+      <rect width="100" height="24" rx="12" fill="rgba(52,199,89,0.12)"/>
+      <text x="12" y="17" font-size="13" font-weight="600" fill="#34C759">Coach (Free)</text>
+      <text x="115" y="17" font-size="15" fill="#8E8E93">341 days remaining</text>
+    </g>
+    <text x="16" y="58" font-size="13" fill="#8E8E93">All features unlocked for your first year</text>
+  </g>
+
+  <!-- ==================== SECTION 3: FEEDBACK PREFERENCES ==================== -->
+  <text x="36" y="470" font-size="12" fill="#6D6D72" letter-spacing="0.5">FEEDBACK PREFERENCES</text>
+
+  <g transform="translate(16, 480)">
+    <rect width="361" height="224" rx="12" fill="white"/>
+
+    <text x="16" y="32" font-size="17" fill="#000">Buddy Suggestions</text>
+    <use href="#toggleOn" x="294" y="12"/>
+    <line x1="16" y1="44" x2="345" y2="44" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <text x="16" y="76" font-size="17" fill="#000">Daily Check-In</text>
+    <use href="#toggleOn" x="294" y="56"/>
+    <line x1="16" y1="88" x2="345" y2="88" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <text x="16" y="120" font-size="17" fill="#000">Stress Insights</text>
+    <use href="#toggleOn" x="294" y="100"/>
+    <line x1="16" y1="132" x2="345" y2="132" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <text x="16" y="164" font-size="17" fill="#000">Weekly Trends</text>
+    <use href="#toggleOn" x="294" y="144"/>
+    <line x1="16" y1="176" x2="345" y2="176" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <text x="16" y="208" font-size="17" fill="#000">Streak Badge</text>
+    <use href="#toggleOn" x="294" y="188"/>
+  </g>
+
+  <!-- ==================== SECTION 4: NOTIFICATIONS ==================== -->
+  <text x="36" y="739" font-size="12" fill="#6D6D72" letter-spacing="0.5">NOTIFICATIONS</text>
+
+  <g transform="translate(16, 749)">
+    <rect width="361" height="88" rx="12" fill="white"/>
+
+    <text x="16" y="32" font-size="17" fill="#000">&#x26A0;&#xFE0F; Unusual Pattern Alerts</text>
+    <use href="#toggleOn" x="294" y="12"/>
+    <line x1="16" y1="44" x2="345" y2="44" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <text x="16" y="76" font-size="17" fill="#000">&#x1F514; Nudge Reminders</text>
+    <use href="#toggleOn" x="294" y="56"/>
+  </g>
+
+  <!-- ==================== SECTION 5: ANALYTICS ==================== -->
+  <text x="36" y="872" font-size="12" fill="#6D6D72" letter-spacing="0.5">ANALYTICS</text>
+
+  <g transform="translate(16, 882)">
+    <rect width="361" height="44" rx="12" fill="white"/>
+    <text x="16" y="30" font-size="17" fill="#000">&#x1F4CA; Share Engine Insights</text>
+    <use href="#toggleOff" x="294" y="7"/>
+  </g>
+
+  <!-- ==================== SECTION 6: BUG REPORTS ==================== -->
+  <g transform="translate(16, 961)">
+    <rect width="361" height="88" rx="12" fill="white"/>
+
+    <text x="16" y="32" font-size="17" fill="#000">&#x1F41B; Report a Bug</text>
+    <use href="#chevron" x="339" y="22"/>
+    <line x1="16" y1="44" x2="345" y2="44" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <text x="16" y="76" font-size="17" fill="#000">&#x2728; Send Feature Request</text>
+    <use href="#chevron" x="339" y="66"/>
+  </g>
+
+  <!-- Annotation: Report a Bug -->
+  <line x1="377" y1="983" x2="393" y2="983" stroke="#EC4899" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="250" y="960" font-size="10" fill="#EC4899" font-style="italic">&#x2192; Bug Report Sheet</text>
+
+  <!-- ==================== SECTION 7: DATA ==================== -->
+  <g transform="translate(16, 1084)">
+    <rect width="361" height="88" rx="12" fill="white"/>
+
+    <text x="16" y="32" font-size="17" fill="#000">&#x1F4E4; Export Health Data</text>
+    <use href="#chevron" x="339" y="22"/>
+    <line x1="16" y1="44" x2="345" y2="44" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <text x="16" y="76" font-size="17" fill="#000">&#x1F41E; Export Debug Trace</text>
+    <use href="#chevron" x="339" y="66"/>
+  </g>
+
+  <!-- Annotation: Export Health Data -->
+  <text x="270" y="1083" font-size="10" fill="#EC4899" font-style="italic">&#x2192; CSV Export</text>
+
+  <!-- ==================== SECTION 8: ABOUT ==================== -->
+  <g transform="translate(16, 1207)">
+    <rect width="361" height="220" rx="12" fill="white"/>
+
+    <!-- Version -->
+    <text x="16" y="32" font-size="17" fill="#000">Version</text>
+    <text x="290" y="32" font-size="17" fill="#8E8E93">1.0 (1)</text>
+    <line x1="16" y1="44" x2="345" y2="44" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Description -->
+    <text x="16" y="72" font-size="15" fill="#8E8E93">Heart wellness tracking</text>
+    <line x1="16" y1="88" x2="345" y2="88" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Terms -->
+    <text x="16" y="116" font-size="17" fill="#000">&#x1F4C4; Terms of Service</text>
+    <use href="#chevron" x="339" y="106"/>
+    <line x1="16" y1="132" x2="345" y2="132" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Privacy -->
+    <text x="16" y="160" font-size="17" fill="#000">&#x270B; Privacy Policy</text>
+    <use href="#chevron" x="339" y="150"/>
+    <line x1="16" y1="176" x2="345" y2="176" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Help -->
+    <text x="16" y="204" font-size="17" fill="#000">&#x2753; Help &amp; Support</text>
+    <use href="#chevron" x="339" y="194"/>
+  </g>
+
+  <!-- Annotation: Terms/Privacy/Help -->
+  <text x="240" y="1370" font-size="10" fill="#EC4899" font-style="italic">&#x2192; In-app Browser</text>
+
+  <!-- ==================== SECTION 9: DISCLAIMERS ==================== -->
+  <text x="36" y="1470" font-size="12" fill="#6D6D72" letter-spacing="0.5">DISCLAIMERS</text>
+
+  <!-- Disclaimer 1: Not a Medical Device (Orange) -->
+  <g transform="translate(16, 1480)">
+    <rect width="361" height="80" rx="12" fill="white"/>
+    <rect x="0" y="0" width="4" height="80" rx="2" fill="#F97316"/>
+    <text x="20" y="28" font-size="15" fill="#000">&#x2764;&#xFE0F;</text>
+    <text x="44" y="28" font-size="15" font-weight="600" fill="#000">Not a Medical Device</text>
+    <text x="44" y="50" font-size="13" fill="#8E8E93">Thump provides wellness insights only. It is not</text>
+    <text x="44" y="66" font-size="13" fill="#8E8E93">intended to diagnose or treat medical conditions.</text>
+  </g>
+
+  <!-- Disclaimer 2: Data Accuracy (Pink) -->
+  <g transform="translate(16, 1575)">
+    <rect width="361" height="80" rx="12" fill="white"/>
+    <rect x="0" y="0" width="4" height="80" rx="2" fill="#EC4899"/>
+    <text x="20" y="28" font-size="15" fill="#000">&#x1F4C8;</text>
+    <text x="44" y="28" font-size="15" font-weight="600" fill="#000">Data Accuracy</text>
+    <text x="44" y="50" font-size="13" fill="#8E8E93">Readings may vary based on sensor placement,</text>
+    <text x="44" y="66" font-size="13" fill="#8E8E93">motion, and environmental conditions.</text>
+  </g>
+
+  <!-- Disclaimer 3: Consult a Professional (Blue) -->
+  <g transform="translate(16, 1670)">
+    <rect width="361" height="80" rx="12" fill="white"/>
+    <rect x="0" y="0" width="4" height="80" rx="2" fill="#007AFF"/>
+    <text x="20" y="28" font-size="15" fill="#000">&#x1FA7A;</text>
+    <text x="44" y="28" font-size="15" font-weight="600" fill="#000">Consult a Professional</text>
+    <text x="44" y="50" font-size="13" fill="#8E8E93">Always consult your doctor before making</text>
+    <text x="44" y="66" font-size="13" fill="#8E8E93">health decisions based on wellness data.</text>
+  </g>
+
+  <!-- Disclaimer 4: Emergencies (Red) -->
+  <g transform="translate(16, 1765)">
+    <rect width="361" height="80" rx="12" fill="white"/>
+    <rect x="0" y="0" width="4" height="80" rx="2" fill="#FF3B30"/>
+    <text x="20" y="28" font-size="15" fill="#000">&#x1F4DE;</text>
+    <text x="44" y="28" font-size="15" font-weight="600" fill="#000">Emergencies</text>
+    <text x="44" y="50" font-size="13" fill="#8E8E93">Call 911 for emergencies. Thump is not an</text>
+    <text x="44" y="66" font-size="13" fill="#8E8E93">emergency response tool.</text>
+  </g>
+
+  <!-- Disclaimer 5: Data on Device (Green) -->
+  <g transform="translate(16, 1860)">
+    <rect width="361" height="80" rx="12" fill="white"/>
+    <rect x="0" y="0" width="4" height="80" rx="2" fill="#34C759"/>
+    <text x="20" y="28" font-size="15" fill="#000">&#x1F512;</text>
+    <text x="44" y="28" font-size="15" font-weight="600" fill="#000">Your Data Stays on Device</text>
+    <text x="44" y="50" font-size="13" fill="#8E8E93">All health data is processed locally on your</text>
+    <text x="44" y="66" font-size="13" fill="#8E8E93">device. Nothing is sent to external servers.</text>
+  </g>
+
+  <!-- ==================== TAB BAR (fixed at bottom of viewport) ==================== -->
+  <!-- Visual note: In a real scroll, this would be fixed. Placing at 1200px viewport bottom conceptually. -->
+  <g transform="translate(0, 2060)">
+    <rect width="393" height="90" fill="white"/>
+    <line x1="0" y1="0" x2="393" y2="0" stroke="#E5E5EA" stroke-width="0.5"/>
+
+    <!-- Home -->
+    <g transform="translate(20, 12)">
+      <rect x="8" y="2" width="20" height="16" rx="2" stroke="#8E8E93" stroke-width="1.5" fill="none"/>
+      <line x1="8" y1="8" x2="28" y2="8" stroke="#8E8E93" stroke-width="1"/>
+      <text x="18" y="36" font-size="10" fill="#8E8E93" text-anchor="middle">Home</text>
+    </g>
+
+    <!-- Insights -->
+    <g transform="translate(95, 12)">
+      <circle cx="18" cy="10" r="9" stroke="#8E8E93" stroke-width="1.5" fill="none"/>
+      <path d="M12 10 L16 14 L24 6" stroke="#8E8E93" stroke-width="1.5" fill="none"/>
+      <text x="18" y="36" font-size="10" fill="#8E8E93" text-anchor="middle">Insights</text>
+    </g>
+
+    <!-- Stress -->
+    <g transform="translate(170, 12)">
+      <path d="M18 4 C18 4 8 8 8 15 C8 20 12 22 18 22 C24 22 28 20 28 15 C28 8 18 4 18 4Z" stroke="#8E8E93" stroke-width="1.5" fill="none"/>
+      <text x="18" y="36" font-size="10" fill="#8E8E93" text-anchor="middle">Stress</text>
+    </g>
+
+    <!-- Trends -->
+    <g transform="translate(245, 12)">
+      <polyline points="6,18 14,10 20,14 30,4" stroke="#8E8E93" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <text x="18" y="36" font-size="10" fill="#8E8E93" text-anchor="middle">Trends</text>
+    </g>
+
+    <!-- Settings (SELECTED) -->
+    <g transform="translate(320, 12)">
+      <circle cx="18" cy="10" r="8" stroke="#EC4899" stroke-width="1.5" fill="none"/>
+      <circle cx="18" cy="10" r="2" fill="#EC4899"/>
+      <line x1="18" y1="2" x2="18" y2="0" stroke="#EC4899" stroke-width="1.5"/>
+      <line x1="18" y1="18" x2="18" y2="20" stroke="#EC4899" stroke-width="1.5"/>
+      <line x1="10" y1="10" x2="8" y2="10" stroke="#EC4899" stroke-width="1.5"/>
+      <line x1="26" y1="10" x2="28" y2="10" stroke="#EC4899" stroke-width="1.5"/>
+      <text x="18" y="36" font-size="10" fill="#EC4899" font-weight="600" text-anchor="middle">Settings</text>
+    </g>
+  </g>
+</svg>

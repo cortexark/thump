@@ -3,9 +3,10 @@
   "confidence" : "low",
   "multiNudgeCategories" : [
     "walk",
+    "intensity",
     "hydrate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
   "nudgeTitle" : "You Might Enjoy a Post-Meal Walk",
   "readinessLevel" : "ready",

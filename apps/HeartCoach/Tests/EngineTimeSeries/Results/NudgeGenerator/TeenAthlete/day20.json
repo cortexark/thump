@@ -3,14 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "walk",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
   "nudgeTitle" : "How About Some Easy Movement Today?",
   "readinessLevel" : "primed",
-  "readinessScore" : 83,
+  "readinessScore" : 81,
   "regressionFlag" : true,
   "stressFlag" : false
 }

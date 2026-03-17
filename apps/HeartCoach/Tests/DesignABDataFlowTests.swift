@@ -148,6 +148,7 @@ final class MetricImpactLabelTests: XCTestCase {
         case .celebrate:    return "Keep it up!"
         case .seekGuidance: return "Protect your heart health"
         case .sunlight:     return "Supports circadian rhythm"
+        case .intensity:    return "Builds cardiovascular fitness"
         }
     }
 
@@ -382,6 +383,7 @@ final class NudgeCategoryDisplayTests: XCTestCase {
         case .celebrate:    return "yellow"
         case .seekGuidance: return "red"
         case .sunlight:     return "orange"
+        case .intensity:    return "pink"
         }
     }
 }

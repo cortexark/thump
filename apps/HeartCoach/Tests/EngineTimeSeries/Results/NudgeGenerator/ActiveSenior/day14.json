@@ -3,9 +3,10 @@
   "confidence" : "medium",
   "multiNudgeCategories" : [
     "walk",
+    "intensity",
     "hydrate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
   "nudgeTitle" : "Keep That Walking Groove Going",
   "readinessLevel" : "primed",

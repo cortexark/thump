@@ -3,8 +3,8 @@
   "confidence" : "medium",
   "multiNudgeCategories" : [
     "walk",
-    "hydrate",
-    "celebrate"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",

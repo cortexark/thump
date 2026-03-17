@@ -105,22 +105,14 @@ final class StressViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    /// Notification service for scheduling bedtime/rest reminders.
-    private var notificationService: NotificationService
-
-    /// Whether a bedtime reminder was just scheduled (for UI confirmation).
-    @Published var didScheduleBedtimeReminder: Bool = false
-
     init(
         healthKitService: HealthKitService = HealthKitService(),
         engine: StressEngine = StressEngine(),
-        scheduler: SmartNudgeScheduler = SmartNudgeScheduler(),
-        notificationService: NotificationService = NotificationService()
+        scheduler: SmartNudgeScheduler = SmartNudgeScheduler()
     ) {
         self.healthKitService = healthKitService
         self.engine = engine
         self.scheduler = scheduler
-        self.notificationService = notificationService
 
         // Listen for readiness updates from DashboardViewModel
         // so the conflict guard stays in sync across tabs
@@ -158,7 +150,7 @@ final class StressViewModel: ObservableObject {
             }
 
             let fetchDays = selectedRange.days + engine.baselineWindow + 7
-            let snapshots: [HeartSnapshot]
+            var snapshots: [HeartSnapshot]
             do {
                 snapshots = try await healthKitService.fetchHistory(
                     days: fetchDays
@@ -173,6 +165,14 @@ final class StressViewModel: ObservableObject {
                 return
                 #endif
             }
+
+            // Simulator fallback: if all snapshots have nil HRV (no real HealthKit data), use mock data
+            #if targetEnvironment(simulator)
+            let hasRealData = snapshots.contains(where: { $0.hrvSDNN != nil })
+            if !hasRealData {
+                snapshots = MockData.mockHistory(days: fetchDays)
+            }
+            #endif
 
             history = snapshots
             computeStressMetrics()
@@ -216,66 +216,20 @@ final class StressViewModel: ObservableObject {
             showWalkSuggestion()
 
         case .morningCheckIn:
-            // Dismiss the card
+            // Dismiss the card from both primary action and list
+            smartActions.removeAll { if case .morningCheckIn = $0 { return true } else { return false } }
             smartAction = .standardNudge
 
-        case .bedtimeWindDown(let nudge):
-            // Schedule a bedtime reminder notification — the card says "be in bed by 10 PM"
-            // so the action should set a reminder, not start a breathing session
-            scheduleBedtimeReminder(nudge: nudge)
+        case .bedtimeWindDown:
+            // Acknowledge and dismiss the card from both primary action and list
             smartActions.removeAll { if case .bedtimeWindDown = $0 { return true } else { return false } }
             smartAction = .standardNudge
 
-        case .restSuggestion(let nudge):
-            // Schedule a rest reminder notification — button says "Set Reminder"
-            scheduleRestReminder(nudge: nudge)
-            smartActions.removeAll { if case .restSuggestion = $0 { return true } else { return false } }
-            smartAction = .standardNudge
+        case .restSuggestion:
+            startBreathingSession()
 
         case .standardNudge:
             break
-        }
-    }
-
-    // MARK: - Bedtime & Rest Reminders
-
-    /// Schedules a bedtime reminder notification based on sleep patterns.
-    /// Uses the learned bedtime hour from sleep patterns, or defaults to 10 PM.
-    private func scheduleBedtimeReminder(nudge: DailyNudge) {
-        let bedtimeHour: Int
-        if let pattern = sleepPatterns.first, pattern.typicalBedtimeHour > 0 {
-            // Remind 1 hour before learned bedtime
-            bedtimeHour = max(20, min(23, pattern.typicalBedtimeHour - 1))
-        } else {
-            bedtimeHour = 21  // Default: 9 PM reminder for 10 PM bedtime
-        }
-
-        Task {
-            await notificationService.scheduleNudgeReminder(nudge: nudge, at: bedtimeHour)
-        }
-
-        didScheduleBedtimeReminder = true
-        // Auto-dismiss the confirmation after 3 seconds
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(3))
-            didScheduleBedtimeReminder = false
-        }
-    }
-
-    /// Schedules a rest reminder notification for later today.
-    private func scheduleRestReminder(nudge: DailyNudge) {
-        let currentHour = Calendar.current.component(.hour, from: Date())
-        // Remind in 1 hour, capped at 10 PM
-        let reminderHour = min(currentHour + 1, 22)
-
-        Task {
-            await notificationService.scheduleNudgeReminder(nudge: nudge, at: reminderHour)
-        }
-
-        didScheduleBedtimeReminder = true
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(3))
-            didScheduleBedtimeReminder = false
         }
     }
 
@@ -339,8 +293,12 @@ final class StressViewModel: ObservableObject {
     // MARK: - Computed Properties
 
     /// Average stress score across the current trend points.
+    /// On the day view, falls back to currentStress when trend data is empty
+    /// (stressTrend requires multi-day history which isn't available for daily range).
     var averageStress: Double? {
-        guard !trendPoints.isEmpty else { return nil }
+        if trendPoints.isEmpty {
+            return currentStress?.score
+        }
         let sum = trendPoints.map(\.score).reduce(0, +)
         return sum / Double(trendPoints.count)
     }

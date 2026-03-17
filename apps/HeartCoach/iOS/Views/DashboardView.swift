@@ -58,8 +58,17 @@ struct DashboardView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar(.hidden, for: .navigationBar)
                 .task {
+                    #if targetEnvironment(simulator) && DEBUG
+                    // Simulator: use MockHealthDataProvider loaded with real Apple Watch
+                    // export data. We can't write RHR/VO2/exercise time to HealthKit
+                    // (Apple-computed read-only types), so mock is the only way to get
+                    // all metrics on simulator.
+                    let provider: any HealthDataProviding = RealUserDataLoader.makeProvider(days: 74)
+                    #else
+                    let provider: any HealthDataProviding = healthKitService
+                    #endif
                     viewModel.bind(
-                        healthDataProvider: healthKitService,
+                        healthDataProvider: provider,
                         localStore: localStore,
                         notificationService: notificationService
                     )
@@ -361,6 +370,10 @@ struct DashboardView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
+
+                            Text("Wellness estimate based on your recent trends — not a medical assessment")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
 
                             // Mini metric badges
                             HStack(spacing: 6) {

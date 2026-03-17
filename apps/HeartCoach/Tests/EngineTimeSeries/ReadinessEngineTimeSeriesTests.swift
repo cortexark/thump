@@ -477,19 +477,20 @@ final class ReadinessEngineTimeSeriesTests: XCTestCase {
         XCTAssertNotNil(result, "Edge case recoveryHR1m=0: should still produce result from other pillars")
         if let r = result {
             let recoveryPillar = r.pillars.first { $0.type == .recovery }
-            XCTAssertNil(
+            // Missing/zero recovery now gets a floor score instead of being excluded
+            XCTAssertNotNil(
                 recoveryPillar,
-                "Edge case recoveryHR1m=0: recovery pillar should be skipped when recovery is 0"
+                "Edge case recoveryHR1m=0: recovery pillar should have floor score"
             )
-            XCTAssertGreaterThanOrEqual(
-                r.pillars.count, 2,
-                "Edge case recoveryHR1m=0: should still have >= 2 pillars from sleep/stress/activity/hrv"
+            XCTAssertEqual(
+                recoveryPillar?.score, 40.0,
+                "Edge case recoveryHR1m=0: recovery floor score should be 40"
             )
         }
 
-        let passed = result != nil && result!.pillars.first(where: { $0.type == .recovery }) == nil
+        let passed = result != nil && result!.pillars.first(where: { $0.type == .recovery })?.score == 40.0
         kpi.recordEdgeCase(engine: engineName, passed: passed,
-                           reason: "recoveryHR1m=0 graceful handling")
+                           reason: "recoveryHR1m=0 graceful handling with floor score")
     }
 
     func testSleepHoursAboveOptimalNotMaxScore() {

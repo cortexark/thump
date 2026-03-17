@@ -1,0 +1,219 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="393" height="852" viewBox="0 0 393 852">
+  <defs>
+    <linearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="50%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="393" height="852" fill="#F9FAFB"/>
+
+  <!-- ============ STATUS BAR ============ -->
+  <g transform="translate(0, 0)">
+    <rect width="393" height="54" fill="#F9FAFB"/>
+    <!-- Time -->
+    <text x="33" y="36" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">9:41</text>
+    <!-- Signal bars -->
+    <g transform="translate(310, 22)">
+      <rect x="0" y="8" width="3" height="4" rx="0.5" fill="#111827"/>
+      <rect x="5" y="5" width="3" height="7" rx="0.5" fill="#111827"/>
+      <rect x="10" y="2" width="3" height="10" rx="0.5" fill="#111827"/>
+      <rect x="15" y="0" width="3" height="12" rx="0.5" fill="#111827"/>
+    </g>
+    <!-- WiFi icon (simplified) -->
+    <g transform="translate(335, 24)">
+      <path d="M0 6 Q6 -4 12 6" fill="none" stroke="#111827" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M2 4 Q6 -1 10 4" fill="none" stroke="#111827" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="6" cy="7" r="1.5" fill="#111827"/>
+    </g>
+    <!-- Battery -->
+    <g transform="translate(355, 24)">
+      <rect x="0" y="0" width="22" height="10" rx="2" fill="none" stroke="#111827" stroke-width="1"/>
+      <rect x="22" y="3" width="2" height="4" rx="1" fill="#111827"/>
+      <rect x="1.5" y="1.5" width="17" height="7" rx="1" fill="#111827"/>
+    </g>
+  </g>
+
+  <!-- ============ LARGE TITLE ============ -->
+  <text x="24" y="90" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="34" font-weight="700" fill="#111827">Insights</text>
+
+  <!-- ============ HERO CARD ============ -->
+  <g transform="translate(16, 108)">
+    <rect width="361" height="160" rx="20" fill="url(#heroGrad)"/>
+    <!-- Sparkles icon -->
+    <text x="20" y="36" font-size="18" fill="white">&#x2728;</text>
+    <!-- Headline -->
+    <text x="20" y="58" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="18" font-weight="700" fill="white">Your Focus This Week</text>
+    <!-- Subtitle badge -->
+    <rect x="20" y="66" width="96" height="20" rx="10" fill="white" opacity="0.2"/>
+    <text x="68" y="80" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="11" font-weight="500" fill="white">Worth watching</text>
+    <!-- Body text -->
+    <text x="20" y="104" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" fill="white" opacity="0.9">
+      <tspan x="20" dy="0">Your recovery and stress patterns suggest</tspan>
+      <tspan x="20" dy="16">taking extra rest this week.</tspan>
+    </text>
+    <!-- Action button -->
+    <rect x="20" y="128" width="140" height="28" rx="14" fill="white"/>
+    <text x="90" y="146" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="600" fill="#7C3AED">View Focus Plan &#x2192;</text>
+    <!-- Click annotation -->
+    <text x="175" y="146" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="10" fill="white" opacity="0.6">&#x2192; Focus Targets</text>
+  </g>
+
+  <!-- ============ FOCUS FOR THE WEEK ============ -->
+  <g transform="translate(16, 286)">
+    <!-- Section header -->
+    <text x="8" y="16" font-size="14">&#x1F3AF;</text>
+    <text x="28" y="16" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="17" font-weight="700" fill="#111827">Focus for the Week</text>
+
+    <!-- Item 1: Bedtime -->
+    <g transform="translate(0, 30)">
+      <rect width="361" height="64" rx="14" fill="white"/>
+      <rect x="12" y="18" width="28" height="28" rx="14" fill="#8B5CF6" opacity="0.15"/>
+      <text x="26" y="37" text-anchor="middle" font-size="13">&#x1F6CF;&#xFE0F;</text>
+      <text x="52" y="32" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">Bedtime by 10:30pm</text>
+      <text x="52" y="48" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">You've been sleeping late</text>
+      <!-- Badge -->
+      <rect x="285" y="24" width="60" height="22" rx="11" fill="#8B5CF6" opacity="0.12"/>
+      <text x="315" y="39" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="11" font-weight="600" fill="#8B5CF6">5.2 hrs</text>
+    </g>
+
+    <!-- Item 2: Activity -->
+    <g transform="translate(0, 102)">
+      <rect width="361" height="64" rx="14" fill="white"/>
+      <rect x="12" y="18" width="28" height="28" rx="14" fill="#3B82F6" opacity="0.15"/>
+      <text x="26" y="37" text-anchor="middle" font-size="13">&#x1F3C3;</text>
+      <text x="52" y="32" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">30 min activity</text>
+      <text x="52" y="48" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">Movement helps recovery</text>
+      <rect x="285" y="24" width="60" height="22" rx="11" fill="#3B82F6" opacity="0.12"/>
+      <text x="315" y="39" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="11" font-weight="600" fill="#3B82F6">45 min</text>
+    </g>
+
+    <!-- Item 3: Breathing -->
+    <g transform="translate(0, 174)">
+      <rect width="361" height="64" rx="14" fill="white"/>
+      <rect x="12" y="18" width="28" height="28" rx="14" fill="#0D9488" opacity="0.15"/>
+      <text x="26" y="37" text-anchor="middle" font-size="13">&#x1F9D8;</text>
+      <text x="52" y="32" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">Breathing exercises</text>
+      <text x="52" y="48" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">Stress is elevated</text>
+      <rect x="285" y="24" width="60" height="22" rx="11" fill="#0D9488" opacity="0.12"/>
+      <text x="315" y="39" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="11" font-weight="600" fill="#0D9488">0 done</text>
+    </g>
+
+    <!-- Item 4: Morning sunlight -->
+    <g transform="translate(0, 246)">
+      <rect width="361" height="64" rx="14" fill="white"/>
+      <rect x="12" y="18" width="28" height="28" rx="14" fill="#F59E0B" opacity="0.15"/>
+      <text x="26" y="37" text-anchor="middle" font-size="13">&#x2600;&#xFE0F;</text>
+      <text x="52" y="32" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">Morning sunlight</text>
+      <text x="52" y="48" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">Helps circadian rhythm</text>
+      <rect x="285" y="24" width="60" height="22" rx="11" fill="#F59E0B" opacity="0.12"/>
+      <text x="315" y="39" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="11" font-weight="600" fill="#D97706">try it</text>
+    </g>
+  </g>
+
+  <!-- ============ WEEKLY REPORT CARD ============ -->
+  <g transform="translate(16, 628)">
+    <rect width="361" height="148" rx="20" fill="white"/>
+    <!-- Header row -->
+    <text x="16" y="28" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="600" fill="#6B7280">Mar 8 -- Mar 15</text>
+    <!-- Orange badge -->
+    <rect x="230" y="14" width="115" height="22" rx="11" fill="#F59E0B" opacity="0.12"/>
+    <text x="287.5" y="29" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="11" font-weight="600" fill="#D97706">Worth Watching</text>
+    <!-- Score -->
+    <text x="16" y="58" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="28" font-weight="700" fill="#111827">35</text>
+    <text x="55" y="58" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="28" font-weight="300" fill="#D1D5DB">/ 100</text>
+    <!-- Summary -->
+    <text x="16" y="78" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">Recovery declined this week. Stress levels remain elevated.</text>
+    <!-- Nudge Completion bar -->
+    <text x="16" y="100" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" font-weight="500" fill="#6B7280">Nudge Completion</text>
+    <text x="333" y="100" text-anchor="end" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" font-weight="600" fill="#111827">20%</text>
+    <rect x="16" y="106" width="329" height="8" rx="4" fill="#F3F4F6"/>
+    <!-- 20% of 329 = 65.8 -->
+    <rect x="16" y="106" width="66" height="8" rx="4" fill="#22C55E"/>
+    <!-- Action link -->
+    <text x="16" y="134" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="600" fill="#EC4899">See your action plan &#x2192;</text>
+    <!-- Click annotation -->
+    <text x="200" y="134" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="10" fill="#D1D5DB">&#x2192; Detail View</text>
+  </g>
+
+  <!-- ============ EDUCATIONAL SECTION ============ -->
+  <g transform="translate(16, 790)">
+    <!-- Header -->
+    <text x="0" y="0" font-size="14">&#x1F4A1;</text>
+    <text x="22" y="0" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="15" font-weight="700" fill="#111827">How Activity Affects Your Numbers</text>
+    <!-- 2x2 grid of small cards -->
+    <!-- Card 1 -->
+    <rect x="0" y="12" width="173" height="44" rx="10" fill="white"/>
+    <circle cx="18" cy="34" r="6" fill="#22C55E" opacity="0.3"/>
+    <circle cx="18" cy="34" r="3" fill="#22C55E"/>
+    <text x="30" y="38" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" font-weight="500" fill="#111827">Activity &#x2192; VO2 Max</text>
+    <!-- Card 2 -->
+    <rect x="181" y="12" width="173" height="44" rx="10" fill="white"/>
+    <circle cx="199" cy="34" r="6" fill="#3B82F6" opacity="0.3"/>
+    <circle cx="199" cy="34" r="3" fill="#3B82F6"/>
+    <text x="211" y="38" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" font-weight="500" fill="#111827">Zone Training &#x2192; Recovery</text>
+    <!-- Card 3 -->
+    <rect x="0" y="62" width="173" height="44" rx="10" fill="white" visibility="hidden"/>
+    <!-- Card 4 -->
+    <rect x="181" y="62" width="173" height="44" rx="10" fill="white" visibility="hidden"/>
+  </g>
+
+  <!-- ============ TAB BAR ============ -->
+  <g transform="translate(0, 788)">
+    <rect width="393" height="64" fill="white"/>
+    <line x1="0" y1="0" x2="393" y2="0" stroke="#E5E7EB" stroke-width="0.5"/>
+
+    <!-- Home -->
+    <g transform="translate(39.3, 12)">
+      <rect x="-8" y="-2" width="16" height="14" rx="2" fill="none" stroke="#9CA3AF" stroke-width="1.5"/>
+      <path d="M-8 5 L0 -2 L8 5" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="0" y="28" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="10" fill="#9CA3AF">Home</text>
+    </g>
+
+    <!-- Insights (SELECTED) -->
+    <g transform="translate(117.9, 12)">
+      <circle cx="0" cy="4" r="7" fill="none" stroke="#EC4899" stroke-width="1.5"/>
+      <path d="M-3 4 L0 1 L3 4" fill="none" stroke="#EC4899" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="0" cy="7" r="1" fill="#EC4899"/>
+      <text x="0" y="28" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="10" font-weight="600" fill="#EC4899">Insights</text>
+    </g>
+
+    <!-- Stress -->
+    <g transform="translate(196.5, 12)">
+      <path d="M-6 4 Q-3 -4 0 4 Q3 12 6 4" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="0" y="28" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="10" fill="#9CA3AF">Stress</text>
+    </g>
+
+    <!-- Trends -->
+    <g transform="translate(275.1, 12)">
+      <path d="M-6 8 L-2 2 L2 6 L6 -2" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="0" y="28" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="10" fill="#9CA3AF">Trends</text>
+    </g>
+
+    <!-- Settings -->
+    <g transform="translate(353.7, 12)">
+      <circle cx="0" cy="4" r="6" fill="none" stroke="#9CA3AF" stroke-width="1.5"/>
+      <circle cx="0" cy="4" r="2" fill="none" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="0" y="28" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="10" fill="#9CA3AF">Settings</text>
+    </g>
+  </g>
+
+  <!-- Educational cards row 2 (positioned above tab bar) -->
+  <g transform="translate(16, 790)">
+    <!-- Card 3 -->
+    <rect x="0" y="-44" width="173" height="44" rx="10" fill="white"/>
+    <circle cx="18" cy="-22" r="6" fill="#8B5CF6" opacity="0.3"/>
+    <circle cx="18" cy="-22" r="3" fill="#8B5CF6"/>
+    <text x="30" y="-18" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" font-weight="500" fill="#111827">Sleep &#x2192; HRV</text>
+    <!-- Card 4 -->
+    <rect x="181" y="-44" width="173" height="44" rx="10" fill="white"/>
+    <circle cx="199" cy="-22" r="6" fill="#F59E0B" opacity="0.3"/>
+    <circle cx="199" cy="-22" r="3" fill="#F59E0B"/>
+    <text x="211" y="-18" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" font-weight="500" fill="#111827">Stress &#x2192; Resting HR</text>
+  </g>
+
+  <!-- Home indicator -->
+  <rect x="140" y="840" width="113" height="5" rx="2.5" fill="#111827"/>
+</svg>
