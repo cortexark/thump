@@ -231,8 +231,9 @@ public struct NudgeGenerator: Sendable {
             // Normal secondary nudge logic when readiness is fine
 
             // Sleep signal: too little or too much sleep
+            let sleepPolicy = ConfigService.activePolicy.view
             if let sleep = current.sleepHours {
-                if sleep < 6.5 {
+                if sleep < sleepPolicy.lowSleepNudgeHours {
                     addIfNew(DailyNudge(
                         category: .rest,
                         title: "Catch Up on Sleep",
@@ -241,7 +242,7 @@ public struct NudgeGenerator: Sendable {
                         durationMinutes: nil,
                         icon: "bed.double.fill"
                     ))
-                } else if sleep > 9.5 {
+                } else if sleep > sleepPolicy.longSleepNudgeHours {
                     addIfNew(DailyNudge(
                         category: .walk,
                         title: "Get Some Fresh Air",

@@ -24,16 +24,22 @@ public struct ReadinessEngine: Sendable {
 
     // MARK: - Configuration
 
-    /// Pillar weights (sum to 1.0).
-    private let pillarWeights: [ReadinessPillarType: Double] = [
-        .sleep: 0.25,
-        .recovery: 0.25,
-        .stress: 0.20,
-        .activityBalance: 0.15,
-        .hrvTrend: 0.15
-    ]
+    private let config: HealthPolicyConfig.SleepReadiness
 
-    public init() {}
+    /// Pillar weights (sum to 1.0).
+    private var pillarWeights: [ReadinessPillarType: Double] {
+        [
+            .sleep: config.pillarWeights["sleep", default: 0.25],
+            .recovery: config.pillarWeights["recovery", default: 0.25],
+            .stress: config.pillarWeights["stress", default: 0.20],
+            .activityBalance: config.pillarWeights["activityBalance", default: 0.15],
+            .hrvTrend: config.pillarWeights["hrvTrend", default: 0.15]
+        ]
+    }
+
+    public init(config: HealthPolicyConfig.SleepReadiness = ConfigService.activePolicy.sleepReadiness) {
+        self.config = config
+    }
 
     // MARK: - Public API
 
@@ -68,7 +74,7 @@ public struct ReadinessEngine: Sendable {
         } else {
             pillars.append(ReadinessPillar(
                 type: .sleep,
-                score: 40.0,
+                score: config.missingDataFloorScore,
                 weight: pillarWeights[.sleep, default: 0.25],
                 detail: "No sleep data — we're working with limited info today"
             ))
@@ -81,7 +87,7 @@ public struct ReadinessEngine: Sendable {
         } else {
             pillars.append(ReadinessPillar(
                 type: .recovery,
-                score: 40.0,
+                score: config.missingDataFloorScore,
                 weight: pillarWeights[.recovery, default: 0.25],
                 detail: "No recovery data yet"
             ))
@@ -120,7 +126,7 @@ public struct ReadinessEngine: Sendable {
         // Overtraining cap: consecutive RHR elevation limits readiness
         var finalScore = normalizedScore
         if consecutiveAlert != nil {
-            finalScore = min(finalScore, 50)
+            finalScore = min(finalScore, config.consecutiveAlertCap)
         }
 
         // Sleep deprivation cap: <5h sleep caps readiness at "moderate" (59 max),
@@ -129,12 +135,12 @@ public struct ReadinessEngine: Sendable {
         // sleepHours == nil means "no data" (handled by floor score above).
         // sleepHours == 0.0 means "tracked zero sleep" — cap hardest.
         if let hours = snapshot.sleepHours {
-            if hours < 3.0 {
-                finalScore = min(finalScore, 20)
-            } else if hours < 4.0 {
-                finalScore = min(finalScore, 35)
-            } else if hours < 5.0 {
-                finalScore = min(finalScore, 50)
+            if hours < config.sleepCapCriticalHours {
+                finalScore = min(finalScore, config.sleepCapCriticalScore)
+            } else if hours < config.sleepCapLowHours {
+                finalScore = min(finalScore, config.sleepCapLowScore)
+            } else if hours < config.sleepCapModerateHours {
+                finalScore = min(finalScore, config.sleepCapModerateScore)
             }
         }
 
@@ -158,11 +164,11 @@ public struct ReadinessEngine: Sendable {
     private func scoreSleep(snapshot: HeartSnapshot) -> ReadinessPillar? {
         guard let hours = snapshot.sleepHours, hours >= 0 else { return nil }
 
-        let optimal = 8.0
+        let optimal = config.sleepOptimalHours
         let deviation = abs(hours - optimal)
         // Gaussian-like: score = 100 * exp(-0.5 * (deviation / sigma)^2)
         // sigma ~1.5 gives: 7h/9h ≈ 95, 6h/10h ≈ 75, 5h/11h ≈ 41
-        let sigma = 1.5
+        let sigma = config.sleepSigma
         let score = 100.0 * exp(-0.5 * pow(deviation / sigma, 2))
 
         let detail: String
@@ -193,8 +199,8 @@ public struct ReadinessEngine: Sendable {
             return nil
         }
 
-        let minDrop = 10.0
-        let maxDrop = 40.0
+        let minDrop = config.recoveryMinDrop
+        let maxDrop = config.recoveryMaxDrop
         let score: Double
         if recovery >= maxDrop {
             score = 100.0

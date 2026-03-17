@@ -2,13 +2,13 @@
   "anomalyScore" : 0.95335286889876447,
   "confidence" : "medium",
   "multiNudgeCategories" : [
-    "seekGuidance",
+    "walk",
     "intensity",
     "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "seekGuidance",
-  "nudgeTitle" : "Peek at Your Trends",
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "A Walk Could Feel Great",
   "readinessLevel" : "primed",
   "readinessScore" : 85,
   "regressionFlag" : false,
