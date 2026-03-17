@@ -3,8 +3,8 @@
   "source_agent": "qae",
   "perspective": "QA engineer validating completeness, safety, and regression behavior",
   "scoring_range": [1, 5],
-  "total_criteria": 10,
-  "max_score": 50,
+  "total_criteria": 12,
+  "max_score": 60,
   "criteria": [
     {
       "id": "QAE-001",
@@ -244,6 +244,54 @@
         "Unusually high heart rate detected. If you feel unwell, consult a doctor",
         "Patterns suggest your body needs more rest. This is not medical advice",
         "Prioritize rest tonight - sleep is the biggest lever for recovery."
+      ]
+    },
+    {
+      "id": "QAE-011",
+      "source_agent": "qae",
+      "category": "no_hyphen_as_dash",
+      "description": "No hyphen as em dash — app text uses em dashes (—) or restructures sentences. A hyphen (-) surrounded by spaces is a formatting error, not a style choice.",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Multiple instances of ' - ' used as sentence connectors across coaching text",
+        "2": "One clear instance of hyphen-as-dash in a coaching text field",
+        "3": "No hyphen-as-dash in primary fields but one appears in a secondary field",
+        "4": "Clean formatting with one borderline case in a goal or nudge label",
+        "5": "Zero hyphen-as-dash anywhere. Em dashes (—) used correctly or sentences restructured."
+      },
+      "fail_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Recovery is lower today - rest is the best lever right now.",
+        "Decent recovery - a moderate effort works well today."
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight. Sleep is the biggest lever for recovery.",
+        "Recovery is lower today. Rest is the best lever right now.",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "QAE-012",
+      "source_agent": "qae",
+      "category": "text_freshness",
+      "description": "Text freshness — text changes meaningfully across journey days. The same phrasing must not appear on days with meaningfully different metrics.",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Day 1 and Day 7 produce byte-identical hero messages despite very different metrics",
+        "2": "Text changes word-for-word in minor ways but the meaning is identical across days",
+        "3": "Text changes noticeably but one frozen phrase appears regardless of day state",
+        "4": "Text is fresh across most days with one reused phrase that is tolerable",
+        "5": "Every day produces text that could only have been written for that specific day and state"
+      },
+      "fail_examples": [
+        "Day 1 readiness=72 and Day 7 readiness=28 both produce: 'Decent recovery. A moderate effort works well today.'",
+        "All 7 days start with 'Recovery is building.' regardless of whether it is",
+        "Hero message on day 2 and day 6 are identical despite one being a crash day"
+      ],
+      "pass_examples": [
+        "Day 1: 'Solid start. Your body is in a good rhythm.' / Day 7: 'Best recovery week in a month. Whatever you did, it worked.'",
+        "Crash day: 'Recovery took a hit today. Rest is the one lever that actually works right now.' / Recovery day: 'Bouncing back. Your body responded fast.'",
+        "Each day's text reflects the specific intersection of that day's metrics and the week's trajectory"
       ]
     }
   ]

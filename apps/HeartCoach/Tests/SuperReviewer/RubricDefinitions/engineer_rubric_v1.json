@@ -3,8 +3,8 @@
   "source_agent": "engineer",
   "perspective": "Software engineer validating data-to-text correctness and deterministic behavior",
   "scoring_range": [1, 5],
-  "total_criteria": 10,
-  "max_score": 50,
+  "total_criteria": 12,
+  "max_score": 60,
   "criteria": [
     {
       "id": "ENG-001",
@@ -244,6 +244,54 @@
         "Identical inputs always produce identical greeting, mode, and recommendations",
         "Re-running the same persona day produces byte-for-byte identical JSON",
         "Deterministic engine with no random components"
+      ]
+    },
+    {
+      "id": "ENG-011",
+      "source_agent": "engineer",
+      "category": "data_horizon_signaling",
+      "description": "Data horizon signaling — text correctly communicates whether implications are drawn from today's data or the past week's trend",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text makes week-level claims with only 1 day of data, or ignores week context entirely when 7 days are available",
+        "2": "Horizon is ambiguous in a way that would confuse a user reading carefully",
+        "3": "Horizon is technically correct but not communicated naturally",
+        "4": "Horizon is clear with one minor phrasing ambiguity",
+        "5": "Text precisely signals its data window: today's snapshot vs week trend vs recent pattern"
+      },
+      "fail_examples": [
+        "Day 1 only: 'Your sleep has been declining all week' (no week exists yet)",
+        "Day 6: 'Sleep was 5 hours tonight' (ignores 5 nights of trend that drove the guidance)",
+        "'Recovery is low' with no signal of whether this is today or a pattern"
+      ],
+      "pass_examples": [
+        "Day 1: 'Sleep was lighter than usual last night. One good night resets a lot.'",
+        "Day 6: 'Sleep has been building back up over the past few days. Tonight matters.'",
+        "Day 3: 'Today's recovery is lower than your recent week average. Rest is the right call.'"
+      ]
+    },
+    {
+      "id": "ENG-012",
+      "source_agent": "engineer",
+      "category": "trend_direction_accuracy",
+      "description": "Trend direction accuracy — when week data drives the message, the trending language matches the actual metric direction",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text says 'improving' when metrics clearly declined over the week, or vice versa",
+        "2": "Trend direction is wrong for one metric but correct for another",
+        "3": "Trend direction is correct but magnitude is significantly off",
+        "4": "Trend direction and magnitude are correct with one minor overshoot",
+        "5": "Trend language precisely matches the actual slope and magnitude of the data"
+      },
+      "fail_examples": [
+        "Readiness: 70, 65, 58, 50, 42 over 5 days — text says 'You've been improving this week'",
+        "Sleep: 5h, 6h, 7h, 7.5h, 8h — text says 'Sleep has been rough lately'",
+        "HRV flat within 2ms for 6 days — text says 'Strong upward trend in recovery signals'"
+      ],
+      "pass_examples": [
+        "Readiness declining: 'Recovery has been slipping over recent days. Prioritize rest tonight.'",
+        "Sleep improving: 'Sleep has been climbing all week. Keep the momentum going.'",
+        "Flat metrics: 'Things have been holding steady this week. Consistency is its own kind of progress.'"
       ]
     }
   ]

@@ -3,8 +3,8 @@
   "source_agent": "customer",
   "perspective": "Non-expert consumer who does not know heart rate terminology",
   "scoring_range": [1, 5],
-  "total_criteria": 10,
-  "max_score": 50,
+  "total_criteria": 13,
+  "max_score": 65,
   "criteria": [
     {
       "id": "CLR-001",
@@ -244,6 +244,78 @@
         "Prioritize rest tonight - sleep is the biggest lever for recovery.",
         "Decent recovery. A moderate effort works well today.",
         "Strong day ahead - your body is ready for a solid workout"
+      ]
+    },
+    {
+      "id": "CLR-011",
+      "source_agent": "customer",
+      "category": "trend_narrative",
+      "description": "Trend narrative — when week data is available, text conveys trajectory from the past, not just a today snapshot",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text gives only today's number with zero reference to how it got there",
+        "2": "Text hints at history with a vague word like 'recently' but no direction",
+        "3": "Text references the past but trajectory direction is unclear",
+        "4": "Text clearly names the trajectory with one minor phrasing gap",
+        "5": "Text grounds today's state in a clear week-long narrative the user can feel"
+      },
+      "fail_examples": [
+        "Recovery is low today (no context of how it got there)",
+        "Sleep was 5 hours (was this the same all week?)",
+        "Stress is elevated (is it getting better or worse?)"
+      ],
+      "pass_examples": [
+        "Sleep has been building back up all week. Tonight keeps the streak going.",
+        "Recovery has been slipping over recent days. Rest is the right call today.",
+        "Stress patterns have been settling down since Wednesday. Keep the calm momentum."
+      ]
+    },
+    {
+      "id": "CLR-012",
+      "source_agent": "customer",
+      "category": "dual_audience_layering",
+      "description": "Dual-audience layering — the same sentence works for a layman (plain outcome) and an expert (can infer data depth) without jargon being visible",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Text is either pure jargon (layman lost) or so stripped down the expert learns nothing",
+        "2": "Text serves one audience but clearly fails the other",
+        "3": "Text is safe for both but neither audience gets real value",
+        "4": "Both audiences served with one minor gap in depth or clarity",
+        "5": "Layman reads a clear human outcome; expert can sense the data story behind it"
+      },
+      "fail_examples": [
+        "Rest. (layman: ok but why? expert: what data?)",
+        "Your 7-day SDNN rolling average has dropped below the 15th percentile baseline. (layman: lost)",
+        "Body stuff is happening. (expert: useless)"
+      ],
+      "pass_examples": [
+        "Recovery has been building steadily this week. A moderate effort suits you well today.",
+        "Sleep patterns have been consistent. Your body is running on a good rhythm right now.",
+        "Heart patterns have been quieter than usual lately. A lighter day works well today."
+      ]
+    },
+    {
+      "id": "CLR-013",
+      "source_agent": "customer",
+      "category": "achievement_celebration",
+      "description": "Achievement celebration — genuine wins (best sleep week, goal streak, strong recovery run) are surfaced with warmth when the data supports it",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "A clear personal best or strong week goes completely unacknowledged",
+        "2": "A win is present in the data but text is neutral or negative",
+        "3": "Text is positive but generic, not tied to the specific achievement",
+        "4": "Text acknowledges the win with one missed opportunity for specificity",
+        "5": "Text names the achievement specifically and makes the user feel it"
+      },
+      "fail_examples": [
+        "Best recovery week in 30 days but text says: 'Decent recovery. Moderate effort works today.'",
+        "5-day sleep streak but text says: 'Sleep was 7 hours last night.'",
+        "Hit step goal 6 days in a row but text ignores it entirely"
+      ],
+      "pass_examples": [
+        "Best recovery week in a month. Your body is responding really well to the pattern you've built.",
+        "Six days hitting your sleep target in a row. That kind of consistency is where change happens.",
+        "Strongest 5-day stretch this month. Whatever you did this week, it's working."
       ]
     }
   ]
