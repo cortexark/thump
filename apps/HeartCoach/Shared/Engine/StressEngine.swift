@@ -721,9 +721,9 @@ public struct StressEngine: Sendable {
         }
 
         let preceding = snapshots.filter { $0.date < targetDay }
-        guard let baseline = computeBaseline(snapshots: preceding) else {
-            return []
-        }
+        // Use preceding days for baseline when available; fall back to today's
+        // own HRV so the Day heatmap works on day 1 (BUG-072).
+        let baseline = computeBaseline(snapshots: preceding) ?? dailyHRV
 
         return hourlyStressEstimates(
             dailyHRV: dailyHRV,
@@ -813,12 +813,16 @@ public struct StressEngine: Sendable {
                 return "Your body seems to be working harder than usual "
                     + "while resting. Consider a short walk or some deep breaths."
             }
+            if score >= 85 {
+                return "Your body is really working hard today. Give yourself "
+                    + "permission to rest — even a few minutes of slow breathing can help."
+            }
             if percentDiff > 30 {
-                return "Your body might be working a bit harder than "
+                return "Your body might be working harder than "
                     + "usual today. A walk, some deep breaths, or "
                     + "extra sleep could help."
             }
-            return "You seem to be running a bit hot today. "
+            return "You seem to be running a bit warm today. "
                 + "A little recovery time could go a long way."
         }
     }

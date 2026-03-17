@@ -35,6 +35,14 @@ public protocol HealthDataProviding: AnyObject {
     /// Whether the data provider is authorized to access health data.
     var isAuthorized: Bool { get }
 
+    /// HealthKit query warnings accumulated during the last refresh cycle.
+    /// Empty for mock providers. Real providers collect error messages from
+    /// failed queries so bug reports can explain why metrics are nil.
+    var queryWarnings: [String] { get }
+
+    /// Clears accumulated query warnings. Call at the start of each refresh cycle.
+    func clearQueryWarnings()
+
     /// Request authorization to access health data.
     /// - Throws: If authorization fails or is unavailable.
     func requestAuthorization() async throws
@@ -99,6 +107,10 @@ public final class MockHealthDataProvider: HealthDataProviding {
     // MARK: - State
 
     public private(set) var isAuthorized: Bool = false
+
+    /// Mock providers return empty warnings (no real HealthKit queries).
+    public var queryWarnings: [String] = []
+    public func clearQueryWarnings() { queryWarnings = [] }
 
     // MARK: - Init
 

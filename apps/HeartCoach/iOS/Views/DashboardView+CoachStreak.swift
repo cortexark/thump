@@ -84,6 +84,9 @@ extension DashboardView {
                             .fill(Color(hex: 0xF59E0B).opacity(0.06))
                     )
                 }
+                Text("Thump is a wellness tool, not a medical device.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
             .padding(16)
             .background(

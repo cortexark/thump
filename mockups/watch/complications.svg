@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <!-- Background -->
+  <rect width="600" height="400" fill="#1C1C1E" rx="12"/>
+
+  <!-- Title -->
+  <text x="300" y="28" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="12" font-weight="600">COMPLICATIONS COLLECTION — RED PERSONA</text>
+
+  <!-- ===== ROW 1 ===== -->
+
+  <!-- 1. Circular Complication -->
+  <g transform="translate(100, 100)">
+    <rect x="-44" y="-44" width="88" height="88" rx="44" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <!-- Gauge ring -->
+    <circle cx="0" cy="0" r="34" fill="none" stroke="#333" stroke-width="5"/>
+    <circle cx="0" cy="0" r="34" fill="none" stroke="#EF4444" stroke-width="5"
+            stroke-dasharray="75 139" stroke-dashoffset="53"
+            stroke-linecap="round" transform="rotate(-90 0 0)"/>
+    <!-- Score -->
+    <text x="0" y="7" text-anchor="middle" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="22" font-weight="800">35</text>
+    <!-- Label -->
+    <text x="0" y="62" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">Circular</text>
+  </g>
+
+  <!-- 2. Rectangular Complication -->
+  <g transform="translate(300, 100)">
+    <rect x="-82" y="-32" width="164" height="64" rx="12" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <!-- Left: score circle -->
+    <circle cx="-48" cy="0" r="22" fill="none" stroke="#EF4444" stroke-width="3"/>
+    <text x="-48" y="7" text-anchor="middle" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="20" font-weight="800">35</text>
+    <!-- Right: text -->
+    <text x="0" y="-6" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="13" font-weight="600">Rest up</text>
+    <text x="0" y="12" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">&#x1F4A4; 15min rest</text>
+    <!-- Label -->
+    <text x="0" y="52" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">Rectangular</text>
+  </g>
+
+  <!-- 3. Corner Complication -->
+  <g transform="translate(500, 100)">
+    <rect x="-27" y="-27" width="54" height="54" rx="12" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <text x="0" y="8" text-anchor="middle" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="24" font-weight="800">35</text>
+    <!-- Red accent dot -->
+    <circle cx="18" cy="-14" r="4" fill="#EF4444"/>
+    <!-- Label -->
+    <text x="0" y="48" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">Corner</text>
+  </g>
+
+  <!-- ===== ROW 2 ===== -->
+
+  <!-- 4. Inline Complication -->
+  <g transform="translate(100, 270)">
+    <rect x="-100" y="-16" width="200" height="32" rx="8" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <text x="0" y="6" text-anchor="middle" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="12" font-weight="500">
+      <tspan fill="#EF4444">&#x2764;</tspan> &#xB7; 35 &#xB7; Stressed &#xB7; <tspan fill="#EF4444">&#x2B06;</tspan>
+    </text>
+    <!-- Label -->
+    <text x="0" y="36" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">Inline</text>
+  </g>
+
+  <!-- 5. Stress Heatmap Widget -->
+  <g transform="translate(300, 270)">
+    <rect x="-82" y="-42" width="164" height="84" rx="12" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <!-- Header -->
+    <text x="-68" y="-24" fill="rgba(255,255,255,0.7)" font-family="-apple-system, SF Pro, Helvetica" font-size="10" font-weight="600">Stress</text>
+    <text x="50" y="-24" fill="#EF4444" font-family="-apple-system, SF Pro, Helvetica" font-size="9" font-weight="600">Elevated &#x2191;</text>
+    <!-- 6 colored dots -->
+    <circle cx="-50" cy="-6" r="7" fill="#EF4444"/>
+    <circle cx="-30" cy="-6" r="7" fill="#F59E0B"/>
+    <circle cx="-10" cy="-6" r="7" fill="#EF4444"/>
+    <circle cx="10" cy="-6" r="7" fill="#EF4444"/>
+    <circle cx="30" cy="-6" r="7" fill="#F59E0B"/>
+    <circle cx="50" cy="-6" r="7" fill="#EF4444"/>
+    <!-- Mini buttons -->
+    <rect x="-70" y="14" width="62" height="20" rx="10" fill="rgba(34,197,94,0.2)"/>
+    <text x="-39" y="28" text-anchor="middle" fill="#22C55E" font-family="-apple-system, SF Pro, Helvetica" font-size="9" font-weight="600">&#x1F3C3; Activity</text>
+    <rect x="2" y="14" width="62" height="20" rx="10" fill="rgba(13,148,136,0.2)"/>
+    <text x="33" y="28" text-anchor="middle" fill="#0D9488" font-family="-apple-system, SF Pro, Helvetica" font-size="9" font-weight="600">&#x1F4A8; Breathe</text>
+    <!-- Label -->
+    <text x="0" y="60" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">Stress Widget</text>
+  </g>
+
+  <!-- 6. HRV Trend Widget -->
+  <g transform="translate(500, 270)">
+    <rect x="-82" y="-42" width="164" height="84" rx="12" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <!-- Header -->
+    <text x="-68" y="-24" fill="rgba(255,255,255,0.7)" font-family="-apple-system, SF Pro, Helvetica" font-size="10" font-weight="600">HRV</text>
+    <text x="-35" y="-24" fill="white" font-family="-apple-system, SF Pro, Helvetica" font-size="12" font-weight="700">22ms</text>
+    <text x="30" y="-24" fill="#EF4444" font-family="-apple-system, SF Pro, Helvetica" font-size="9" font-weight="600">Declining &#x2193;</text>
+    <!-- Mini 7-day sparkline -->
+    <polyline points="-65,-4 -45,-8 -25,-2 -5,2 15,8 35,16 55,24"
+              fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Sparkline area fill -->
+    <polygon points="-65,-4 -45,-8 -25,-2 -5,2 15,8 35,16 55,24 55,32 -65,32"
+              fill="rgba(167,139,250,0.12)"/>
+    <!-- Axis -->
+    <line x1="-65" y1="32" x2="65" y2="32" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <!-- Day labels -->
+    <text x="-65" y="42" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="6">M</text>
+    <text x="-45" y="42" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="6">T</text>
+    <text x="-25" y="42" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="6">W</text>
+    <text x="-5" y="42" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="6">T</text>
+    <text x="15" y="42" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="6">F</text>
+    <text x="35" y="42" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="6">S</text>
+    <text x="55" y="42" fill="rgba(255,255,255,0.3)" font-family="-apple-system, SF Pro, Helvetica" font-size="6">S</text>
+    <!-- Label -->
+    <text x="0" y="60" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system, SF Pro, Helvetica" font-size="10">HRV Widget</text>
+  </g>
+</svg>

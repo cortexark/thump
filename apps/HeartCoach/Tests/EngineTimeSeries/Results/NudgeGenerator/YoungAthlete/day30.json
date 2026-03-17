@@ -3,12 +3,12 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "walk",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
-  "nudgeTitle" : "A Brisk Walk Could Feel Great",
+  "nudgeTitle" : "A Walk Could Feel Great",
   "readinessLevel" : "primed",
   "readinessScore" : 87,
   "regressionFlag" : false,

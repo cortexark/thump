@@ -3,9 +3,10 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "celebrate",
+    "intensity",
     "hydrate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "celebrate",
   "nudgeTitle" : "You're on a Roll!",
   "readinessLevel" : "primed",

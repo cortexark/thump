@@ -7,7 +7,6 @@
 // Platforms: iOS 17+
 
 import Foundation
-import UIKit
 import FirebaseFirestore
 
 // MARK: - Feedback Service
@@ -28,41 +27,19 @@ final class FeedbackService {
 
     private init() {}
 
-    // MARK: - User Identification
-
-    /// Returns a stable user ID for feedback documents.
-    /// Prefers the hashed Apple Sign-In ID from EngineTelemetryService;
-    /// falls back to a persistent UUID stored in UserDefaults so
-    /// feedback is always attributable even without Apple Sign-In.
-    private var feedbackUserId: String {
-        if let hashedId = EngineTelemetryService.shared.hashedUserId {
-            return hashedId
-        }
-
-        let key = "thump_feedback_device_id"
-        if let existing = UserDefaults.standard.string(forKey: key) {
-            return existing
-        }
-
-        // Generate a stable ID from vendor ID + random UUID fallback
-        let deviceId = UIDevice.current.identifierForVendor?.uuidString
-            ?? UUID().uuidString
-        let stableId = "device_\(deviceId)"
-        UserDefaults.standard.set(stableId, forKey: key)
-        return stableId
-    }
-
     // MARK: - Bug Reports
 
-    /// Uploads a bug report document to Firestore with optional diagnostic payload.
+    /// Uploads a bug report document to Firestore including all current health
+    /// metrics and engine outputs so the team can reproduce the exact UI state.
     func submitBugReport(
         description: String,
         appVersion: String,
         deviceModel: String,
         iosVersion: String,
-        diagnosticPayload: [String: Any]? = nil
+        healthMetrics: [String: Any],
+        completion: ((Error?) -> Void)? = nil
     ) {
-        let userId = feedbackUserId
+        let userId = EngineTelemetryService.shared.hashedUserId ?? "anonymous"
 
         var data: [String: Any] = [
             "description": description,
@@ -70,15 +47,17 @@ final class FeedbackService {
             "deviceModel": deviceModel,
             "iosVersion": iosVersion,
             "timestamp": FieldValue.serverTimestamp(),
-            "status": "new"
+            "status": "new",
+            "healthMetrics": healthMetrics
         ]
 
-        // Merge diagnostic payload if provided
-        if let diagnostic = diagnosticPayload {
-            for (key, value) in diagnostic where key != "description" {
-                data[key] = value
-            }
+        // Add user profile context (age, sex) for metric interpretation
+        let profile = LocalStore().profile
+        if let dob = profile.dateOfBirth {
+            let ageYears = Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 0
+            data["userAge"] = ageYears
         }
+        data["userSex"] = profile.biologicalSex.rawValue
 
         db.collection("users")
             .document(userId)
@@ -89,6 +68,7 @@ final class FeedbackService {
                 } else {
                     AppLogger.engine.info("[FeedbackService] Bug report uploaded successfully")
                 }
+                completion?(error)
             }
     }
 
@@ -99,9 +79,10 @@ final class FeedbackService {
         appVersion: String,
         deviceModel: String,
         iosVersion: String,
+        healthMetrics: [String: Any] = [:],
         completion: @escaping (Error?) -> Void
     ) {
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "description": description,
             "appVersion": appVersion,
             "deviceModel": deviceModel,
@@ -109,6 +90,9 @@ final class FeedbackService {
             "timestamp": FieldValue.serverTimestamp(),
             "status": "new"
         ]
+        if !healthMetrics.isEmpty {
+            data["healthMetrics"] = healthMetrics
+        }
 
         db.collection("users")
             .document(userId)
@@ -125,7 +109,7 @@ final class FeedbackService {
         description: String,
         appVersion: String
     ) {
-        let userId = feedbackUserId
+        let userId = EngineTelemetryService.shared.hashedUserId ?? "anonymous"
 
         let data: [String: Any] = [
             "description": description,

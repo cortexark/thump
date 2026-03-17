@@ -55,7 +55,35 @@ public enum StressLevel: String, Codable, Equatable, Sendable, CaseIterable {
         case .balanced:
             return "Things look balanced"
         case .elevated:
-            return "You might be running a bit hot"
+            return "You might be running a bit warm"
+        }
+    }
+
+    /// Score-aware friendly message with graduated severity for elevated stress.
+    public static func friendlyMessage(for score: Double) -> String {
+        let level = StressLevel.from(score: score)
+        switch level {
+        case .relaxed:
+            return "You seem pretty relaxed right now"
+        case .balanced:
+            return "Things look balanced"
+        case .elevated:
+            if score >= 85 {
+                return "Your body is under a lot of strain — take a real break"
+            } else if score >= 76 {
+                return "Your body's managing more than usual — some downtime could help"
+            } else {
+                return "You might be running a bit warm"
+            }
+        }
+    }
+
+    /// Brief action hint paired with the stress level label.
+    public var actionHint: String {
+        switch self {
+        case .relaxed: return "A great time to enjoy what you're doing"
+        case .balanced: return "You're in a good rhythm"
+        case .elevated: return "Even a few slow breaths can help"
         }
     }
 

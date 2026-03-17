@@ -1,0 +1,405 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#EF4444"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#22C55E"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8B5CF6"/>
+    </marker>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="900" fill="#F8FAFC"/>
+
+  <!-- Title -->
+  <text x="700" y="45" text-anchor="middle" font-size="24" font-weight="700" fill="#0F172A">Thump — Complete Click Flow Map</text>
+  <text x="700" y="68" text-anchor="middle" font-size="13" fill="#64748B">Red Persona (Poor Metrics) · All navigation paths</text>
+
+  <!-- ==================== iPhone Section ==================== -->
+  <text x="420" y="105" text-anchor="middle" font-size="16" font-weight="600" fill="#475569">iPhone App</text>
+  <line x1="280" y1="112" x2="560" y2="112" stroke="#CBD5E1" stroke-width="1"/>
+
+  <!-- Tab Bar Legend -->
+  <rect x="20" y="120" width="840" height="30" rx="6" fill="#E2E8F0" opacity="0.5"/>
+  <text x="30" y="140" font-size="11" font-weight="600" fill="#475569">TAB BAR:</text>
+  <circle cx="105" cy="135" r="6" fill="#EF4444"/><text x="115" y="139" font-size="10" fill="#334155">Tab 0: Home</text>
+  <circle cx="205" cy="135" r="6" fill="#8B5CF6"/><text x="215" y="139" font-size="10" fill="#334155">Tab 1: Insights</text>
+  <circle cx="315" cy="135" r="6" fill="#0D9488"/><text x="325" y="139" font-size="10" fill="#334155">Tab 2: Stress</text>
+  <circle cx="415" cy="135" r="6" fill="#3B82F6"/><text x="425" y="139" font-size="10" fill="#334155">Tab 3: Trends</text>
+  <circle cx="510" cy="135" r="6" fill="#6B7280"/><text x="520" y="139" font-size="10" fill="#334155">Tab 4: Settings</text>
+  <rect x="620" y="127" width="12" height="12" rx="2" fill="none" stroke="#F59E0B" stroke-width="2"/><text x="638" y="139" font-size="10" fill="#334155">Modal/Sheet</text>
+  <rect x="720" y="127" width="12" height="12" rx="2" fill="none" stroke="#22C55E" stroke-width="2"/><text x="738" y="139" font-size="10" fill="#334155">Action</text>
+
+  <!-- ===== HOME / DASHBOARD (Tab 0) ===== -->
+  <g transform="translate(30, 170)">
+    <rect width="180" height="340" rx="16" fill="white" stroke="#EF4444" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="180" height="36" rx="16" fill="#EF4444"/>
+    <rect x="0" y="20" width="180" height="16" fill="#EF4444"/>
+    <text x="90" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="white">HOME (Tab 0)</text>
+
+    <!-- Content items -->
+    <text x="12" y="56" font-size="9" font-weight="600" fill="#374151">Hero + Buddy (Stressed)</text>
+    <line x1="10" y1="62" x2="170" y2="62" stroke="#E5E7EB" stroke-width="0.5"/>
+
+    <rect x="10" y="70" width="160" height="24" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+    <text x="18" y="85" font-size="8" font-weight="600" fill="#92400E">Daily Check-In</text>
+    <text x="130" y="85" font-size="7" fill="#92400E">4 moods</text>
+
+    <rect x="10" y="100" width="160" height="36" rx="6" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+    <text x="18" y="114" font-size="8" font-weight="600" fill="#991B1B">Thump Check (Score: 35)</text>
+    <text x="18" y="126" font-size="7" fill="#991B1B">❤️ "Rest up" badge →</text>
+
+    <rect x="10" y="142" width="160" height="24" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+    <text x="18" y="157" font-size="8" font-weight="600" fill="#92400E">Week-over-Week Banner</text>
+
+    <rect x="10" y="172" width="160" height="24" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+    <text x="18" y="187" font-size="8" font-weight="600" fill="#92400E">Recovery Context Banner</text>
+
+    <rect x="10" y="202" width="160" height="24" rx="6" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+    <text x="18" y="217" font-size="8" font-weight="600" fill="#991B1B">How You Recovered</text>
+
+    <rect x="10" y="232" width="160" height="30" rx="6" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="0.5"/>
+    <text x="18" y="247" font-size="8" font-weight="600" fill="#5B21B6">Buddy Says (3 recs)</text>
+    <text x="18" y="256" font-size="7" fill="#5B21B6">Rest · Breathe · Hydrate</text>
+
+    <rect x="10" y="268" width="160" height="20" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="0.5"/>
+    <text x="18" y="281" font-size="8" fill="#6B7280">Goals + Zones + Streak</text>
+
+    <rect x="10" y="294" width="160" height="20" rx="6" fill="#DBEAFE" stroke="#3B82F6" stroke-width="0.5"/>
+    <text x="18" y="307" font-size="8" font-weight="600" fill="#1E40AF">Metric Tiles (RHR, HRV...)</text>
+  </g>
+
+  <!-- ===== READINESS SHEET (Modal) ===== -->
+  <g transform="translate(30, 530)">
+    <rect width="180" height="200" rx="16" fill="white" stroke="#F59E0B" stroke-width="2" stroke-dasharray="6,3" filter="url(#shadow)"/>
+    <rect width="180" height="36" rx="16" fill="#F59E0B"/>
+    <rect x="0" y="20" width="180" height="16" fill="#F59E0B"/>
+    <text x="90" y="24" text-anchor="middle" font-size="11" font-weight="700" fill="white">READINESS SHEET</text>
+    <text x="90" y="60" text-anchor="middle" font-size="9" fill="#374151">Score Circle: 35 (Red)</text>
+    <text x="90" y="76" text-anchor="middle" font-size="9" fill="#374151">Badge: "Rest up"</text>
+    <text x="90" y="96" text-anchor="middle" font-size="9" font-weight="600" fill="#374151">Pillar Breakdown:</text>
+    <text x="20" y="112" font-size="8" fill="#EF4444">● Sleep: 35%</text>
+    <text x="20" y="126" font-size="8" fill="#EF4444">● Recovery: 30%</text>
+    <text x="20" y="140" font-size="8" fill="#EF4444">● Stress: 25%</text>
+    <text x="20" y="154" font-size="8" fill="#F59E0B">● Activity: 45%</text>
+    <text x="20" y="168" font-size="8" fill="#EF4444">● HRV Trend: 30%</text>
+    <text x="90" y="190" text-anchor="middle" font-size="8" fill="#6B7280" font-style="italic">(Modal — dismiss to return)</text>
+  </g>
+
+  <!-- ===== INSIGHTS (Tab 1) ===== -->
+  <g transform="translate(250, 170)">
+    <rect width="180" height="340" rx="16" fill="white" stroke="#8B5CF6" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="180" height="36" rx="16" fill="#8B5CF6"/>
+    <rect x="0" y="20" width="180" height="16" fill="#8B5CF6"/>
+    <text x="90" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="white">INSIGHTS (Tab 1)</text>
+
+    <rect x="10" y="48" width="160" height="40" rx="6" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="0.5"/>
+    <text x="18" y="63" font-size="8" font-weight="600" fill="#5B21B6">Hero Card (Purple Gradient)</text>
+    <text x="18" y="78" font-size="7" fill="#5B21B6">"View Focus Plan →" button</text>
+
+    <rect x="10" y="94" width="160" height="50" rx="6" fill="#FCE7F3" stroke="#EC4899" stroke-width="0.5"/>
+    <text x="18" y="108" font-size="8" font-weight="600" fill="#9D174D">Focus for the Week</text>
+    <text x="18" y="120" font-size="7" fill="#9D174D">🛏️ Bedtime by 10:30pm</text>
+    <text x="18" y="130" font-size="7" fill="#9D174D">🏃 30 min activity</text>
+    <text x="18" y="140" font-size="7" fill="#9D174D">🧘 Breathing · ☀️ Sunlight</text>
+
+    <rect x="10" y="150" width="160" height="50" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+    <text x="18" y="164" font-size="8" font-weight="600" fill="#92400E">Weekly Report</text>
+    <text x="18" y="176" font-size="7" fill="#92400E">Score: 35/100 "Worth Watching"</text>
+    <text x="18" y="188" font-size="7" fill="#92400E">Nudge completion: 20%</text>
+    <text x="18" y="196" font-size="7" fill="#EC4899">"See your action plan →"</text>
+
+    <rect x="10" y="206" width="160" height="36" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="0.5"/>
+    <text x="18" y="220" font-size="8" font-weight="600" fill="#374151">Correlations</text>
+    <text x="18" y="233" font-size="7" fill="#6B7280">Activity ↔ Numbers</text>
+
+    <rect x="10" y="248" width="160" height="50" rx="6" fill="#FCE7F3" stroke="#EC4899" stroke-width="0.5"/>
+    <text x="18" y="262" font-size="8" font-weight="600" fill="#9D174D">💡 Educational Cards</text>
+    <text x="18" y="274" font-size="7" fill="#9D174D">Activity → VO2 Max</text>
+    <text x="18" y="284" font-size="7" fill="#9D174D">Zone Training → Recovery</text>
+    <text x="18" y="294" font-size="7" fill="#9D174D">Sleep → HRV · Stress → RHR</text>
+  </g>
+
+  <!-- ===== STRESS (Tab 2) ===== -->
+  <g transform="translate(470, 170)">
+    <rect width="180" height="340" rx="16" fill="white" stroke="#0D9488" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="180" height="36" rx="16" fill="#0D9488"/>
+    <rect x="0" y="20" width="180" height="16" fill="#0D9488"/>
+    <text x="90" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="white">STRESS (Tab 2)</text>
+
+    <rect x="10" y="48" width="160" height="24" rx="6" fill="#F0FDFA" stroke="#0D9488" stroke-width="0.5"/>
+    <text x="18" y="63" font-size="8" font-weight="600" fill="#134E4A">Day | Week | Month toggle</text>
+
+    <rect x="10" y="78" width="160" height="24" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="0.5"/>
+    <text x="18" y="93" font-size="8" fill="#374151">◀ Saturday, Mar 15 ▶</text>
+
+    <rect x="10" y="108" width="160" height="70" rx="6" fill="#1F2937" stroke="#374151" stroke-width="0.5"/>
+    <text x="90" y="125" text-anchor="middle" font-size="8" font-weight="600" fill="white">24-Hour Stress Heatmap</text>
+    <!-- Mini heatmap representation -->
+    <g transform="translate(20, 132)">
+      <rect x="0" y="0" width="10" height="10" rx="2" fill="#22C55E"/><rect x="13" y="0" width="10" height="10" rx="2" fill="#22C55E"/>
+      <rect x="26" y="0" width="10" height="10" rx="2" fill="#22C55E"/><rect x="39" y="0" width="10" height="10" rx="2" fill="#22C55E"/>
+      <rect x="52" y="0" width="10" height="10" rx="2" fill="#22C55E"/><rect x="65" y="0" width="10" height="10" rx="2" fill="#F59E0B"/>
+      <rect x="78" y="0" width="10" height="10" rx="2" fill="#F59E0B"/><rect x="91" y="0" width="10" height="10" rx="2" fill="#EF4444"/>
+      <rect x="104" y="0" width="10" height="10" rx="2" fill="#EF4444"/><rect x="117" y="0" width="10" height="10" rx="2" fill="#EF4444"/>
+      <rect x="0" y="13" width="10" height="10" rx="2" fill="#EF4444"/><rect x="13" y="13" width="10" height="10" rx="2" fill="#EF4444"/>
+      <rect x="26" y="13" width="10" height="10" rx="2" fill="#F59E0B"/><rect x="39" y="13" width="10" height="10" rx="2" fill="#F59E0B"/>
+      <rect x="52" y="13" width="10" height="10" rx="2" fill="#EF4444"/><rect x="65" y="13" width="10" height="10" rx="2" fill="#EF4444"/>
+      <rect x="78" y="13" width="10" height="10" rx="2" fill="#EF4444"/><rect x="91" y="13" width="10" height="10" rx="2" fill="#EF4444"/>
+      <rect x="104" y="13" width="10" height="10" rx="2" fill="#F59E0B"/><rect x="117" y="13" width="10" height="10" rx="2" fill="#F59E0B"/>
+    </g>
+    <text x="20" y="168" font-size="6" fill="#9CA3AF">12a 1a 2a 3a 4a 5a 6a 7a 8a 9a 10 11 12p 1p 2p 3p 4p 5p 6p 7p 8p 9p 10 11</text>
+
+    <rect x="10" y="184" width="160" height="30" rx="6" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+    <text x="18" y="198" font-size="8" font-weight="600" fill="#991B1B">⬆ Stress trending up</text>
+    <text x="18" y="209" font-size="7" fill="#991B1B">Avg HRV: 22ms (low)</text>
+
+    <rect x="10" y="220" width="160" height="30" rx="6" fill="#F0FDFA" stroke="#0D9488" stroke-width="0.5"/>
+    <text x="18" y="236" font-size="8" font-weight="600" fill="#134E4A">💨 Breathe · 📝 Journal · 👤 Check-in</text>
+    <text x="18" y="246" font-size="7" fill="#134E4A">(3 action buttons)</text>
+
+    <rect x="10" y="256" width="160" height="40" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="0.5"/>
+    <text x="18" y="270" font-size="8" fill="#374151">Insight: "Stress elevated</text>
+    <text x="18" y="282" font-size="7" fill="#374151">for 3 consecutive days..."</text>
+  </g>
+
+  <!-- ===== TRENDS (Tab 3) ===== -->
+  <g transform="translate(690, 170)">
+    <rect width="180" height="340" rx="16" fill="white" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="180" height="36" rx="16" fill="#3B82F6"/>
+    <rect x="0" y="20" width="180" height="16" fill="#3B82F6"/>
+    <text x="90" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="white">TRENDS (Tab 3)</text>
+
+    <rect x="10" y="48" width="160" height="28" rx="6" fill="#DBEAFE" stroke="#3B82F6" stroke-width="0.5"/>
+    <text x="18" y="60" font-size="7" font-weight="600" fill="#1E40AF">Metric Chips (3-col grid):</text>
+    <text x="18" y="70" font-size="7" fill="#1E40AF">RHR* | HRV | Recovery | Cardio | Active</text>
+
+    <rect x="10" y="82" width="160" height="20" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="0.5"/>
+    <text x="18" y="95" font-size="8" fill="#374151">Time: 7D* | 14D | 30D</text>
+
+    <rect x="10" y="108" width="160" height="80" rx="6" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+    <text x="18" y="122" font-size="8" font-weight="600" fill="#991B1B">Resting Heart Rate</text>
+    <text x="140" y="122" font-size="10" font-weight="700" fill="#EF4444">78</text>
+    <text x="18" y="134" font-size="7" fill="#6B7280">"What is this?" explainer</text>
+    <!-- Mini chart -->
+    <polyline points="20,170 40,166 65,158 85,154 110,150 135,148 155,148" fill="none" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/>
+    <text x="18" y="183" font-size="6" fill="#9CA3AF">Mon  Tue  Wed  Thu   Fri   Sat  Sun</text>
+
+    <rect x="10" y="194" width="160" height="24" rx="6" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="0.5"/>
+    <text x="18" y="209" font-size="7" fill="#374151">Avg: 73 | Low: 65 | High: 78</text>
+
+    <rect x="10" y="224" width="160" height="36" rx="6" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+    <text x="18" y="238" font-size="8" font-weight="600" fill="#EF4444">⬆ Rising Trend</text>
+    <text x="18" y="250" font-size="7" fill="#991B1B">RHR +13 bpm this week</text>
+
+    <rect x="10" y="266" width="160" height="24" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+    <text x="18" y="281" font-size="8" font-weight="600" fill="#92400E">💡 Improvement Tip</text>
+
+    <rect x="10" y="296" width="160" height="30" rx="6" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="0.5"/>
+    <text x="18" y="310" font-size="8" font-weight="600" fill="#5B21B6">Coaching Progress</text>
+    <text x="18" y="320" font-size="7" fill="#5B21B6">Score: 35 | AHA: 45/150</text>
+  </g>
+
+  <!-- ===== SETTINGS (Tab 4) ===== -->
+  <g transform="translate(250, 530)">
+    <rect width="180" height="200" rx="16" fill="white" stroke="#6B7280" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="180" height="36" rx="16" fill="#6B7280"/>
+    <rect x="0" y="20" width="180" height="16" fill="#6B7280"/>
+    <text x="90" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="white">SETTINGS (Tab 4)</text>
+    <text x="18" y="56" font-size="8" fill="#374151">👤 Profile + Streak</text>
+    <text x="18" y="70" font-size="8" fill="#374151">💳 Subscription (Free Year)</text>
+    <text x="18" y="84" font-size="8" fill="#374151">⚙️ Feedback Toggles (5)</text>
+    <text x="18" y="98" font-size="8" fill="#374151">🔔 Notifications (2)</text>
+    <text x="18" y="112" font-size="8" fill="#374151">📊 Analytics Toggle</text>
+    <text x="18" y="126" font-size="8" fill="#374151">🐛 Bug Report → sheet</text>
+    <text x="18" y="140" font-size="8" fill="#374151">✨ Feature Request → sheet</text>
+    <text x="18" y="154" font-size="8" fill="#374151">📤 Export Data → CSV/JSON</text>
+    <text x="18" y="168" font-size="8" fill="#374151">📄 Terms · Privacy · Help</text>
+    <text x="18" y="182" font-size="8" fill="#374151">⚠️ Disclaimers (5 cards)</text>
+  </g>
+
+  <!-- ==================== NAVIGATION ARROWS (iPhone) ==================== -->
+
+  <!-- Readiness badge → Readiness Sheet -->
+  <line x1="120" y1="510" x2="120" y2="528" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4,2"/>
+  <text x="135" y="522" font-size="7" fill="#F59E0B" font-weight="600">badge tap</text>
+
+  <!-- Recovery banner → Stress tab -->
+  <path d="M 210 365 Q 340 360 470 340" fill="none" stroke="#0D9488" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,2"/>
+  <text x="330" y="348" font-size="7" fill="#0D9488" font-weight="600">banner → Stress</text>
+
+  <!-- WoW banner → Trends tab -->
+  <path d="M 210 335 Q 450 310 690 330" fill="none" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,2"/>
+  <text x="440" y="308" font-size="7" fill="#3B82F6" font-weight="600">WoW → Trends</text>
+
+  <!-- Recovery card → Trends tab -->
+  <path d="M 210 395 Q 450 380 690 380" fill="none" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,2"/>
+  <text x="440" y="378" font-size="7" fill="#3B82F6" font-weight="600">recovery → Trends</text>
+
+  <!-- Metric tiles → Trends tab -->
+  <path d="M 210 470 Q 450 460 690 430" fill="none" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,2"/>
+  <text x="440" y="460" font-size="7" fill="#3B82F6" font-weight="600">metrics → Trends</text>
+
+  <!-- ==================== Watch Section ==================== -->
+  <text x="1080" y="105" text-anchor="middle" font-size="16" font-weight="600" fill="#475569">Apple Watch</text>
+  <line x1="960" y1="112" x2="1200" y2="112" stroke="#CBD5E1" stroke-width="1"/>
+
+  <!-- Watch Home -->
+  <g transform="translate(920, 130)">
+    <rect width="130" height="160" rx="30" fill="#000000" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+    <text x="65" y="20" text-anchor="middle" font-size="8" font-weight="600" fill="#6B7280">WATCH HOME</text>
+    <circle cx="65" cy="65" r="28" fill="none" stroke="#EF4444" stroke-width="4" stroke-dasharray="62 114" stroke-linecap="round" transform="rotate(-90, 65, 65)"/>
+    <circle cx="65" cy="65" r="28" fill="none" stroke="#333" stroke-width="4" stroke-dasharray="0 176" stroke-dashoffset="-62"/>
+    <text x="65" y="72" text-anchor="middle" font-size="20" font-weight="800" fill="white">35</text>
+    <text x="65" y="108" text-anchor="middle" font-size="7" fill="#9CA3AF">Let's build from here</text>
+    <rect x="20" y="118" width="90" height="20" rx="10" fill="rgba(255,255,255,0.1)"/>
+    <text x="65" y="131" text-anchor="middle" font-size="7" fill="white">😴 Rest · 15m · START</text>
+    <text x="65" y="152" text-anchor="middle" font-size="6" fill="#6B7280">tap → insight flow</text>
+  </g>
+
+  <!-- Watch Insight Flow -->
+  <g transform="translate(920, 310)">
+    <rect width="130" height="160" rx="30" fill="#000000" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+    <text x="65" y="20" text-anchor="middle" font-size="8" font-weight="600" fill="#6B7280">INSIGHT FLOW</text>
+    <text x="65" y="40" text-anchor="middle" font-size="7" fill="white">6 swipeable screens:</text>
+    <text x="15" y="58" font-size="6" fill="#EF4444">1. Hero (35)</text>
+    <text x="15" y="70" font-size="6" fill="#EF4444">2. Readiness (5 pillars)</text>
+    <text x="15" y="82" font-size="6" fill="#F59E0B">3. Walk (2,340 steps)</text>
+    <text x="15" y="94" font-size="6" fill="#EF4444">4. Stress (Elevated)</text>
+    <text x="15" y="106" font-size="6" fill="#EF4444">5. Sleep (5.2 hrs)</text>
+    <text x="15" y="118" font-size="6" fill="#EF4444">6. Trends (HRV↓ RHR↑)</text>
+    <!-- Page dots -->
+    <circle cx="40" cy="132" r="2" fill="white"/><circle cx="48" cy="132" r="2" fill="#555"/><circle cx="56" cy="132" r="2" fill="#555"/>
+    <circle cx="64" cy="132" r="2" fill="#555"/><circle cx="72" cy="132" r="2" fill="#555"/><circle cx="80" cy="132" r="2" fill="#555"/>
+    <text x="65" y="152" text-anchor="middle" font-size="6" fill="#6B7280">← swipe →</text>
+  </g>
+
+  <!-- Watch Live Face -->
+  <g transform="translate(1080, 130)">
+    <rect width="130" height="160" rx="30" fill="url(#watchStressGrad)" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+    <defs>
+      <linearGradient id="watchStressGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1C1917"/>
+        <stop offset="100%" stop-color="#F9A8D4"/>
+      </linearGradient>
+    </defs>
+    <text x="65" y="20" text-anchor="middle" font-size="8" font-weight="600" fill="rgba(255,255,255,0.5)">LIVE FACE</text>
+    <!-- Buddy heart -->
+    <text x="65" y="80" text-anchor="middle" font-size="36">😰</text>
+    <text x="65" y="110" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.9)">Heart needs TLC today</text>
+    <text x="65" y="124" text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.5)">Try a breathing exercise</text>
+    <!-- Indicator dots -->
+    <circle cx="50" cy="140" r="2" fill="#555"/><circle cx="58" cy="140" r="2" fill="#555"/><circle cx="66" cy="140" r="2" fill="#555"/>
+    <circle cx="74" cy="140" r="2" fill="#555"/><circle cx="82" cy="140" r="2" fill="#555"/>
+    <text x="65" y="155" text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.4)">tap → breathe</text>
+  </g>
+
+  <!-- Watch Nudge -->
+  <g transform="translate(1080, 310)">
+    <rect width="130" height="160" rx="30" fill="#000000" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+    <text x="65" y="20" text-anchor="middle" font-size="8" font-weight="600" fill="#6B7280">NUDGE</text>
+    <!-- Category circle -->
+    <circle cx="65" cy="50" r="20" fill="rgba(139,92,246,0.25)"/>
+    <text x="65" y="56" text-anchor="middle" font-size="14">😴</text>
+    <text x="65" y="82" text-anchor="middle" font-size="8" font-weight="600" fill="white">Time to Rest</text>
+    <text x="65" y="96" text-anchor="middle" font-size="6" fill="#9CA3AF">Recovery is low. Take 15</text>
+    <text x="65" y="106" text-anchor="middle" font-size="6" fill="#9CA3AF">minutes to sit quietly.</text>
+    <rect x="15" y="112" width="100" height="18" rx="9" fill="#22C55E"/>
+    <text x="65" y="124" text-anchor="middle" font-size="7" font-weight="600" fill="white">✓ Mark Complete</text>
+    <text x="65" y="142" text-anchor="middle" font-size="7" fill="#3B82F6">💬 Give Feedback</text>
+    <text x="65" y="155" text-anchor="middle" font-size="6" fill="#6B7280">→ Feedback View</text>
+  </g>
+
+  <!-- Watch Complications -->
+  <g transform="translate(920, 490)">
+    <rect width="290" height="160" rx="16" fill="#1C1C1E" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+    <text x="145" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#6B7280">COMPLICATIONS (Watch Face Widgets)</text>
+
+    <!-- Circular -->
+    <circle cx="45" cy="60" r="22" fill="none" stroke="#333" stroke-width="3"/>
+    <circle cx="45" cy="60" r="22" fill="none" stroke="#EF4444" stroke-width="3" stroke-dasharray="48 90" stroke-linecap="round" transform="rotate(-90, 45, 60)"/>
+    <text x="45" y="65" text-anchor="middle" font-size="12" font-weight="700" fill="white">35</text>
+    <text x="45" y="92" text-anchor="middle" font-size="6" fill="#6B7280">Circular</text>
+
+    <!-- Rectangular -->
+    <rect x="85" y="40" width="90" height="40" rx="8" fill="#2A2A2E"/>
+    <text x="105" y="58" text-anchor="middle" font-size="10" font-weight="700" fill="#EF4444">35</text>
+    <text x="150" y="55" font-size="6" fill="white">Rest up</text>
+    <text x="150" y="65" font-size="5" fill="#9CA3AF">💤 15min rest</text>
+    <text x="130" y="92" text-anchor="middle" font-size="6" fill="#6B7280">Rectangular</text>
+
+    <!-- Inline -->
+    <rect x="190" y="45" width="85" height="24" rx="6" fill="#2A2A2E"/>
+    <text x="232" y="61" text-anchor="middle" font-size="6" fill="white">❤️ · 35 · Stressed</text>
+    <text x="232" y="92" text-anchor="middle" font-size="6" fill="#6B7280">Inline</text>
+
+    <!-- Stress Widget -->
+    <rect x="15" y="100" width="85" height="40" rx="6" fill="#2A2A2E"/>
+    <text x="22" y="114" font-size="6" font-weight="600" fill="white">Stress</text>
+    <circle cx="60" cy="111" r="3" fill="#EF4444"/><circle cx="68" cy="111" r="3" fill="#EF4444"/><circle cx="76" cy="111" r="3" fill="#F59E0B"/>
+    <circle cx="60" cy="119" r="3" fill="#F59E0B"/><circle cx="68" cy="119" r="3" fill="#EF4444"/><circle cx="76" cy="119" r="3" fill="#EF4444"/>
+    <text x="22" y="134" font-size="5" fill="#EF4444">Elevated ↑</text>
+    <text x="57" y="148" text-anchor="middle" font-size="6" fill="#6B7280">Stress Widget</text>
+
+    <!-- HRV Widget -->
+    <rect x="115" y="100" width="85" height="40" rx="6" fill="#2A2A2E"/>
+    <text x="122" y="114" font-size="6" font-weight="600" fill="white">HRV</text>
+    <text x="155" y="114" font-size="6" fill="#A78BFA">22ms</text>
+    <polyline points="125,128 135,126 145,130 155,132 165,134 175,136 185,138" fill="none" stroke="#A78BFA" stroke-width="1.2" stroke-linecap="round"/>
+    <text x="122" y="134" font-size="5" fill="#EF4444">Declining ↓</text>
+    <text x="157" y="148" text-anchor="middle" font-size="6" fill="#6B7280">HRV Widget</text>
+
+    <!-- Breathe Widget -->
+    <rect x="215" y="100" width="60" height="40" rx="6" fill="#2A2A2E"/>
+    <text x="245" y="118" text-anchor="middle" font-size="14">💨</text>
+    <text x="245" y="132" text-anchor="middle" font-size="6" fill="#0D9488">Breathe</text>
+    <text x="245" y="148" text-anchor="middle" font-size="6" fill="#6B7280">Quick Action</text>
+  </g>
+
+  <!-- ==================== Watch Navigation Arrows ==================== -->
+  <!-- Home → Insight Flow -->
+  <line x1="985" y1="290" x2="985" y2="308" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="995" y="302" font-size="6" fill="#3B82F6">tap</text>
+
+  <!-- Home → Nudge (from pill) -->
+  <path d="M 1050 250 Q 1090 280 1145 308" fill="none" stroke="#22C55E" stroke-width="1.2" marker-end="url(#arrow-green)"/>
+  <text x="1090" y="275" font-size="6" fill="#22C55E">START</text>
+
+  <!-- Live Face → Breathe overlay -->
+  <text x="1145" y="298" font-size="6" fill="#0D9488">tap → breathe overlay</text>
+
+  <!-- Nudge → Feedback -->
+  <text x="1210" y="430" font-size="6" fill="#3B82F6">→ feedback</text>
+
+  <!-- ==================== Legend ==================== -->
+  <g transform="translate(470, 560)">
+    <rect width="400" height="170" rx="12" fill="white" stroke="#E2E8F0" stroke-width="1" filter="url(#shadow)"/>
+    <text x="200" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#0F172A">Navigation Legend</text>
+
+    <line x1="20" y1="42" x2="60" y2="42" stroke="#3B82F6" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="70" y="46" font-size="9" fill="#334155">→ Tab navigation (blue)</text>
+
+    <line x1="20" y1="60" x2="60" y2="60" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="70" y="64" font-size="9" fill="#334155">→ Modal/sheet (amber, dashed border)</text>
+
+    <line x1="20" y1="78" x2="60" y2="78" stroke="#0D9488" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="70" y="82" font-size="9" fill="#334155">→ Stress tab navigation (teal)</text>
+
+    <line x1="20" y1="96" x2="60" y2="96" stroke="#22C55E" stroke-width="2"/>
+    <text x="70" y="100" font-size="9" fill="#334155">→ Action (green)</text>
+
+    <text x="20" y="122" font-size="9" font-weight="600" fill="#475569">Key Flows:</text>
+    <text x="20" y="138" font-size="8" fill="#334155">1. Dashboard badge → Readiness Sheet (modal) → dismiss</text>
+    <text x="20" y="152" font-size="8" fill="#334155">2. Recovery banner → Stress tab → Breathe/Journal/Check-in</text>
+    <text x="20" y="166" font-size="8" fill="#334155">3. WoW/Recovery/Metrics → Trends tab → metric detail + coaching</text>
+  </g>
+</svg>

@@ -93,12 +93,14 @@ final class TrendsViewModelTests: XCTestCase {
     // MARK: - Time Range Properties
 
     func testTimeRange_labels() {
+        XCTAssertEqual(TrendsViewModel.TimeRange.today.label, "Today")
         XCTAssertEqual(TrendsViewModel.TimeRange.week.label, "7 Days")
         XCTAssertEqual(TrendsViewModel.TimeRange.twoWeeks.label, "14 Days")
         XCTAssertEqual(TrendsViewModel.TimeRange.month.label, "30 Days")
     }
 
     func testTimeRange_rawValues() {
+        XCTAssertEqual(TrendsViewModel.TimeRange.today.rawValue, 1)
         XCTAssertEqual(TrendsViewModel.TimeRange.week.rawValue, 7)
         XCTAssertEqual(TrendsViewModel.TimeRange.twoWeeks.rawValue, 14)
         XCTAssertEqual(TrendsViewModel.TimeRange.month.rawValue, 30)
@@ -360,7 +362,7 @@ final class TrendsViewModelTests: XCTestCase {
 
     func testAllTimeRanges_areIterable() {
         let allRanges = TrendsViewModel.TimeRange.allCases
-        XCTAssertEqual(allRanges.count, 3)
+        XCTAssertEqual(allRanges.count, 4)
     }
 
     // MARK: - Bind Method

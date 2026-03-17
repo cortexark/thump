@@ -3,9 +3,10 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "rest",
+    "intensity",
     "hydrate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "rest",
   "nudgeTitle" : "A Cozy Bedtime Routine",
   "readinessLevel" : "primed",

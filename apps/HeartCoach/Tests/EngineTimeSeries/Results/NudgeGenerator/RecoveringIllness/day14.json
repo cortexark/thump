@@ -3,14 +3,14 @@
   "confidence" : "medium",
   "multiNudgeCategories" : [
     "walk",
-    "hydrate",
-    "moderate"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
   "nudgeTitle" : "Keep That Walking Groove Going",
   "readinessLevel" : "ready",
-  "readinessScore" : 69,
+  "readinessScore" : 67,
   "regressionFlag" : false,
   "stressFlag" : false
 }

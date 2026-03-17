@@ -67,7 +67,7 @@ final class StressAndHeartModelPropertyTests: XCTestCase {
     // MARK: - NudgeCategory Properties
 
     func testNudgeCategory_allCases() {
-        XCTAssertEqual(NudgeCategory.allCases.count, 8)
+        XCTAssertEqual(NudgeCategory.allCases.count, 9)
     }
 
     func testNudgeCategory_icons() {

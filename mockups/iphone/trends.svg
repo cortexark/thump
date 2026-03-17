@@ -1,0 +1,224 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="393" height="852" viewBox="0 0 393 852">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+      text { font-family: 'Inter', -apple-system, 'SF Pro Display', sans-serif; }
+    </style>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#EF4444" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#EF4444" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="tabBarBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8F8F8"/>
+      <stop offset="100%" stop-color="#F2F2F2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="393" height="852" fill="#F2F2F7" rx="44"/>
+
+  <!-- Header Gradient -->
+  <rect width="393" height="120" fill="url(#headerGrad)" rx="44"/>
+
+  <!-- Dynamic Island -->
+  <rect x="122" y="8" width="149" height="34" rx="17" fill="#000"/>
+
+  <!-- Status Bar -->
+  <text x="36" y="25" font-size="15" font-weight="600" fill="#000">9:41</text>
+  <!-- Signal bars -->
+  <g transform="translate(304,14)">
+    <rect x="0" y="6" width="3" height="4" rx="1" fill="#000"/>
+    <rect x="5" y="4" width="3" height="6" rx="1" fill="#000"/>
+    <rect x="10" y="2" width="3" height="8" rx="1" fill="#000"/>
+    <rect x="15" y="0" width="3" height="10" rx="1" fill="#000"/>
+  </g>
+  <!-- WiFi -->
+  <g transform="translate(330,14)">
+    <path d="M4 8a1 1 0 1 1 2 0 1 1 0 0 1-2 0" fill="#000"/>
+    <path d="M1.5 5.5C3 4 7 4 8.5 5.5" stroke="#000" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M-0.5 3.5C2.5 1 7.5 1 10.5 3.5" stroke="#000" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- Battery -->
+  <rect x="352" y="15" width="24" height="11" rx="3" stroke="#000" stroke-width="1" fill="none"/>
+  <rect x="376" y="19" width="2" height="4" rx="1" fill="#000"/>
+  <rect x="354" y="17" width="18" height="7" rx="1.5" fill="#000"/>
+
+  <!-- Header Title -->
+  <text x="28" y="72" font-size="13" fill="#EF4444">&#x2764;&#xFE0F;</text>
+  <text x="48" y="72" font-size="28" font-weight="700" fill="#1C1C1E">Trends</text>
+  <text x="20" y="92" font-size="14" fill="#6B7280">Your resting heart rate story</text>
+
+  <!-- Metric Picker: 3-column grid -->
+  <g transform="translate(20,108)">
+    <!-- Row 1 -->
+    <!-- RHR (selected) -->
+    <rect x="0" y="0" width="113" height="36" rx="18" fill="#EF4444"/>
+    <text x="56" y="23" font-size="13" font-weight="600" fill="#FFF" text-anchor="middle">&#x2764;&#xFE0F; RHR</text>
+    <!-- HRV -->
+    <rect x="121" y="0" width="113" height="36" rx="18" fill="#E5E5EA"/>
+    <text x="177" y="23" font-size="13" font-weight="500" fill="#3C3C43" text-anchor="middle">&#x1F493; HRV</text>
+    <!-- Recovery -->
+    <rect x="242" y="0" width="111" height="36" rx="18" fill="#E5E5EA"/>
+    <text x="297" y="23" font-size="13" font-weight="500" fill="#3C3C43" text-anchor="middle">&#x21A9;&#xFE0F; Recovery</text>
+    <!-- Row 2 (centered) -->
+    <!-- Cardio -->
+    <rect x="60" y="44" width="113" height="36" rx="18" fill="#E5E5EA"/>
+    <text x="116" y="67" font-size="13" font-weight="500" fill="#3C3C43" text-anchor="middle">&#x1FAC1; Cardio</text>
+    <!-- Active -->
+    <rect x="181" y="44" width="113" height="36" rx="18" fill="#E5E5EA"/>
+    <text x="237" y="67" font-size="13" font-weight="500" fill="#3C3C43" text-anchor="middle">&#x1F3C3; Active</text>
+  </g>
+
+  <!-- Annotation: metric chips -->
+  <line x1="197" y1="192" x2="197" y2="200" stroke="#EF4444" stroke-width="1" stroke-dasharray="3,2"/>
+  <rect x="147" y="201" width="100" height="14" rx="4" fill="#EF4444" opacity="0.08"/>
+  <text x="197" y="211" font-size="8" fill="#EF4444" text-anchor="middle">switches metric</text>
+
+  <!-- Time Range Picker -->
+  <g transform="translate(110,220)">
+    <rect x="0" y="0" width="56" height="30" rx="15" fill="#EF4444"/>
+    <text x="28" y="20" font-size="13" font-weight="600" fill="#FFF" text-anchor="middle">7D</text>
+    <rect x="62" y="0" width="56" height="30" rx="15" fill="#E5E5EA"/>
+    <text x="90" y="20" font-size="13" font-weight="500" fill="#3C3C43" text-anchor="middle">14D</text>
+    <rect x="124" y="0" width="56" height="30" rx="15" fill="#E5E5EA"/>
+    <text x="152" y="20" font-size="13" font-weight="500" fill="#3C3C43" text-anchor="middle">30D</text>
+  </g>
+
+  <!-- Annotation: time range -->
+  <line x1="197" y1="254" x2="197" y2="261" stroke="#EF4444" stroke-width="1" stroke-dasharray="3,2"/>
+  <rect x="152" y="262" width="90" height="14" rx="4" fill="#EF4444" opacity="0.08"/>
+  <text x="197" y="272" font-size="8" fill="#EF4444" text-anchor="middle">changes period</text>
+
+  <!-- Chart Card -->
+  <g transform="translate(20,282)">
+    <rect width="353" height="260" rx="20" fill="#FFF"/>
+
+    <!-- Chart header -->
+    <text x="16" y="28" font-size="15" font-weight="600" fill="#1C1C1E">Resting Heart Rate</text>
+    <text x="16" y="52" font-size="28" font-weight="700" fill="#EF4444">78 bpm</text>
+
+    <!-- Explainer -->
+    <text x="16" y="72" font-size="11" fill="#8E8E93">Your heart rate at complete rest — lower generally</text>
+    <text x="16" y="85" font-size="11" fill="#8E8E93">means better cardiovascular fitness.</text>
+    <!-- Annotation -->
+    <rect x="248" y="62" width="88" height="16" rx="4" fill="#8E8E93" opacity="0.1"/>
+    <text x="292" y="73" font-size="8" fill="#8E8E93" text-anchor="middle">What is this?</text>
+
+    <!-- Chart area -->
+    <!-- Y axis labels -->
+    <text x="16" y="110" font-size="10" fill="#C7C7CC">85</text>
+    <text x="16" y="155" font-size="10" fill="#C7C7CC">75</text>
+    <text x="16" y="200" font-size="10" fill="#C7C7CC">65</text>
+    <text x="16" y="240" font-size="10" fill="#C7C7CC">60</text>
+
+    <!-- Grid lines -->
+    <line x1="40" y1="106" x2="340" y2="106" stroke="#F2F2F7" stroke-width="1"/>
+    <line x1="40" y1="151" x2="340" y2="151" stroke="#F2F2F7" stroke-width="1"/>
+    <line x1="40" y1="196" x2="340" y2="196" stroke="#F2F2F7" stroke-width="1"/>
+    <line x1="40" y1="236" x2="340" y2="236" stroke="#F2F2F7" stroke-width="1"/>
+
+    <!-- Chart data: 65,68,72,74,76,78,78 mapped to y
+         Y mapping: 85=106, 60=236, range=130px for 25bpm => 5.2px/bpm
+         65 => 236-(5*5.2)=210, 68=>194.4, 72=>168.8, 74=>158.4, 76=>148, 78=>137.6 -->
+
+    <!-- Filled area -->
+    <polygon points="83,210 126,194 169,169 212,158 255,148 298,138 340,138 340,236 83,236" fill="url(#chartFill)"/>
+
+    <!-- Line -->
+    <polyline points="83,210 126,194 169,169 212,158 255,148 298,138 340,138" fill="none" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Data points -->
+    <circle cx="83" cy="210" r="4" fill="#EF4444"/>
+    <circle cx="126" cy="194" r="4" fill="#EF4444"/>
+    <circle cx="169" cy="169" r="4" fill="#EF4444"/>
+    <circle cx="212" cy="158" r="4" fill="#EF4444"/>
+    <circle cx="255" cy="148" r="4" fill="#EF4444"/>
+    <circle cx="298" cy="138" r="4" fill="#EF4444"/>
+    <circle cx="340" cy="138" r="4" fill="#FFF" stroke="#EF4444" stroke-width="2.5"/>
+
+    <!-- X axis labels -->
+    <text x="83" y="252" font-size="10" fill="#8E8E93" text-anchor="middle">Mon</text>
+    <text x="126" y="252" font-size="10" fill="#8E8E93" text-anchor="middle">Tue</text>
+    <text x="169" y="252" font-size="10" fill="#8E8E93" text-anchor="middle">Wed</text>
+    <text x="212" y="252" font-size="10" fill="#8E8E93" text-anchor="middle">Thu</text>
+    <text x="255" y="252" font-size="10" fill="#8E8E93" text-anchor="middle">Fri</text>
+    <text x="298" y="252" font-size="10" fill="#8E8E93" text-anchor="middle">Sat</text>
+    <text x="340" y="252" font-size="10" fill="#8E8E93" text-anchor="middle">Sun</text>
+  </g>
+
+  <!-- Stats Pills Row -->
+  <g transform="translate(20,552)">
+    <!-- Avg -->
+    <rect x="0" y="0" width="111" height="50" rx="14" fill="#FFF"/>
+    <text x="55" y="22" font-size="18" font-weight="700" fill="#EF4444" text-anchor="middle">&#x2764;&#xFE0F; 73</text>
+    <text x="55" y="38" font-size="10" fill="#8E8E93" text-anchor="middle">Avg bpm</text>
+
+    <!-- Low -->
+    <rect x="121" y="0" width="111" height="50" rx="14" fill="#FFF"/>
+    <text x="176" y="22" font-size="18" font-weight="700" fill="#EF4444" text-anchor="middle">&#x2764;&#xFE0F; 65</text>
+    <text x="176" y="38" font-size="10" fill="#8E8E93" text-anchor="middle">Low bpm</text>
+
+    <!-- High -->
+    <rect x="242" y="0" width="111" height="50" rx="14" fill="#FFF"/>
+    <text x="297" y="22" font-size="18" font-weight="700" fill="#EF4444" text-anchor="middle">&#x2764;&#xFE0F; 78</text>
+    <text x="297" y="38" font-size="10" fill="#8E8E93" text-anchor="middle">High bpm</text>
+  </g>
+
+  <!-- Trend Insight Card -->
+  <g transform="translate(20,614)">
+    <rect width="353" height="82" rx="20" fill="#EF4444" fill-opacity="0.06" stroke="#EF4444" stroke-opacity="0.2" stroke-width="1"/>
+    <text x="16" y="24" font-size="15" font-weight="700" fill="#DC2626">&#x2B06; Rising Trend</text>
+    <text x="16" y="42" font-size="12" font-weight="600" fill="#6B7280">What's happening</text>
+    <text x="16" y="58" font-size="11" fill="#6B7280">Your resting heart rate has increased 13 bpm over the</text>
+    <text x="16" y="72" font-size="11" fill="#6B7280">past week. This may indicate accumulated fatigue or stress.</text>
+  </g>
+
+  <!-- Improvement Tip Card -->
+  <g transform="translate(20,706)">
+    <rect width="353" height="60" rx="16" fill="#FFF"/>
+    <text x="16" y="22" font-size="13" font-weight="700" fill="#1C1C1E">&#x1F4A1; What You Can Do</text>
+    <text x="16" y="40" font-size="11" fill="#6B7280">Focus on sleep quality and stress reduction.</text>
+    <!-- Goal capsule -->
+    <rect x="248" y="42" width="90" height="22" rx="11" fill="#EF4444" fill-opacity="0.1"/>
+    <text x="293" y="57" font-size="10" font-weight="600" fill="#EF4444" text-anchor="middle">Goal: &lt; 65 bpm</text>
+  </g>
+
+  <!-- Tab Bar -->
+  <g transform="translate(0,776)">
+    <rect width="393" height="76" fill="url(#tabBarBg)"/>
+    <line x1="0" y1="0" x2="393" y2="0" stroke="#C6C6C8" stroke-width="0.5"/>
+
+    <!-- Home -->
+    <g transform="translate(39,12)" text-anchor="middle">
+      <text x="0" y="0" font-size="20">&#x1F3E0;</text>
+      <text x="0" y="20" font-size="10" fill="#8E8E93">Home</text>
+    </g>
+    <!-- Insights -->
+    <g transform="translate(118,12)" text-anchor="middle">
+      <text x="0" y="0" font-size="20">&#x1F4A1;</text>
+      <text x="0" y="20" font-size="10" fill="#8E8E93">Insights</text>
+    </g>
+    <!-- Stress -->
+    <g transform="translate(197,12)" text-anchor="middle">
+      <text x="0" y="0" font-size="20">&#x1F9E0;</text>
+      <text x="0" y="20" font-size="10" fill="#8E8E93">Stress</text>
+    </g>
+    <!-- Trends (selected) -->
+    <g transform="translate(276,12)" text-anchor="middle">
+      <text x="0" y="0" font-size="20">&#x1F4C8;</text>
+      <text x="0" y="20" font-size="10" font-weight="600" fill="#FF375F">Trends</text>
+    </g>
+    <!-- Settings -->
+    <g transform="translate(354,12)" text-anchor="middle">
+      <text x="0" y="0" font-size="20">&#x2699;&#xFE0F;</text>
+      <text x="0" y="20" font-size="10" fill="#8E8E93">Settings</text>
+    </g>
+  </g>
+
+  <!-- Home indicator -->
+  <rect x="140" y="832" width="113" height="5" rx="2.5" fill="#000"/>
+</svg>

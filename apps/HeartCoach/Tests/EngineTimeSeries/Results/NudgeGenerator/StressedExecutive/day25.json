@@ -3,14 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "rest",
-    "breathe",
-    "hydrate"
+    "celebrate",
+    "breathe"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "rest",
   "nudgeTitle" : "Rest and Recharge Today",
   "readinessLevel" : "recovering",
-  "readinessScore" : 37,
+  "readinessScore" : 33,
   "regressionFlag" : false,
   "stressFlag" : false
 }

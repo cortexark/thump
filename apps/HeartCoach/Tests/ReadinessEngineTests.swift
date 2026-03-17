@@ -23,15 +23,19 @@ final class ReadinessEngineTests: XCTestCase {
 
     // MARK: - Minimum Data Requirements
 
-    func testCompute_noPillars_returnsNil() {
-        // Snapshot with no usable data → nil
+    func testCompute_noPillars_returnsFloorScore() {
+        // Snapshot with no usable data → floor scores for sleep + recovery
+        // (no longer returns nil — missing critical pillars get penalty scores)
         let snapshot = HeartSnapshot(date: Date())
         let result = engine.compute(
             snapshot: snapshot,
             stressScore: nil,
             recentHistory: []
         )
-        XCTAssertNil(result)
+        XCTAssertNotNil(result, "Missing pillars should get floor scores, not be excluded")
+        if let result {
+            XCTAssertLessThanOrEqual(result.score, 50, "Floor scores should produce a conservative result")
+        }
     }
 
     func testCompute_onlyOnePillar_returnsNil() {
@@ -113,19 +117,18 @@ final class ReadinessEngineTests: XCTestCase {
             "11h oversleep should degrade the score")
     }
 
-    func testSleep_zero_excludesPillar() {
+    func testSleep_zero_getsFloorScore() {
         let snapshot = HeartSnapshot(date: Date(), sleepHours: 0)
         let result = engine.compute(
             snapshot: snapshot,
             stressScore: 50.0,
             recentHistory: []
         )
-        // Stress + activityBalance fallback → 2 pillars, sleep excluded
-        // Previously nil (1 pillar), now returns result thanks to activity fallback
-        XCTAssertNotNil(result, "Stress + activity fallback should give 2 pillars")
+        XCTAssertNotNil(result)
         if let r = result {
-            let hasSleep = r.pillars.contains { $0.type == .sleep }
-            XCTAssertFalse(hasSleep, "Sleep pillar should be excluded with 0h sleep")
+            let sleepPillar = r.pillars.first { $0.type == .sleep }
+            XCTAssertNotNil(sleepPillar, "Sleep pillar should be present with floor score")
+            XCTAssertLessThanOrEqual(sleepPillar?.score ?? 100, 5.0, "Zero sleep should score near 0")
         }
     }
 
@@ -189,7 +192,7 @@ final class ReadinessEngineTests: XCTestCase {
         XCTAssertEqual(recoveryPillar!.score, 0.0, accuracy: 0.1)
     }
 
-    func testRecovery_nil_excludesPillar() {
+    func testRecovery_nil_getsFloorScore() {
         let snapshot = HeartSnapshot(date: Date(), sleepHours: 8.0)
         let result = engine.compute(
             snapshot: snapshot,
@@ -197,7 +200,8 @@ final class ReadinessEngineTests: XCTestCase {
             recentHistory: []
         )
         let recoveryPillar = result?.pillars.first { $0.type == .recovery }
-        XCTAssertNil(recoveryPillar)
+        XCTAssertNotNil(recoveryPillar, "Missing recovery should get floor score")
+        XCTAssertEqual(recoveryPillar?.score, 40.0, "Missing recovery floor score should be 40")
     }
 
     // MARK: - Stress Pillar
