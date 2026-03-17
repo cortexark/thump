@@ -136,7 +136,7 @@ extension DashboardView {
         // Override with readiness context — don't show "Steady" when sleep is critically low
         if let readiness = viewModel.readinessResult {
             if let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep }),
-               sleepPillar.score < 50 {
+               sleepPillar.score < 50 {  // NOTE: 50 differs from recoveryModerateScore (55)
                 return "Low sleep"
             }
             if readiness.level == .recovering {
@@ -161,14 +161,23 @@ extension DashboardView {
     }
 
     /// Builds a human-readable recovery narrative from the trend data + sleep + stress.
+    /// When coordinator is active, delegates to AdvicePresenter.
     func recoveryNarrative(wow: WeekOverWeekTrend) -> String {
+        // Coordinator path: use AdvicePresenter
+        if ConfigService.enableCoordinator,
+           let adviceState = coordinator.bundle?.adviceState,
+           let narrative = AdvicePresenter.recoveryNarrative(for: adviceState) {
+            return narrative
+        }
+
+        // Legacy path
+        let policy = ConfigService.activePolicy
         var parts: [String] = []
         var sleepIsLow = false
 
-        // Sleep context from readiness pillars
         if let readiness = viewModel.readinessResult {
             if let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep }) {
-                if sleepPillar.score >= 75 {
+                if sleepPillar.score >= Double(policy.view.recoveryStrongScore) {
                     let hrs = viewModel.todaySnapshot?.sleepHours ?? 0
                     parts.append("Sleep was solid\(hrs > 0 ? " (\(String(format: "%.1f", hrs)) hrs)" : "")")
                 } else if sleepPillar.score >= 50 {
@@ -180,7 +189,6 @@ extension DashboardView {
             }
         }
 
-        // HRV context
         if let hrv = viewModel.todaySnapshot?.hrvSDNN, hrv > 0 {
             let diff = wow.currentWeekMean - wow.baselineMean
             if diff <= -1 {
@@ -190,10 +198,8 @@ extension DashboardView {
             }
         }
 
-        // Recovery verdict — must not contradict sleep assessment
         let diff = wow.currentWeekMean - wow.baselineMean
         if sleepIsLow {
-            // Never say "on track" when sleep is critically low
             parts.append("Prioritize rest tonight — sleep is the biggest lever for recovery.")
         } else if diff <= -2 {
             parts.append("Your recovery is looking strong this week.")
