@@ -255,7 +255,7 @@ struct DashboardView: View {
         if let readiness = viewModel.readinessResult, readiness.score < 45 {
             let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep })
             if let sleep = sleepPillar, sleep.score < 50 {
-                return "Rough night. Take it easy — your body needs to catch up."
+                return "Rough night. Take it easy - your body needs to catch up."
             }
             return "Recovery is low. A light day will help you bounce back."
         }
@@ -369,7 +369,7 @@ struct DashboardView: View {
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
 
-                            Text("Wellness estimate based on your recent trends — not a medical assessment")
+                            Text("Wellness estimate based on your recent trends - not a medical assessment")
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
 
