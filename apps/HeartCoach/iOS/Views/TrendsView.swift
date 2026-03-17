@@ -167,7 +167,8 @@ struct TrendsView: View {
     private var timeRangePicker: some View {
         HStack(spacing: 8) {
             ForEach(
-                [(TrendsViewModel.TimeRange.week, "7D"),
+                [(TrendsViewModel.TimeRange.today, "1D"),
+                 (.week, "7D"),
                  (.twoWeeks, "14D"),
                  (.month, "30D")],
                 id: \.0
@@ -243,7 +244,7 @@ struct TrendsView: View {
 
     private func highlightStatsRow(points: [(date: Date, value: Double)]) -> some View {
         let values = points.map(\.value)
-        let avg = values.reduce(0, +) / Double(values.count)
+        let avg = values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
         let minVal = values.min() ?? 0
         let maxVal = values.max() ?? 0
 
@@ -333,9 +334,9 @@ struct TrendsView: View {
         }
 
         let midpoint = values.count / 2
-        let firstAvg = values.prefix(midpoint).reduce(0, +) / Double(midpoint)
-        let secondAvg = values.suffix(values.count - midpoint).reduce(0, +) / Double(values.count - midpoint)
-        let percentChange = (secondAvg - firstAvg) / firstAvg * 100
+        let firstAvg = midpoint > 0 ? values.prefix(midpoint).reduce(0, +) / Double(midpoint) : 0
+        let secondAvg = (values.count - midpoint) > 0 ? values.suffix(values.count - midpoint).reduce(0, +) / Double(values.count - midpoint) : 0
+        let percentChange = firstAvg == 0 ? 0 : (secondAvg - firstAvg) / firstAvg * 100
 
         let lowerIsBetter = viewModel.selectedMetric == .restingHR
         let improving = lowerIsBetter ? percentChange < -2 : percentChange > 2
@@ -345,7 +346,7 @@ struct TrendsView: View {
         let rangeDescription = change < 2 ? "barely any" : (change < 5 ? "about \(Int(change))%" : "\(Int(change))%")
         let metricName = metricDisplayName.lowercased()
 
-        let shortWindow = viewModel.timeRange == .week
+        let shortWindow = viewModel.timeRange == .week || viewModel.timeRange == .today
         let windowNote = shortWindow
             ? " Try 14D or 30D for the bigger picture."
             : ""
@@ -385,7 +386,7 @@ struct TrendsView: View {
 
     @ViewBuilder
     private func missedDaysCard(points: [(date: Date, value: Double)]) -> some View {
-        let expectedDays = viewModel.timeRange == .week ? 7 : (viewModel.timeRange == .twoWeeks ? 14 : 30)
+        let expectedDays = viewModel.timeRange.rawValue
         let missedCount = expectedDays - points.count
 
         if missedCount >= 2 {

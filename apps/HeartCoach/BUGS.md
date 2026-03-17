@@ -451,28 +451,144 @@
 
 ---
 
+## P1 — Ship Blockers (2026-03-16 Session — Real Device Testing)
+
+### BUG-064: Pull-to-refresh crashes with "Something went wrong" on real device
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P1-BLOCKER
+- **File:** `iOS/Services/HealthKitService.swift` (13 locations)
+- **Description:** Pulling down to refresh on a real device always showed "Something went wrong." Root cause: HealthKit returns errors for unavailable metrics (no VO2Max data, no workout data, no zone minutes) on real devices — the simulator never hits these because mock data always provides values. The `.refreshable` modifier calls `DashboardViewModel.refresh()` → `fetchTodaySnapshot()` → 10 concurrent HealthKit queries. Any single query error caused the entire refresh to fail and throw.
+- **Fix Applied:** Changed 13 HealthKit query error handlers from throwing to returning graceful defaults:
+  - `batchAverageQuery` → returns `[:]` instead of throwing
+  - `batchSumQuery` → returns `[:]`
+  - `queryRecoveryHR` → returns `[]`
+  - `queryVO2Max` → returns `nil`
+  - `queryBodyMass` → returns `nil`
+  - `queryWorkoutMinutes` → returns `nil`
+  - `queryZoneMinutes` → returns `[]` (2 locations)
+  - `querySleepHours` → returns `[]`
+  - `queryAverageQuantity` → returns `nil`
+  - `queryCumulativeSum` → returns `nil`
+  - `queryMaxHeartRate` → returns `nil`
+  - `queryAverageHeartRate` → returns `nil`
+  - Each location logs via `AppLogger.healthKit.warning(...)` before returning default
+- **Impact:** App now degrades gracefully — missing metrics show as "—" instead of crashing the entire dashboard refresh.
+
+---
+
+## P0 — Critical Bugs (2026-03-16 Session — Real Device Testing)
+
+### BUG-065: "Heart is getting stronger this week" — FDA cardiac efficiency claim
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P0-CRASH (Regulatory)
+- **File:** `iOS/Views/DashboardView+Recovery.swift` line 54
+- **Description:** Recovery card positive trend message said "Heart is getting stronger this week" — this is a structure/function claim about a specific organ. FDA classifies software making such claims as potential SaMD (Software as a Medical Device). Every regulatory judge flagged this.
+- **Fix Applied:** Changed to "RHR trending down — that often tracks with good sleep and consistent activity." This attributes the trend to behavioral factors (sleep, activity) rather than making a cardiac efficiency claim.
+
+### BUG-066: Recovery narrative contradicts sleep assessment
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P0-CRASH (Safety)
+- **File:** `iOS/Views/DashboardView+Recovery.swift` — `recoveryNarrative()` function
+- **Description:** The recovery narrative function built 3 parts independently: (1) sleep assessment, (2) HRV context, (3) recovery verdict. These parts didn't cross-reference each other. Result: user could see "Short on sleep — that slows recovery" immediately followed by "Recovery is on track." in the same card. On a real device with 2.2h sleep, the card showed "Short on sleep" + "Recovery is on track" — directly contradictory and dangerously reassuring.
+- **Root Cause:** The verdict section only looked at `wow.currentWeekMean - wow.baselineMean` (RHR week-over-week), ignoring the sleep assessment it had just generated above.
+- **Fix Applied:** Added `sleepIsLow` tracking flag. When sleep pillar score < 50, the verdict now says "Prioritize rest tonight — sleep is the biggest lever for recovery." instead of the RHR-based "on track" message. Sleep assessment and verdict can no longer contradict each other.
+
+### BUG-067: "Steady" recovery badge when readiness is Recovering
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P0-CRASH (UX Coherence)
+- **File:** `iOS/Views/DashboardView+Recovery.swift` — `recoveryTrendLabel()` function
+- **Description:** The recovery trend badge (top-right of the "How You Recovered" card) showed "Steady" even when the user's readiness was `.recovering` with 2.2h sleep. The badge only looked at RHR week-over-week direction (`.stable` → "Steady"), ignoring the rest of the dashboard context. User sees "Recovering" readiness + "Steady" recovery badge — confusing and contradictory.
+- **Fix Applied:** `recoveryTrendLabel()` now checks readiness context first:
+  - If sleep pillar score < 50 → returns "Low sleep" (overrides RHR trend)
+  - If readiness level == `.recovering` → returns "Needs rest" (overrides RHR trend)
+  - Otherwise falls through to original RHR-based logic (Great/Improving/Steady/Elevated/Needs rest)
+
+### BUG-068: Activity data mismatch — Thump Check vs Daily Goals
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P0-CRASH (Data Coherence)
+- **File:** `iOS/Views/DashboardView+ThumpCheck.swift`
+- **Description:** The Activity pill in "Today's Play" (Thump Check section) showed "63" while the Daily Goals section showed "10 min" for the same Activity metric on the same screen. User sees two contradictory numbers for "Activity" within one scroll.
+- **Root Cause:** Two completely different data sources:
+  - **Thump Check Activity pill** used `viewModel.zoneAnalysis?.overallScore` — a HeartRateZoneEngine *quality score* (0-100) measuring how well the user's zone distribution matched targets. Not actual minutes.
+  - **Daily Goals Activity ring** used `(walkMinutes ?? 0) + (workoutMinutes ?? 0)` — actual HealthKit exercise minutes.
+  - "63" was a zone quality percentage, "10" was real minutes. Both labeled "Activity."
+- **Fix Applied:** Changed Thump Check Activity pill to show actual minutes (`walkMinutes + workoutMinutes`), matching Daily Goals. Updated `activityPillColor` to base on actual minutes: ≥30 green, ≥10 amber, >0 red, else secondary.
+- **Why it matters:** Same metric label showing different numbers on the same screen destroys user trust. A user who notices "63 Activity" next to "10 min Active" will assume the app is broken.
+
+### BUG-069: Bug report opens Mail app, yanking user out of Thump
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P0-CRASH (UX)
+- **File:** `iOS/Views/SettingsView.swift` — `submitBugReport()`
+- **Description:** Tapping "Send" on the Report a Bug sheet called `UIApplication.shared.open(mailto:...)` which opened the Mail app (or showed "no email configured" error on devices without Mail). The Firestore upload already sent the report successfully — the `mailto:` was supposed to be a "fallback" but fired every time, disrupting the flow and confusing users.
+- **Fix Applied:** Removed the `mailto:` URL open entirely. Firestore is the sole submission channel. Sheet now auto-dismisses 1.5s after successful upload with a "Submitted successfully" message.
+
+### BUG-070: Bug report sends no health metrics — team cannot reproduce
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P0-CRASH (Diagnostics)
+- **Files:** `iOS/Services/FeedbackService.swift`, `iOS/Views/SettingsView.swift`
+- **Description:** The bug report only sent description + device info (model, iOS version, app version). No health metrics, no engine outputs, no UI state. The team receiving the report had zero context about what the user was seeing on screen — impossible to reproduce or diagnose.
+- **Fix Applied:** Bug report now collects and uploads a full `healthMetrics` dictionary to Firestore:
+  - **Today's snapshot**: RHR, HRV, recovery HR, VO2Max, zone minutes, steps, walk/workout minutes, sleep hours, body mass, height
+  - **Assessment**: overall score, status, nudge category/title/intensity
+  - **User profile**: age (from DOB), biological sex, streak days, onboarding status
+  - **7-day history**: daily RHR, HRV, sleep, steps, walk/workout minutes, assessment status
+  - **App state**: design variant (A/B), notification settings, telemetry consent, current tab
+
+### BUG-071: Bug report sheet doesn't close after submission
+- **Status:** FIXED (2026-03-16)
+- **Severity:** P0-CRASH (UX)
+- **File:** `iOS/Views/SettingsView.swift` — bug report sheet
+- **Description:** After tapping "Send", the sheet stayed open showing only a green checkmark. User had to manually tap "Cancel" to dismiss — confusing because "Cancel" implies the report wasn't sent. The "Send" button also remained enabled, allowing duplicate submissions.
+- **Fix Applied:** (1) Sheet auto-dismisses 1.5s after successful Firestore upload. (2) "Send" button is disabled after first tap to prevent duplicates. (3) Success message reads "Submitted successfully. Thank you!" with animated entry. (4) Added note below the text field: "Your current health metrics and app state will be included to help us investigate."
+
+---
+
+## P2 — Major Bugs (2026-03-17 Session)
+
+### BUG-072: Stress Day heatmap shows "Need 3+ days of data" even with HRV data
+- **Status:** FIXED (2026-03-17)
+- **Severity:** P2-MAJOR
+- **File:** `Shared/Engine/StressEngine.swift`, `iOS/Views/StressHeatmapViews.swift`
+- **Description:** The Stress Day heatmap showed "Need 3+ days of data for this view" even when the user had 9 HRV readings for the current day. Root cause: `hourlyStressForDay()` called `computeBaseline(snapshots: preceding)` which required prior days' HRV to compute a baseline. On day 1 (or when historical HRV was sparse), this returned nil, causing the function to return empty `[HourlyStressPoint]`, triggering the empty state.
+- **Fix Applied:** (1) Added baseline fallback: `let baseline = computeBaseline(snapshots: preceding) ?? dailyHRV` — uses today's own HRV when no historical baseline exists. (2) Updated empty state message from "Need 3+ days of data for this view" to "Wear your watch today to see stress data here."
+
+---
+
+## Enhancement — Bug Report Diagnostic Gaps (2026-03-17)
+
+### ENH-001: Bug report now includes HealthKit query warnings
+- **Status:** DONE (2026-03-17)
+- **Severity:** P1-BLOCKER (Diagnostics)
+- **Files:** `iOS/Services/HealthKitService.swift`, `iOS/Services/HealthDataProviding.swift`, `iOS/ViewModels/DashboardViewModel.swift`
+- **Description:** When HealthKit queries fail (auth denied, no data, query error), the app returned graceful defaults (nil, empty array) but the bug report had no way to explain *why* metrics were nil. Team receiving bug reports couldn't distinguish "user doesn't wear watch" from "HealthKit authorization revoked" from "query crash."
+- **Fix Applied:** Added `queryWarnings: [String]` array to HealthKitService that accumulates error messages from all 13 HealthKit query error handlers during a refresh cycle. Warnings are cleared at each refresh start, written to the diagnostic snapshot as `healthKitQueryWarnings` and `healthKitQueryWarningCount`. Protocol and mock updated for testability.
+
+### ENH-002: Bug report now includes stress hourly data availability
+- **Status:** DONE (2026-03-17)
+- **Severity:** P2-MAJOR (Diagnostics)
+- **File:** `iOS/ViewModels/DashboardViewModel.swift`
+- **Description:** BUG-072 (stress heatmap showing "3+ days needed") was not diagnosable from bug reports because the hourly stress point count was not included. Team couldn't tell if the heatmap was empty because of no HRV data, no baseline, or a code bug.
+- **Fix Applied:** Added `stressHourlyPointCount`, `stressHourlyEmpty`, and `stressHourlyEmptyReason` to the diagnostic snapshot. Calls `StressEngine.hourlyStressForDay()` during diagnostic capture to record the exact same data availability the heatmap sees.
+
+### ENH-003: Bug report now includes optional screenshot
+- **Status:** DONE (2026-03-17)
+- **Severity:** P2-MAJOR (Diagnostics)
+- **Files:** `iOS/Views/SettingsView.swift`
+- **Description:** Text-based diagnostic data captures *what text was generated* but not *how it rendered*. Visual bugs (wrong emoji, hyphen vs em-dash, truncation, layout issues, color mismatches) were invisible in structured data.
+- **Fix Applied:** Added "Include screenshot" toggle (default ON) to bug report sheet. Captures the main window as JPEG (40% quality), capped at 500KB, encoded as base64 in the Firestore document. Falls back to 20% quality if initial capture exceeds 500KB. Screenshot shows the dashboard behind the bug report sheet — the screen the user was looking at when they decided to report.
+
+---
+
 ## Tracking Summary
 
 | Severity | Total | Open | Fixed |
 |----------|-------|------|-------|
-| P0-CRASH | 1 | 0 | 1 |
-| P1-BLOCKER | 8 | 0 | 8 |
-| P2-MAJOR | 32 | 1 | 31 |
+| P0-CRASH | 8 | 0 | 8 |
+| P1-BLOCKER | 9 | 0 | 9 |
+| P2-MAJOR | 33 | 1 | 32 |
 | P3-MINOR | 7 | 0 | 7 |
 | P4-COSMETIC | 13 | 0 | 13 |
-| **Total** | **63** | **1** | **62** |
-
-### Remaining Open (1)
-- BUG-013: Accessibility labels missing across views (P2) — large effort, plan for next sprint
-
-| Severity | Total | Open | Fixed |
-|----------|-------|------|-------|
-| P0-CRASH | 1 | 0 | 1 |
-| P1-BLOCKER | 8 | 0 | 8 |
-| P2-MAJOR | 28 | 1 | 27 |
-| P3-MINOR | 5 | 0 | 5 |
-| P4-COSMETIC | 13 | 0 | 13 |
-| **Total** | **55** | **1** | **54** |
+| **Total** | **72** | **1** | **71** |
 
 ### Remaining Open (1)
 - BUG-013: Accessibility labels missing across views (P2) — large effort, plan for next sprint
@@ -483,6 +599,36 @@
 - Production readiness suite: 31 tests across 10 clinical personas × 8 engines
 - Watch build: ✅ ThumpWatch scheme passes
 
+### Session History
+| Date | Bugs Found | Bugs Fixed | Method |
+|------|-----------|------------|--------|
+| 2026-03-12 | 55 | 54 | Code review + static analysis |
+| 2026-03-14 | 8 | 8 | Time-series engine testing + linter |
+| 2026-03-16 | 8 | 8 | Real device testing + LLM judge review |
+| 2026-03-17 | 1 | 1 | QAE defect management + diagnostic enhancement |
+| **Total** | **72** | **71** | |
+
 ---
 
-*Last updated: 2026-03-12 — 54/55 bugs fixed, 1 remaining (accessibility). All P0 + P1 resolved. Mock data replaced with real HealthKit queries. Medical language scrubbed. AI slop removed. Raw jargon humanized. Context-aware trend colors added. Watch shaming language softened. Plaintext PHI fallback removed. Force unwraps eliminated. E2E behavioral + UI coherence tests built.*
+## Production Release TODO
+
+### TODO-001: Re-enable StoreKit + AuthenticationServices framework links
+- **Status:** PENDING (for production release only)
+- **File:** `Thump.xcodeproj/project.pbxproj`
+- **Description:** StoreKit.framework and AuthenticationServices.framework were removed from the explicit Frameworks build phase to allow building with a personal development team (which doesn't support In-App Purchase or Sign in with Apple capabilities). Swift `import StoreKit` / `import AuthenticationServices` still auto-links for compilation, but the explicit link is needed for App Store submission.
+- **Action for production:** When switching to a paid Apple Developer Program account ($99/yr):
+  1. Re-add `StoreKit.framework` to Thump target → Build Phases → Link Binary With Libraries
+  2. Re-add `AuthenticationServices.framework` to the same
+  3. Add `com.apple.developer.applesignin` back to `iOS.entitlements`
+  4. Create `Thump.storekit` configuration file for sandbox testing (BUG-015)
+  5. Verify provisioning profile includes IAP + Sign in with Apple capabilities
+
+### TODO-002: Disable In-App Purchase capability for personal development team
+- **Status:** DONE (2026-03-16)
+- **File:** `Thump.xcodeproj/project.pbxproj`, `iOS/iOS.entitlements`
+- **Description:** Personal development teams (like "Anugragha sundaravelan") don't support the In-App Purchase capability. The provisioning profile `iOS Team Provisioning Profile: com.health.thump.ios` excluded IAP, causing a build/signing error. IAP capability was disabled for development builds.
+- **Action for production:** See TODO-001 — re-enable when switching to paid developer account.
+
+---
+
+*Last updated: 2026-03-17 — 71/72 bugs fixed, 1 remaining (BUG-013 accessibility). All P0 + P1 resolved. Session 4: stress heatmap baseline fallback fix (BUG-072) + 3 diagnostic enhancements (HealthKit query warnings, stress hourly data availability, optional screenshot capture in bug reports).*

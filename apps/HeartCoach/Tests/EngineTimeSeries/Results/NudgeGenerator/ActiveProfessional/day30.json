@@ -3,13 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "walk",
+    "intensity",
     "hydrate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "walk",
-  "nudgeTitle" : "How About Some Easy Movement Today?",
+  "nudgeTitle" : "You Might Enjoy a Post-Meal Walk",
   "readinessLevel" : "ready",
-  "readinessScore" : 68,
+  "readinessScore" : 67,
   "regressionFlag" : true,
   "stressFlag" : false
 }

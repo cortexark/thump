@@ -43,6 +43,9 @@ struct ThumpiOSApp: App {
     /// Shares the root `localStore` so alert-budget state is owned by one persistence object.
     @StateObject var notificationService: NotificationService
 
+    /// Centralized engine coordinator shared by all view models (Phase 2).
+    @StateObject var coordinator = DailyEngineCoordinator()
+
     // MARK: - Initialization
 
     init() {
@@ -63,6 +66,7 @@ struct ThumpiOSApp: App {
                 .environmentObject(connectivityService)
                 .environmentObject(localStore)
                 .environmentObject(notificationService)
+                .environmentObject(coordinator)
                 .task {
                     guard !isRunningTests else { return }
                     await performStartupTasks()
@@ -144,6 +148,7 @@ struct ThumpiOSApp: App {
         }
 
         // Verify Apple Sign-In credential is still valid
+        #if !DEBUG
         if isSignedIn {
             let credentialValid = await AppleSignInService.isCredentialValid()
             if !credentialValid {
@@ -151,6 +156,7 @@ struct ThumpiOSApp: App {
                 AppLogger.info("Apple Sign-In credential revoked — returning to sign-in")
             }
         }
+        #endif
 
         // Configure engine telemetry for quality baselining
         EngineTelemetryService.shared.configureUserId()

@@ -4,13 +4,7 @@
 <dict>
 	<key>com.apple.developer.healthkit</key>
 	<true/>
-	<key>com.apple.developer.healthkit.access</key>
-	<array>
-		<string>health-data</string>
-	</array>
 	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.com.thump.shared</string>
-	</array>
+	<array/>
 </dict>
 </plist>

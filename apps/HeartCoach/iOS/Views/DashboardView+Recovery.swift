@@ -1,7 +1,7 @@
 // DashboardView+Recovery.swift
 // Thump iOS
 //
-// How You Recovered card + Consecutive Alert — extracted from DashboardView for readability.
+// How You Recovered card + Consecutive Alert  - extracted from DashboardView for readability.
 
 import SwiftUI
 
@@ -39,7 +39,7 @@ extension DashboardView {
                         .background(Capsule().fill(trendColor))
                 }
 
-                // Narrative body — human-readable recovery story
+                // Narrative body  - human-readable recovery story
                 Text(recoveryNarrative(wow: wow))
                     .font(.subheadline)
                     .foregroundStyle(.primary)
@@ -51,7 +51,7 @@ extension DashboardView {
                         Image(systemName: "heart.fill")
                             .font(.caption)
                             .foregroundStyle(Color(hex: 0x22C55E))
-                        Text("Heart is getting stronger this week")
+                        Text("RHR trending down  - that often tracks with good sleep and consistent activity")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(Color(hex: 0x22C55E))
@@ -133,6 +133,16 @@ extension DashboardView {
     // MARK: - How You Recovered Helpers
 
     func recoveryTrendLabel(_ direction: WeeklyTrendDirection) -> String {
+        // Override with readiness context  - don't show "Steady" when sleep is critically low
+        if let readiness = viewModel.readinessResult {
+            if let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep }),
+               sleepPillar.score < 50 {  // NOTE: 50 differs from recoveryModerateScore (55)
+                return "Low sleep"
+            }
+            if readiness.level == .recovering {
+                return "Needs rest"
+            }
+        }
         switch direction {
         case .significantImprovement: return "Great"
         case .improving:             return "Improving"
@@ -151,37 +161,48 @@ extension DashboardView {
     }
 
     /// Builds a human-readable recovery narrative from the trend data + sleep + stress.
+    /// When coordinator is active, delegates to AdvicePresenter.
     func recoveryNarrative(wow: WeekOverWeekTrend) -> String {
-        var parts: [String] = []
+        // Coordinator path: use AdvicePresenter
+        if ConfigService.enableCoordinator,
+           let adviceState = coordinator.bundle?.adviceState,
+           let narrative = AdvicePresenter.recoveryNarrative(for: adviceState) {
+            return narrative
+        }
 
-        // Sleep context from readiness pillars
+        // Legacy path
+        let policy = ConfigService.activePolicy
+        var parts: [String] = []
+        var sleepIsLow = false
+
         if let readiness = viewModel.readinessResult {
             if let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep }) {
-                if sleepPillar.score >= 75 {
+                if sleepPillar.score >= Double(policy.view.recoveryStrongScore) {
                     let hrs = viewModel.todaySnapshot?.sleepHours ?? 0
                     parts.append("Sleep was solid\(hrs > 0 ? " (\(String(format: "%.1f", hrs)) hrs)" : "")")
                 } else if sleepPillar.score >= 50 {
                     parts.append("Sleep was okay but could be better")
                 } else {
-                    parts.append("Short on sleep — that slows recovery")
+                    parts.append("Short on sleep  - that slows recovery")
+                    sleepIsLow = true
                 }
             }
         }
 
-        // HRV context
         if let hrv = viewModel.todaySnapshot?.hrvSDNN, hrv > 0 {
             let diff = wow.currentWeekMean - wow.baselineMean
             if diff <= -1 {
-                parts.append("HRV is trending up — body is recovering well")
+                parts.append("HRV is trending up  - body is recovering well")
             } else if diff >= 2 {
-                parts.append("HRV dipped — body is still catching up")
+                parts.append("HRV dipped  - body is still catching up")
             }
         }
 
-        // Recovery verdict
         let diff = wow.currentWeekMean - wow.baselineMean
-        if diff <= -2 {
-            parts.append("Your heart is in great shape this week.")
+        if sleepIsLow {
+            parts.append("Prioritize rest tonight  - sleep is the biggest lever for recovery.")
+        } else if diff <= -2 {
+            parts.append("Your recovery is looking strong this week.")
         } else if diff <= 0.5 {
             parts.append("Recovery is on track.")
         } else {
@@ -195,11 +216,11 @@ extension DashboardView {
     func recoveryAction(wow: WeekOverWeekTrend) -> String {
         let stress = viewModel.stressResult
         if let stress, stress.level == .elevated {
-            return "Stress is high — an easy walk and early bedtime will help"
+            return "Stress is high  - an easy walk and early bedtime will help"
         }
         let diff = wow.currentWeekMean - wow.baselineMean
         if diff > 3 {
-            return "Rest day recommended — extra sleep tonight"
+            return "Rest day recommended  - extra sleep tonight"
         }
         return "Consider a lighter day or an extra 30 min of sleep"
     }

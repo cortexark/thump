@@ -1,0 +1,383 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 393 2400" width="393" height="2400" font-family="-apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif">
+  <defs>
+    <linearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="50%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="tealGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0891B2"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <clipPath id="screenClip">
+      <rect width="393" height="2400" rx="0"/>
+    </clipPath>
+    <filter id="cardShadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.08)"/>
+    </filter>
+    <filter id="annotationShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="rgba(59,130,246,0.3)"/>
+    </filter>
+  </defs>
+
+  <!-- ==================== BACKGROUND ==================== -->
+  <rect width="393" height="2400" fill="#F2F2F7"/>
+
+  <!-- ==================== HERO SECTION ==================== -->
+  <rect width="393" height="420" fill="url(#heroGrad)"/>
+
+  <!-- Status Bar -->
+  <g fill="white" font-size="15" font-weight="600">
+    <!-- Time -->
+    <text x="36" y="18" font-size="16" font-weight="700">9:41</text>
+    <!-- Dynamic Island -->
+    <rect x="122" y="4" width="149" height="36" rx="18" fill="black"/>
+    <!-- Signal bars -->
+    <g transform="translate(300,6)">
+      <rect x="0" y="10" width="4" height="6" rx="1" fill="white"/>
+      <rect x="6" y="7" width="4" height="9" rx="1" fill="white"/>
+      <rect x="12" y="4" width="4" height="12" rx="1" fill="white"/>
+      <rect x="18" y="1" width="4" height="15" rx="1" fill="white"/>
+    </g>
+    <!-- WiFi -->
+    <g transform="translate(330,5)">
+      <path d="M8,14 a1,1 0 1,0 0.01,0" fill="white"/>
+      <path d="M3,10 Q8,5 13,10" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M0,7 Q8,0 16,7" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </g>
+    <!-- Battery -->
+    <g transform="translate(352,6)">
+      <rect x="0" y="1" width="27" height="13" rx="4" stroke="white" stroke-width="1.2" fill="none"/>
+      <rect x="28" y="4.5" width="2.5" height="6" rx="1" fill="white"/>
+      <rect x="2" y="3" width="23" height="9" rx="2.5" fill="white"/>
+    </g>
+  </g>
+
+  <!-- Hero Content -->
+  <g transform="translate(0, 60)">
+    <!-- Buddy Heart Character (worried face) -->
+    <g transform="translate(196, 80)">
+      <!-- Heart shape -->
+      <path d="M0,25 C0,25 -40,-15 -40,-35 C-40,-55 -20,-60 0,-40 C20,-60 40,-55 40,-35 C40,-15 0,25 0,25Z" fill="white" fill-opacity="0.95"/>
+      <!-- Worried eyes -->
+      <circle cx="-12" cy="-22" r="4" fill="#EA580C"/>
+      <circle cx="12" cy="-22" r="4" fill="#EA580C"/>
+      <!-- Worried mouth (wavy line) -->
+      <path d="M-10,-6 Q-5,-10 0,-6 Q5,-2 10,-6" stroke="#EA580C" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- Worried eyebrows -->
+      <line x1="-18" y1="-32" x2="-8" y2="-30" stroke="#EA580C" stroke-width="2" stroke-linecap="round"/>
+      <line x1="8" y1="-30" x2="18" y2="-32" stroke="#EA580C" stroke-width="2" stroke-linecap="round"/>
+      <!-- Sweat drop -->
+      <ellipse cx="28" cy="-18" rx="3" ry="5" fill="rgba(255,255,255,0.6)"/>
+    </g>
+
+    <!-- Mood badge -->
+    <rect x="127" y="120" width="139" height="32" rx="16" fill="rgba(0,0,0,0.3)"/>
+    <text x="196" y="141" text-anchor="middle" fill="white" font-size="14" font-weight="500">feeling stressed</text>
+
+    <!-- Greeting -->
+    <text x="196" y="185" text-anchor="middle" fill="white" font-size="30" font-weight="700">Good morning</text>
+
+    <!-- Date -->
+    <text x="196" y="212" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="16" font-weight="500">Saturday, Mar 15</text>
+
+    <!-- Focus insight -->
+    <rect x="32" y="228" width="329" height="44" rx="12" fill="rgba(0,0,0,0.15)"/>
+    <text x="196" y="255" text-anchor="middle" fill="white" font-size="15" font-weight="500">Your recovery needs attention today</text>
+  </g>
+
+  <!-- ==================== CARDS SECTION ==================== -->
+
+  <!-- ===== Card 1: Daily Check-In ===== -->
+  <g transform="translate(16, 440)">
+    <rect width="361" height="150" rx="20" fill="white" stroke="rgba(0,0,0,0.08)" stroke-width="1" filter="url(#cardShadow)"/>
+    <g transform="translate(16,16)">
+      <!-- Header -->
+      <text x="0" y="18" font-size="22">&#x1F60A;</text>
+      <text x="32" y="18" font-size="17" font-weight="700" fill="#1C1C1E">Daily Check-In</text>
+      <text x="32" y="38" font-size="14" fill="#8E8E93">How are you feeling?</text>
+
+      <!-- Mood buttons row -->
+      <g transform="translate(0, 56)">
+        <!-- Great -->
+        <rect x="0" y="0" width="76" height="64" rx="14" fill="#DCFCE7"/>
+        <text x="38" y="26" text-anchor="middle" font-size="22">&#x2600;&#xFE0F;</text>
+        <text x="38" y="48" text-anchor="middle" font-size="12" font-weight="600" fill="#16A34A">Great</text>
+
+        <!-- Good -->
+        <rect x="84" y="0" width="76" height="64" rx="14" fill="#CCFBF1"/>
+        <text x="122" y="26" text-anchor="middle" font-size="22">&#x1F324;&#xFE0F;</text>
+        <text x="122" y="48" text-anchor="middle" font-size="12" font-weight="600" fill="#0D9488">Good</text>
+
+        <!-- Okay -->
+        <rect x="168" y="0" width="76" height="64" rx="14" fill="#FEF3C7"/>
+        <text x="206" y="26" text-anchor="middle" font-size="22">&#x2601;&#xFE0F;</text>
+        <text x="206" y="48" text-anchor="middle" font-size="12" font-weight="600" fill="#D97706">Okay</text>
+
+        <!-- Rough -->
+        <rect x="252" y="0" width="76" height="64" rx="14" fill="#EDE9FE"/>
+        <text x="290" y="26" text-anchor="middle" font-size="22">&#x1F327;&#xFE0F;</text>
+        <text x="290" y="48" text-anchor="middle" font-size="12" font-weight="600" fill="#7C3AED">Rough</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ===== Card 2: Thump Check ===== -->
+  <g transform="translate(16, 602)">
+    <rect width="361" height="260" rx="20" fill="white" stroke="rgba(0,0,0,0.08)" stroke-width="1" filter="url(#cardShadow)"/>
+    <g transform="translate(16,16)">
+      <!-- Header row -->
+      <text x="0" y="18" font-size="22">&#x2764;&#xFE0F;</text>
+      <text x="32" y="18" font-size="17" font-weight="700" fill="#1C1C1E">Thump Check</text>
+
+      <!-- Red badge: Rest up -->
+      <rect x="200" y="0" width="124" height="32" rx="16" fill="#FEE2E2"/>
+      <text x="222" y="22" font-size="14" font-weight="600" fill="#DC2626">Rest up</text>
+      <text x="308" y="22" font-size="14" fill="#DC2626">&#x203A;</text>
+
+      <!-- Annotation: Readiness Sheet -->
+      <g filter="url(#annotationShadow)">
+        <rect x="200" y="-18" width="130" height="18" rx="4" fill="#3B82F6"/>
+        <text x="206" y="-4" font-size="10" font-weight="600" fill="white">&#x2192; Readiness Sheet</text>
+      </g>
+
+      <!-- Recommendation text -->
+      <text x="0" y="56" font-size="15" fill="#6B7280">Your body needs recovery.</text>
+      <text x="0" y="74" font-size="15" fill="#6B7280">Take it easy today.</text>
+
+      <!-- 3 Status pills row -->
+      <g transform="translate(0, 92)">
+        <!-- RHR -->
+        <rect x="0" y="0" width="105" height="80" rx="14" fill="#FEE2E2"/>
+        <text x="52" y="26" text-anchor="middle" font-size="18">&#x2764;&#xFE0F;</text>
+        <text x="52" y="50" text-anchor="middle" font-size="20" font-weight="700" fill="#DC2626">78</text>
+        <text x="52" y="68" text-anchor="middle" font-size="12" font-weight="500" fill="#DC2626">RHR bpm</text>
+
+        <!-- Recovery -->
+        <rect x="113" y="0" width="105" height="80" rx="14" fill="#FEE2E2"/>
+        <text x="165" y="26" text-anchor="middle" font-size="18">&#x1F525;</text>
+        <text x="165" y="50" text-anchor="middle" font-size="20" font-weight="700" fill="#DC2626">40%</text>
+        <text x="165" y="68" text-anchor="middle" font-size="12" font-weight="500" fill="#DC2626">Recovery</text>
+
+        <!-- Stress -->
+        <rect x="226" y="0" width="105" height="80" rx="14" fill="#FEE2E2"/>
+        <text x="278" y="26" text-anchor="middle" font-size="18">&#x1F9E0;</text>
+        <text x="278" y="50" text-anchor="middle" font-size="16" font-weight="700" fill="#DC2626">Elevated</text>
+        <text x="278" y="68" text-anchor="middle" font-size="12" font-weight="500" fill="#DC2626">Stress</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ===== Card 3: Week-over-Week Banner ===== -->
+  <g transform="translate(16, 874)">
+    <rect width="361" height="120" rx="20" fill="#FFF7ED" stroke="rgba(234,88,12,0.2)" stroke-width="1" filter="url(#cardShadow)"/>
+    <g transform="translate(16,16)">
+      <text x="0" y="18" font-size="14" font-weight="700" fill="#EA580C">Week-over-Week</text>
+
+      <!-- Annotation: Trends Tab -->
+      <g filter="url(#annotationShadow)">
+        <rect x="230" y="0" width="100" height="18" rx="4" fill="#3B82F6"/>
+        <text x="236" y="13" font-size="10" font-weight="600" fill="white">&#x2192; Trends Tab</text>
+      </g>
+
+      <text x="0" y="48" font-size="15" fill="#9A3412">
+        <tspan font-weight="600">RHR 72 &#x2192; 78 bpm</tspan>
+        <tspan fill="#EA580C"> &#x2014; Trending up &#x2191;</tspan>
+      </text>
+      <text x="0" y="72" font-size="15" fill="#9A3412">
+        <tspan font-weight="600">Recovery:</tspan>
+        <tspan fill="#EA580C"> Declining this week &#x2193;</tspan>
+      </text>
+    </g>
+  </g>
+
+  <!-- ===== Card 4: Recovery Context Banner ===== -->
+  <g transform="translate(16, 1006)">
+    <rect width="361" height="120" rx="20" fill="#FFFBEB" stroke="rgba(217,119,6,0.2)" stroke-width="1" filter="url(#cardShadow)"/>
+    <g transform="translate(16,16)">
+      <!-- Annotation: Stress Tab -->
+      <g filter="url(#annotationShadow)">
+        <rect x="236" y="0" width="100" height="18" rx="4" fill="#3B82F6"/>
+        <text x="242" y="13" font-size="10" font-weight="600" fill="white">&#x2192; Stress Tab</text>
+      </g>
+
+      <text x="0" y="22" font-size="15" fill="#92400E">
+        <tspan font-size="16">&#x26A0;&#xFE0F;</tspan>
+        <tspan font-weight="600" dx="4">Elevated resting heart rate for 3 days</tspan>
+      </text>
+      <text x="0" y="52" font-size="15" fill="#92400E">
+        <tspan font-size="16">&#x1F319;</tspan>
+        <tspan dx="4">Tonight: prioritize 7+ hours of sleep</tspan>
+      </text>
+    </g>
+  </g>
+
+  <!-- ===== Card 5: How You Recovered ===== -->
+  <g transform="translate(16, 1138)">
+    <rect width="361" height="220" rx="20" fill="white" stroke="rgba(0,0,0,0.08)" stroke-width="1" filter="url(#cardShadow)"/>
+    <g transform="translate(16,16)">
+      <!-- Header -->
+      <text x="0" y="18" font-size="22">&#x2764;&#xFE0F;&#x200D;&#x1FA79;</text>
+      <text x="34" y="18" font-size="17" font-weight="700" fill="#1C1C1E">How You Recovered</text>
+
+      <!-- Needs rest badge -->
+      <rect x="218" y="0" width="100" height="28" rx="14" fill="#FEE2E2"/>
+      <text x="268" y="19" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">Needs rest</text>
+
+      <!-- Annotation: Trends Tab -->
+      <g filter="url(#annotationShadow)">
+        <rect x="218" y="-18" width="100" height="18" rx="4" fill="#3B82F6"/>
+        <text x="224" y="-4" font-size="10" font-weight="600" fill="white">&#x2192; Trends Tab</text>
+      </g>
+
+      <!-- 3 stat pills row -->
+      <g transform="translate(0, 44)">
+        <rect x="0" y="0" width="105" height="64" rx="12" fill="#F9FAFB" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+        <text x="52" y="24" text-anchor="middle" font-size="11" font-weight="500" fill="#6B7280">This Week</text>
+        <text x="52" y="50" text-anchor="middle" font-size="22" font-weight="700" fill="#DC2626">78</text>
+
+        <rect x="113" y="0" width="105" height="64" rx="12" fill="#F9FAFB" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+        <text x="165" y="24" text-anchor="middle" font-size="11" font-weight="500" fill="#6B7280">Monthly</text>
+        <text x="165" y="50" text-anchor="middle" font-size="22" font-weight="700" fill="#6B7280">65</text>
+
+        <rect x="226" y="0" width="105" height="64" rx="12" fill="#FEE2E2" stroke="rgba(220,38,38,0.15)" stroke-width="1"/>
+        <text x="278" y="24" text-anchor="middle" font-size="11" font-weight="500" fill="#DC2626">Change</text>
+        <text x="278" y="50" text-anchor="middle" font-size="22" font-weight="700" fill="#DC2626">+13</text>
+      </g>
+
+      <!-- Red insight -->
+      <rect x="0" y="122" width="329" height="42" rx="10" fill="#FEF2F2"/>
+      <text x="12" y="148" font-size="13" font-weight="500" fill="#DC2626">Your heart rate is elevated this week</text>
+    </g>
+  </g>
+
+  <!-- ===== Card 6: Buddy Says ===== -->
+  <g transform="translate(16, 1370)">
+    <rect width="361" height="440" rx="20" fill="white" stroke="rgba(0,0,0,0.08)" stroke-width="1" filter="url(#cardShadow)"/>
+    <g transform="translate(16,16)">
+      <!-- Header -->
+      <text x="0" y="18" font-size="22">&#x1F4AC;</text>
+      <text x="32" y="18" font-size="17" font-weight="700" fill="#1C1C1E">Buddy Says</text>
+
+      <!-- Recommendation 1: Time to Rest (Purple) -->
+      <g transform="translate(0, 40)">
+        <rect width="329" height="112" rx="16" fill="url(#purpleGrad)"/>
+        <g transform="translate(16,16)">
+          <text x="0" y="18" font-size="22">&#x1F634;</text>
+          <text x="32" y="18" font-size="16" font-weight="700" fill="white">Time to Rest</text>
+          <text x="0" y="44" font-size="13" fill="rgba(255,255,255,0.9)">Your recovery score suggests taking it easy</text>
+          <rect x="0" y="56" width="210" height="24" rx="8" fill="rgba(255,255,255,0.2)"/>
+          <text x="10" y="73" font-size="11" font-weight="600" fill="white">Lowers resting heart rate</text>
+        </g>
+      </g>
+
+      <!-- Recommendation 2: Try Breathing (Teal) -->
+      <g transform="translate(0, 164)">
+        <rect width="329" height="112" rx="16" fill="url(#tealGrad)"/>
+        <g transform="translate(16,16)">
+          <text x="0" y="18" font-size="22">&#x1F9D8;</text>
+          <text x="32" y="18" font-size="16" font-weight="700" fill="white">Try Breathing</text>
+          <text x="0" y="44" font-size="13" fill="rgba(255,255,255,0.9)">A 5-minute breathing session can help</text>
+          <rect x="0" y="56" width="180" height="24" rx="8" fill="rgba(255,255,255,0.2)"/>
+          <text x="10" y="73" font-size="11" font-weight="600" fill="white">Reduces stress score</text>
+        </g>
+      </g>
+
+      <!-- Recommendation 3: Stay Hydrated (Cyan) -->
+      <g transform="translate(0, 288)">
+        <rect width="329" height="112" rx="16" fill="url(#cyanGrad)"/>
+        <g transform="translate(16,16)">
+          <text x="0" y="18" font-size="22">&#x1F4A7;</text>
+          <text x="32" y="18" font-size="16" font-weight="700" fill="white">Stay Hydrated</text>
+          <text x="0" y="44" font-size="13" fill="rgba(255,255,255,0.9)">Water supports your heart recovery</text>
+          <rect x="0" y="56" width="200" height="24" rx="8" fill="rgba(255,255,255,0.2)"/>
+          <text x="10" y="73" font-size="11" font-weight="600" fill="white">Supports HRV &amp; recovery</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== TAB BAR ==================== -->
+  <g transform="translate(0, 1850)">
+    <!-- Tab bar background -->
+    <rect width="393" height="83" fill="white"/>
+    <line x1="0" y1="0" x2="393" y2="0" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/>
+
+    <!-- Tab items -->
+    <g font-size="10" font-weight="500">
+      <!-- Home (SELECTED) -->
+      <g transform="translate(39.3, 0)" text-anchor="middle">
+        <text x="0" y="28" font-size="24">&#x1F3E0;</text>
+        <text x="0" y="46" font-size="10" font-weight="600" fill="#DC2626">Home</text>
+        <!-- Active indicator dot -->
+        <circle cx="0" cy="52" r="2.5" fill="#DC2626"/>
+        <!-- Annotation -->
+        <g filter="url(#annotationShadow)">
+          <rect x="-36" y="58" width="72" height="16" rx="3" fill="#3B82F6"/>
+          <text x="0" y="70" text-anchor="middle" font-size="8" font-weight="600" fill="white">SELECTED</text>
+        </g>
+      </g>
+
+      <!-- Insights -->
+      <g transform="translate(117.9, 0)" text-anchor="middle">
+        <text x="0" y="28" font-size="24">&#x2728;</text>
+        <text x="0" y="46" font-size="10" font-weight="500" fill="#8E8E93">Insights</text>
+        <g filter="url(#annotationShadow)">
+          <rect x="-40" y="58" width="80" height="16" rx="3" fill="#3B82F6"/>
+          <text x="0" y="70" text-anchor="middle" font-size="8" font-weight="600" fill="white">&#x2192; Insights Tab</text>
+        </g>
+      </g>
+
+      <!-- Stress -->
+      <g transform="translate(196.5, 0)" text-anchor="middle">
+        <text x="0" y="28" font-size="24">&#x1F9E0;</text>
+        <text x="0" y="46" font-size="10" font-weight="500" fill="#8E8E93">Stress</text>
+        <g filter="url(#annotationShadow)">
+          <rect x="-38" y="58" width="76" height="16" rx="3" fill="#3B82F6"/>
+          <text x="0" y="70" text-anchor="middle" font-size="8" font-weight="600" fill="white">&#x2192; Stress Tab</text>
+        </g>
+      </g>
+
+      <!-- Trends -->
+      <g transform="translate(275.1, 0)" text-anchor="middle">
+        <text x="0" y="28" font-size="24">&#x1F4C8;</text>
+        <text x="0" y="46" font-size="10" font-weight="500" fill="#8E8E93">Trends</text>
+        <g filter="url(#annotationShadow)">
+          <rect x="-38" y="58" width="76" height="16" rx="3" fill="#3B82F6"/>
+          <text x="0" y="70" text-anchor="middle" font-size="8" font-weight="600" fill="white">&#x2192; Trends Tab</text>
+        </g>
+      </g>
+
+      <!-- Settings -->
+      <g transform="translate(353.7, 0)" text-anchor="middle">
+        <text x="0" y="28" font-size="24">&#x2699;&#xFE0F;</text>
+        <text x="0" y="46" font-size="10" font-weight="500" fill="#8E8E93">Settings</text>
+        <g filter="url(#annotationShadow)">
+          <rect x="-42" y="58" width="84" height="16" rx="3" fill="#3B82F6"/>
+          <text x="0" y="70" text-anchor="middle" font-size="8" font-weight="600" fill="white">&#x2192; Settings Tab</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== GLOBAL ANNOTATIONS LEGEND ==================== -->
+  <g transform="translate(16, 1960)">
+    <rect width="361" height="120" rx="16" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1" stroke-dasharray="4,2"/>
+    <g transform="translate(16,16)">
+      <text x="0" y="16" font-size="14" font-weight="700" fill="#1E40AF">Click Path Annotations</text>
+      <text x="0" y="38" font-size="12" fill="#3B82F6">&#x2022; Readiness badge &#x2192; Readiness Detail Sheet</text>
+      <text x="0" y="56" font-size="12" fill="#3B82F6">&#x2022; WoW banner / Recovery card &#x2192; Trends Tab</text>
+      <text x="0" y="74" font-size="12" fill="#3B82F6">&#x2022; Recovery context banner &#x2192; Stress Tab</text>
+      <text x="0" y="92" font-size="12" fill="#3B82F6">&#x2022; Tab bar icons &#x2192; respective tab destinations</text>
+    </g>
+  </g>
+
+</svg>

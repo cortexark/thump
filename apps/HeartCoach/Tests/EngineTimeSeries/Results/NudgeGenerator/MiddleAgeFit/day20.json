@@ -3,8 +3,8 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "celebrate",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "celebrate",

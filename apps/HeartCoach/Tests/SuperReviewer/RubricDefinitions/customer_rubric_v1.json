@@ -1,0 +1,250 @@
+{
+  "version": "1.0",
+  "source_agent": "customer",
+  "perspective": "Non-expert consumer who does not know heart rate terminology",
+  "scoring_range": [1, 5],
+  "total_criteria": 10,
+  "max_score": 50,
+  "criteria": [
+    {
+      "id": "CLR-001",
+      "source_agent": "customer",
+      "category": "plain_language",
+      "description": "Plain language - no medical jargon (HRV, SDNN, RHR, VO2, parasympathetic, bpm in context)",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Multiple jargon terms appear with no explanation; text reads like a medical report",
+        "2": "One or two jargon terms slip through; most text is accessible",
+        "3": "No raw jargon but uses semi-technical phrasing that may confuse a layperson",
+        "4": "All language is plain; one minor phrasing could be simpler",
+        "5": "Entirely conversational, anyone could understand on first read"
+      },
+      "fail_examples": [
+        "Your HRV dropped 15ms below your 7-day baseline",
+        "SDNN variance is elevated, parasympathetic tone is low",
+        "RHR 78bpm, VO2max trending down this week"
+      ],
+      "pass_examples": [
+        "Your body's recovery signal dipped a bit overnight",
+        "Heart rhythm patterns suggest a lighter day would help",
+        "Sleep score dropping due to low hours"
+      ]
+    },
+    {
+      "id": "CLR-002",
+      "source_agent": "customer",
+      "category": "emotional_safety",
+      "description": "Emotional safety - never blame the user for their metrics or behavior",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Directly blames or shames the user for poor metrics",
+        "2": "Implies fault through phrasing like 'you only' or 'you didn't'",
+        "3": "Neutral but misses the chance to reframe objectively",
+        "4": "Mostly objective framing with one borderline phrase",
+        "5": "Entirely objective, data-driven framing with no blame or guilt"
+      },
+      "fail_examples": [
+        "You didn't sleep enough last night",
+        "You only got 4 hours of sleep last night",
+        "You should have gone to bed earlier"
+      ],
+      "pass_examples": [
+        "Sleep score dropping due to low hours",
+        "Recovery is lower today - rest is the best lever right now",
+        "Prioritize rest tonight - sleep is the biggest lever for recovery."
+      ]
+    },
+    {
+      "id": "CLR-003",
+      "source_agent": "customer",
+      "category": "actionability",
+      "description": "Actionability - every recommendation says what to DO, not just what is wrong",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "States a problem with no suggestion at all",
+        "2": "Vaguely hints at action but nothing concrete",
+        "3": "Provides a general direction but no specific action",
+        "4": "Gives a clear action with minor ambiguity",
+        "5": "Every recommendation includes a specific, doable action"
+      },
+      "fail_examples": [
+        "Your recovery is low today",
+        "Stress levels are elevated",
+        "Sleep quality has been declining"
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Try a 10-minute walk to ease into the day",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "CLR-004",
+      "source_agent": "customer",
+      "category": "greeting_appropriateness",
+      "description": "Greeting appropriateness - matches the time of day",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Greeting contradicts the time of day (Good morning at 10pm)",
+        "2": "Greeting is generic and ignores time completely",
+        "3": "Greeting is time-neutral but misses an opportunity to be warm",
+        "4": "Greeting matches time of day with minor awkwardness",
+        "5": "Greeting naturally matches the time of day and feels warm"
+      },
+      "fail_examples": [
+        "Good morning! at 9:00 PM",
+        "Rise and shine! at 11:00 PM",
+        "Time to wind down at 7:00 AM"
+      ],
+      "pass_examples": [
+        "Good morning - here's how last night went",
+        "Evening check-in: winding down looks smart tonight",
+        "Afternoon update: solid day so far"
+      ]
+    },
+    {
+      "id": "CLR-005",
+      "source_agent": "customer",
+      "category": "emoji_mood_coherence",
+      "description": "Emoji and buddy mood coherence - mood indicator matches the overall tone of the text",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Happy emoji/mood paired with alarming or negative text",
+        "2": "Mood is mismatched in a noticeable way",
+        "3": "Mood is neutral and doesn't conflict but doesn't reinforce either",
+        "4": "Mood mostly matches with one minor inconsistency",
+        "5": "Mood perfectly reinforces the text tone"
+      },
+      "fail_examples": [
+        "Cheerful buddy icon next to 'Recovery is critically low, rest immediately'",
+        "Sad mood indicator with 'Great day! You crushed your goals'",
+        "Celebratory emoji on a rest-mode warning"
+      ],
+      "pass_examples": [
+        "Calm buddy mood with 'Take it easy today, recovery is building'",
+        "Energetic mood with 'Strong recovery - push yourself today'",
+        "Neutral mood with 'Decent recovery. A moderate effort works well today.'"
+      ]
+    },
+    {
+      "id": "CLR-006",
+      "source_agent": "customer",
+      "category": "goal_motivation",
+      "description": "Goal motivation - goal text encourages progress, never guilts the user",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Goal text shames the user for not hitting targets",
+        "2": "Goal text implies disappointment or failure",
+        "3": "Goal text is factual but flat, no encouragement",
+        "4": "Goal text is encouraging with one minor guilt-adjacent phrase",
+        "5": "Goal text is motivating, forward-looking, and blame-free"
+      },
+      "fail_examples": [
+        "You failed to hit your step goal again",
+        "Only 2,000 of 10,000 steps - not enough effort",
+        "You're being lazy, get moving"
+      ],
+      "pass_examples": [
+        "3,200 steps down, 6,800 to go - a short walk gets you closer",
+        "Rest day adjusted your goal - even small movement counts",
+        "Solid start. Another 4,000 steps and you'll hit your target"
+      ]
+    },
+    {
+      "id": "CLR-007",
+      "source_agent": "customer",
+      "category": "recovery_framing",
+      "description": "Recovery framing - uses objective data framing, never subjective blame",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Recovery text directly blames user choices for poor recovery",
+        "2": "Recovery text implies user is at fault through word choice",
+        "3": "Recovery text is neutral but leans toward subjective framing",
+        "4": "Recovery text is mostly objective with one borderline phrase",
+        "5": "Recovery text is entirely data-driven and constructive"
+      },
+      "fail_examples": [
+        "You wrecked your recovery by staying up late",
+        "Bad recovery because you didn't rest enough",
+        "Your poor choices led to low recovery"
+      ],
+      "pass_examples": [
+        "Recovery is lower today - sleep duration was the main factor",
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "CLR-008",
+      "source_agent": "customer",
+      "category": "stress_sensitivity",
+      "description": "Stress sensitivity - stress-related text does not cause MORE stress",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Stress text is alarming and likely to increase user anxiety",
+        "2": "Stress text uses urgent language that could worry the user",
+        "3": "Stress text is factual but cold, misses reassurance",
+        "4": "Stress text is calming with one slightly anxious phrase",
+        "5": "Stress text is calming, normalizing, and provides a gentle next step"
+      },
+      "fail_examples": [
+        "WARNING: Your stress levels are dangerously high!",
+        "Your body is under extreme stress, this is concerning",
+        "Stress has been critically elevated for 3 days straight"
+      ],
+      "pass_examples": [
+        "Stress patterns are a bit elevated - a few deep breaths can help",
+        "Your body's been working hard. A calm evening helps reset things",
+        "Stress is higher than usual. A short walk or quiet time helps"
+      ]
+    },
+    {
+      "id": "CLR-009",
+      "source_agent": "customer",
+      "category": "cross_page_consistency",
+      "description": "Consistency across pages - dashboard message doesn't contradict stress page or insights",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Dashboard says 'great day' while stress page says 'high stress warning'",
+        "2": "Noticeable contradiction between two pages",
+        "3": "Pages don't contradict but tell very different stories",
+        "4": "Pages are consistent with one minor tone mismatch",
+        "5": "All pages tell a coherent story with consistent tone and data"
+      },
+      "fail_examples": [
+        "Dashboard: 'Excellent recovery!' / Stress: 'Your body is overwhelmed'",
+        "Insights: 'Great sleep trend' / Dashboard: 'Sleep has been poor'",
+        "Goals: 'Push hard today' / Recovery: 'Take it easy, recovery is low'"
+      ],
+      "pass_examples": [
+        "Dashboard: 'Solid recovery' / Stress: 'Manageable stress' / Goals: 'Moderate effort today'",
+        "Dashboard: 'Rest day' / Stress: 'Take it easy' / Goals: 'Adjusted goals for recovery'",
+        "All pages reflect improving trend with encouraging tone"
+      ]
+    },
+    {
+      "id": "CLR-010",
+      "source_agent": "customer",
+      "category": "first_impression",
+      "description": "First impression - would a non-expert understand what to do within 5 seconds?",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Text is confusing, dense, or requires domain knowledge to parse",
+        "2": "Text is somewhat clear but requires re-reading",
+        "3": "Main point is visible but action isn't immediately obvious",
+        "4": "Clear message and action with minor complexity",
+        "5": "Instantly clear what the situation is and what to do"
+      },
+      "fail_examples": [
+        "Based on multi-day HRV trend analysis, parasympathetic reactivation suggests modified periodization",
+        "Composite readiness index factoring sleep, strain, and recovery yields a moderate recommendation",
+        "Your 7-day rolling SDNN average is within normal variance"
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Decent recovery. A moderate effort works well today.",
+        "Strong day ahead - your body is ready for a solid workout"
+      ]
+    }
+  ]
+}

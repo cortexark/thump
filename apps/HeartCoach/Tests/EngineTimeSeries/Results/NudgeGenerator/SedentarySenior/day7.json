@@ -4,13 +4,13 @@
   "multiNudgeCategories" : [
     "seekGuidance",
     "rest",
-    "breathe"
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "seekGuidance",
   "nudgeTitle" : "Quick Sync Check",
-  "readinessLevel" : "recovering",
-  "readinessScore" : 39,
+  "readinessLevel" : "moderate",
+  "readinessScore" : 42,
   "regressionFlag" : false,
   "stressFlag" : false
 }

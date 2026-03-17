@@ -64,7 +64,14 @@ extension DashboardView {
                     todaysPlayPill(
                         icon: "flame.fill",
                         label: "Activity",
-                        value: viewModel.zoneAnalysis.map { "\($0.overallScore)" } ?? "—",
+                        value: {
+                            // Show actual active minutes (consistent with Daily Goals)
+                            // instead of abstract zone quality score
+                            let walk = viewModel.todaySnapshot?.walkMinutes ?? 0
+                            let workout = viewModel.todaySnapshot?.workoutMinutes ?? 0
+                            let total = Int(walk + workout)
+                            return total > 0 ? "\(total)" : "—"
+                        }(),
                         color: activityPillColor
                     )
                     todaysPlayPill(
@@ -127,18 +134,38 @@ extension DashboardView {
         }
     }
 
-    /// Context-aware recommendation sentence based on yesterday's zones, recovery, and stress.
+    /// Context-aware recommendation sentence based on yesterday's zones, recovery, stress, and sleep.
+    /// When coordinator is active, delegates to AdvicePresenter.
     func thumpCheckRecommendation(_ result: ReadinessResult) -> String {
+        let yesterdayZoneContext = yesterdayZoneSummary()
+
+        // Coordinator path: use AdvicePresenter
+        if ConfigService.enableCoordinator,
+           let adviceState = coordinator.bundle?.adviceState,
+           let snapshot = viewModel.todaySnapshot {
+            let rec = AdvicePresenter.checkRecommendation(
+                for: adviceState,
+                readinessScore: result.score,
+                snapshot: snapshot
+            )
+            return "\(yesterdayZoneContext)\(rec)"
+        }
+
+        // Legacy path
+        let policy = ConfigService.activePolicy
         let assessment = viewModel.assessment
         let zones = viewModel.zoneAnalysis
         let stress = viewModel.stressResult
+        let sleepHours = viewModel.todaySnapshot?.sleepHours
 
-        // What did yesterday look like?
-        let yesterdayZoneContext = yesterdayZoneSummary()
+        if let hours = sleepHours, hours > 0, hours < policy.view.sleepLightOnlyHours {
+            if hours < policy.view.sleepSkipWorkoutHours {
+                return "\(yesterdayZoneContext)You got \(String(format: "%.1f", hours)) hours of sleep. Skip the workout — rest is the only thing that helps today. Get to bed early tonight."
+            }
+            return "\(yesterdayZoneContext)About \(String(format: "%.1f", hours)) hours of sleep last night. Keep it very light today — a short walk at most. Sleep is what your body needs most."
+        }
 
-        // Build recommendation based on current state
         if result.score < 45 {
-            // Low recovery
             if let stress, stress.level == .elevated {
                 return "\(yesterdayZoneContext)Recovery is low and stress is up — take a full rest day. Your body needs it."
             }
@@ -146,25 +173,29 @@ extension DashboardView {
         }
 
         if result.score < 65 {
-            // Moderate recovery
+            if let hours = sleepHours, hours < 6.0 {
+                return "\(yesterdayZoneContext)\(String(format: "%.1f", hours)) hours of sleep. Take it easy — a walk is fine, but skip anything intense."
+            }
             if let zones, zones.recommendation == .tooMuchIntensity {
                 return "\(yesterdayZoneContext)You've been pushing hard. A moderate effort today lets your body absorb those gains."
             }
             if assessment?.stressFlag == true {
                 return "\(yesterdayZoneContext)Stress is elevated. Keep it light — a calm walk or easy movement."
             }
-            return "\(yesterdayZoneContext)Decent recovery. A moderate workout works well today."
+            return "\(yesterdayZoneContext)Decent recovery. A moderate effort works well today."
         }
 
-        // Good recovery (65+)
-        if result.score >= 80 {
+        let sleepTooLow = sleepHours.map { $0 < 6.0 } ?? false
+        if result.score >= 80 && !sleepTooLow {
             if let zones, zones.recommendation == .needsMoreThreshold {
                 return "\(yesterdayZoneContext)You're fully charged. Great day for a harder effort or tempo session."
             }
             return "\(yesterdayZoneContext)You're primed. Push it if you want — your body can handle it."
         }
 
-        // Ready (65-79)
+        if sleepTooLow {
+            return "\(yesterdayZoneContext)Your metrics look good, but sleep was short. A moderate effort is fine — don't push too hard."
+        }
         if let zones, zones.recommendation == .needsMoreAerobic {
             return "\(yesterdayZoneContext)Good recovery. A steady aerobic session would build your base nicely."
         }
@@ -196,14 +227,16 @@ extension DashboardView {
 
     /// Recovery label for the status pill.
     func recoveryLabel(_ result: ReadinessResult) -> String {
-        if result.score >= 75 { return "Strong" }
-        if result.score >= 55 { return "Moderate" }
+        let policy = ConfigService.activePolicy
+        if result.score >= policy.view.recoveryStrongScore { return "Strong" }
+        if result.score >= policy.view.recoveryModerateScore { return "Moderate" }
         return "Low"
     }
 
     func recoveryPillColor(_ result: ReadinessResult) -> Color {
-        if result.score >= 75 { return Color(hex: 0x22C55E) }
-        if result.score >= 55 { return Color(hex: 0xF59E0B) }
+        let policy = ConfigService.activePolicy
+        if result.score >= policy.view.recoveryStrongScore { return Color(hex: 0x22C55E) }
+        if result.score >= policy.view.recoveryModerateScore { return Color(hex: 0xF59E0B) }
         return Color(hex: 0xEF4444)
     }
 
@@ -216,10 +249,14 @@ extension DashboardView {
     }
 
     var activityPillColor: Color {
-        guard let zones = viewModel.zoneAnalysis else { return .secondary }
-        if zones.overallScore >= 80 { return Color(hex: 0x22C55E) }
-        if zones.overallScore >= 50 { return Color(hex: 0xF59E0B) }
-        return Color(hex: 0xEF4444)
+        // Color based on actual active minutes (consistent with the pill value)
+        let policy = ConfigService.activePolicy
+        let walk = viewModel.todaySnapshot?.walkMinutes ?? 0
+        let workout = viewModel.todaySnapshot?.workoutMinutes ?? 0
+        let total = walk + workout
+        if total >= policy.view.activityHighMinutes { return Color(hex: 0x22C55E) }
+        if total >= policy.view.activityModerateMinutes { return Color(hex: 0xF59E0B) }
+        return total > 0 ? Color(hex: 0xEF4444) : .secondary
     }
 
     /// Stress label from stress engine result.

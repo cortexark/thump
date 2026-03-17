@@ -23,6 +23,7 @@ struct InsightsView: View {
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
     @EnvironmentObject private var localStore: LocalStore
+    @EnvironmentObject private var coordinator: DailyEngineCoordinator
 
     // MARK: - State
 
@@ -40,6 +41,7 @@ struct InsightsView: View {
                 .onAppear { InteractionLog.pageView("Insights") }
                 .task {
                     viewModel.bind(healthKitService: healthKitService, localStore: localStore)
+                    viewModel.bind(coordinator: coordinator)
                     viewModel.connectivityService = connectivityService
                     await viewModel.loadInsights()
                 }
@@ -169,27 +171,38 @@ struct InsightsView: View {
                 }
 
                 ForEach(Array(plan.items.prefix(3).enumerated()), id: \.offset) { index, item in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .frame(width: 22, height: 22)
-                            .background(Circle().fill(Color(hex: 0x22C55E)))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-
-                            Text(item.detail)
+                    Button {
+                        InteractionLog.log(.cardTap, element: "action_item_\(index)", page: "Insights", details: item.title)
+                        showingReportDetail = true
+                    } label: {
+                        HStack(alignment: .top, spacing: 10) {
+                            Text("\(index + 1)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .frame(width: 22, height: 22)
+                                .background(Circle().fill(Color(hex: 0x22C55E)))
 
-                        Spacer()
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.primary)
+
+                                Text(item.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
+                    .buttonStyle(CardButtonStyle())
+                    .accessibilityHint("Double tap to view full action plan")
                 }
 
                 if plan.items.count > 3 {
@@ -411,10 +424,11 @@ struct InsightsView: View {
             }
         }
 
+        let policy = ConfigService.activePolicy
         let completionPct = Int(report.nudgeCompletionRate * 100)
-        if completionPct >= 70 {
+        if completionPct >= policy.view.nudgeCompletionSolid {
             parts.append("You engaged with \(completionPct)% of daily suggestions — solid commitment.")
-        } else if completionPct >= 40 {
+        } else if completionPct >= policy.view.nudgeCompletionMinimum {
             parts.append("You completed \(completionPct)% of your nudges. Aim for one extra nudge this week.")
         } else {
             parts.append("Try following more daily nudges this week to see progress.")

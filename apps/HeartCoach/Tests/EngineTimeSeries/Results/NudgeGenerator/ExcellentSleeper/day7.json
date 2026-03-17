@@ -3,9 +3,10 @@
   "confidence" : "low",
   "multiNudgeCategories" : [
     "seekGuidance",
+    "intensity",
     "hydrate"
   ],
-  "multiNudgeCount" : 2,
+  "multiNudgeCount" : 3,
   "nudgeCategory" : "seekGuidance",
   "nudgeTitle" : "Quick Sync Check",
   "readinessLevel" : "primed",

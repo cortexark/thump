@@ -3,14 +3,14 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "celebrate",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "celebrate",
   "nudgeTitle" : "You're on a Roll!",
   "readinessLevel" : "primed",
-  "readinessScore" : 93,
+  "readinessScore" : 92,
   "regressionFlag" : false,
   "stressFlag" : false
 }

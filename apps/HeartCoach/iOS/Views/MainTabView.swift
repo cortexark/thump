@@ -46,12 +46,12 @@ struct MainTabView: View {
             checkBreatheDeepLink()
         }
         .offset(x: dragOffset)
-        .highPriorityGesture(
-            DragGesture(minimumDistance: 30, coordinateSpace: .global)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 40, coordinateSpace: .global)
                 .onChanged { value in
                     let h = value.translation.width
                     let v = value.translation.height
-                    guard abs(h) > abs(v) * 1.2 else { return }
+                    guard abs(h) > abs(v) * 2.0 else { return }
                     // Resist at edges, free movement between tabs
                     let atEdge = (selectedTab == 0 && h > 0) ||
                                  (selectedTab == tabCount - 1 && h < 0)

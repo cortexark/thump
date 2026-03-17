@@ -3,8 +3,8 @@
   "confidence" : "high",
   "multiNudgeCategories" : [
     "moderate",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "moderate",

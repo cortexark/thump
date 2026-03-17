@@ -32,6 +32,7 @@ struct StressView: View {
     @StateObject var viewModel = StressViewModel()
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
+    @EnvironmentObject private var coordinator: DailyEngineCoordinator
 
     // MARK: - Body
 
@@ -57,6 +58,7 @@ struct StressView: View {
             .task {
                 viewModel.bind(healthKitService: healthKitService)
                 viewModel.bind(connectivityService: connectivityService)
+                viewModel.bind(coordinator: coordinator)
                 await viewModel.loadData()
             }
             .sheet(isPresented: $viewModel.isJournalSheetPresented) {
@@ -65,14 +67,21 @@ struct StressView: View {
             .sheet(isPresented: $viewModel.isBreathingSessionActive) {
                 breathingSessionSheet
             }
-            .alert("Time for a Walk",
+            .alert("Time to Get Moving",
                    isPresented: $viewModel.walkSuggestionShown) {
-                Button("OK") {
-                    InteractionLog.log(.buttonTap, element: "walk_suggestion_ok", page: "Stress")
+                Button("Open Fitness") {
+                    InteractionLog.log(.buttonTap, element: "walk_open_fitness", page: "Stress")
+                    viewModel.walkSuggestionShown = false
+                    if let url = URL(string: "fitness://") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Not Now", role: .cancel) {
+                    InteractionLog.log(.buttonTap, element: "walk_suggestion_dismiss", page: "Stress")
                     viewModel.walkSuggestionShown = false
                 }
             } message: {
-                Text("A 10-minute walk can lower stress and boost your mood. Step outside and enjoy the fresh air.")
+                Text("A 10-minute walk can lower stress and boost your mood. Open Fitness to start a walking workout.")
             }
         }
     }
@@ -88,12 +97,12 @@ struct StressView: View {
                     .frame(width: 12, height: 12)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(stress.level.friendlyMessage)
+                    Text(StressLevel.friendlyMessage(for: stress.score))
                         .font(.headline)
                         .foregroundStyle(.primary)
 
                     HStack(spacing: 6) {
-                        Text("Score: \(Int(stress.score))")
+                        Text(stress.level.displayName)
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
@@ -109,6 +118,10 @@ struct StressView: View {
                                 )
                         }
                     }
+
+                    Text(stress.level.actionHint)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
 
                 Spacer()

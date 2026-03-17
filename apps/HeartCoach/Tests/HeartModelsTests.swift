@@ -176,7 +176,7 @@ final class HeartModelsTests: XCTestCase {
     }
 
     func testNudgeCategory_caseCount() {
-        XCTAssertEqual(NudgeCategory.allCases.count, 8)
+        XCTAssertEqual(NudgeCategory.allCases.count, 9)
     }
 
     // MARK: - ConfidenceLevel

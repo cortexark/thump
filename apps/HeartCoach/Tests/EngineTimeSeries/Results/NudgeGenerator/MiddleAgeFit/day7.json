@@ -3,8 +3,8 @@
   "confidence" : "low",
   "multiNudgeCategories" : [
     "seekGuidance",
-    "hydrate",
-    "rest"
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
   "nudgeCategory" : "seekGuidance",

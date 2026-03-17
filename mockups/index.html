@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Thump App Mockups</title>
+<style>
+body { font-family: -apple-system, sans-serif; background: #f0f0f0; margin: 0; padding: 20px; }
+h1 { text-align: center; color: #1a1a1a; }
+h2 { color: #333; margin-top: 40px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+.watch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+.card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.card img, .card object { width: 100%; height: auto; border-radius: 8px; }
+.card h3 { margin: 8px 0 4px; font-size: 14px; }
+.card p { margin: 0; font-size: 12px; color: #666; }
+.full-width { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<h1>Thump - App Mockups (Red Persona)</h1>
+
+<h2>iPhone Screens (393x852)</h2>
+<div class="grid">
+  <div class="card"><object data="iphone/home-dashboard.svg" type="image/svg+xml"></object><h3>Dashboard (Tab 0)</h3><p>Hero + Thump Check + Recovery + Buddy Says</p></div>
+  <div class="card"><object data="iphone/insights.svg" type="image/svg+xml"></object><h3>Insights (Tab 1)</h3><p>Focus targets + Weekly report + Education</p></div>
+  <div class="card"><object data="iphone/stress.svg" type="image/svg+xml"></object><h3>Stress (Tab 2)</h3><p>Heatmap + Trend + Actions</p></div>
+  <div class="card"><object data="iphone/trends.svg" type="image/svg+xml"></object><h3>Trends (Tab 3)</h3><p>RHR selected + Chart + Coaching</p></div>
+  <div class="card"><object data="iphone/settings.svg" type="image/svg+xml"></object><h3>Settings (Tab 4)</h3><p>Profile + Toggles + Export + Legal</p></div>
+  <div class="card"><object data="iphone/readiness-sheet.svg" type="image/svg+xml"></object><h3>Readiness Breakdown (Modal)</h3><p>Score circle + 5 pillar bars</p></div>
+</div>
+
+<h2>Apple Watch Screens (45mm)</h2>
+<div class="watch-grid">
+  <div class="card"><object data="watch/home.svg" type="image/svg+xml"></object><h3>Watch Home</h3><p>Score hero + Buddy + Nudge pill</p></div>
+  <div class="card"><object data="watch/live-face.svg" type="image/svg+xml"></object><h3>Live Face</h3><p>Buddy on gradient + Insight</p></div>
+  <div class="card"><object data="watch/nudge.svg" type="image/svg+xml"></object><h3>Nudge</h3><p>Rest recommendation + Complete</p></div>
+  <div class="card full-width"><object data="watch/insight-flow.svg" type="image/svg+xml"></object><h3>Insight Flow (6 Panels)</h3><p>Hero → Readiness → Walk → Stress → Sleep → Trends</p></div>
+  <div class="card full-width"><object data="watch/complications.svg" type="image/svg+xml"></object><h3>Complications</h3><p>Circular + Rectangular + Inline + Stress + HRV + Breathe</p></div>
+</div>
+
+<h2>Click Flow Map</h2>
+<div class="card full-width"><object data="click-flow-map.svg" type="image/svg+xml" style="width:100%;min-height:500px"></object><h3>Navigation Map</h3><p>All screens connected with tap targets and navigation paths</p></div>
+</body>
+</html>

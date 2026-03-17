@@ -2,13 +2,13 @@
   "anomalyScore" : 1.053149309102281,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "walk",
-    "hydrate",
-    "rest"
+    "moderate",
+    "intensity",
+    "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "Two Little Walks",
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Try Something Different Today",
   "readinessLevel" : "primed",
   "readinessScore" : 87,
   "regressionFlag" : false,

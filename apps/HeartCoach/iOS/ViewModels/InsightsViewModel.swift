@@ -45,6 +45,8 @@ final class InsightsViewModel: ObservableObject {
     private var localStore: LocalStore
     /// Optional connectivity service for pushing the action plan to the Apple Watch.
     weak var connectivityService: ConnectivityService?
+    /// Shared engine coordinator for reading pre-computed results (Phase 2).
+    private var coordinator: DailyEngineCoordinator?
 
     // MARK: - Initialization
 
@@ -68,6 +70,11 @@ final class InsightsViewModel: ObservableObject {
         self.localStore = localStore
     }
 
+    /// Binds the shared engine coordinator (Phase 2).
+    func bind(coordinator: DailyEngineCoordinator) {
+        self.coordinator = coordinator
+    }
+
     // MARK: - Public API
 
     /// Loads correlation insights and weekly report data.
@@ -75,6 +82,78 @@ final class InsightsViewModel: ObservableObject {
     /// Fetches 30 days of history from HealthKit, runs the correlation
     /// engine, and generates a weekly report from the last 7 days.
     func loadInsights() async {
+        if ConfigService.enableCoordinator, coordinator?.bundle != nil {
+            await loadInsightsViaCoordinator()
+        } else {
+            await loadInsightsLegacy()
+        }
+    }
+
+    /// Loads insights using the coordinator bundle — eliminates 7x HeartTrendEngine calls.
+    private func loadInsightsViaCoordinator() async {
+        isLoading = true
+        errorMessage = nil
+
+        guard let bundle = coordinator?.bundle else {
+            await loadInsightsLegacy()
+            return
+        }
+
+        // Use correlations from coordinator bundle (already computed)
+        correlations = bundle.correlations.sorted { abs($0.correlationStrength) > abs($1.correlationStrength) }
+
+        // Load stored snapshots from LocalStore — they already contain HeartAssessment.
+        // This avoids running HeartTrendEngine 7x for the weekly report.
+        let storedHistory = localStore.loadHistory()
+        let calendar = Calendar.current
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: Date()))!
+        let weekStored = storedHistory.filter { $0.snapshot.date >= sevenDaysAgo }
+            .sorted { $0.snapshot.date < $1.snapshot.date }
+
+        let weekHistory = weekStored.map(\.snapshot)
+        var weekAssessments: [HeartAssessment] = []
+
+        // Use stored assessments where available; lazy-compute missing ones
+        let engine = ConfigService.makeDefaultEngine()
+        let fullHistory = bundle.history
+        for stored in weekStored {
+            if let assessment = stored.assessment {
+                weekAssessments.append(assessment)
+            } else {
+                // Stored snapshot without assessment — compute lazily
+                let priorHistory = fullHistory.filter { $0.date < stored.snapshot.date }
+                let assessment = engine.assess(
+                    history: priorHistory,
+                    current: stored.snapshot,
+                    feedback: nil
+                )
+                weekAssessments.append(assessment)
+            }
+        }
+
+        let report = generateWeeklyReport(
+            from: weekHistory,
+            assessments: weekAssessments
+        )
+        weeklyReport = report
+
+        let plan = generateActionPlan(
+            from: weekHistory,
+            assessments: weekAssessments,
+            report: report
+        )
+        actionPlan = plan
+
+        if let connectivity = connectivityService {
+            let watchPlan = buildWatchActionPlan(from: plan, report: report, assessments: weekAssessments)
+            connectivity.sendActionPlan(watchPlan)
+        }
+
+        isLoading = false
+    }
+
+    /// Legacy path: fetches history from HealthKit and runs engines directly.
+    private func loadInsightsLegacy() async {
         isLoading = true
         errorMessage = nil
 

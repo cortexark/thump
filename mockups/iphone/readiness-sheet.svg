@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="393" height="600" viewBox="0 0 393 600">
+  <defs>
+    <clipPath id="sheetClip">
+      <rect x="0" y="60" width="393" height="540" rx="20" ry="20"/>
+    </clipPath>
+  </defs>
+
+  <!-- Semi-transparent overlay background -->
+  <rect width="393" height="600" fill="black" opacity="0.4"/>
+
+  <!-- White rounded sheet -->
+  <rect x="0" y="60" width="393" height="540" rx="20" ry="20" fill="white"/>
+
+  <!-- Drag handle -->
+  <rect x="176.5" y="72" width="40" height="5" rx="2.5" fill="#D1D5DB"/>
+
+  <!-- Navigation title -->
+  <text x="196.5" y="105" text-anchor="middle" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="17" font-weight="600" fill="#111827">Readiness Breakdown</text>
+
+  <!-- Score Circle -->
+  <!-- Outer ring background -->
+  <circle cx="196.5" cy="175" r="55" fill="none" stroke="#EF4444" stroke-opacity="0.2" stroke-width="10"/>
+  <!-- Progress ring: 35% of 360 = 126 degrees -->
+  <!-- Circle circumference = 2 * pi * 55 = 345.58 -->
+  <!-- 35% = 120.95 dash, rest gap -->
+  <circle cx="196.5" cy="175" r="55" fill="none" stroke="#EF4444" stroke-width="10" stroke-linecap="round"
+    stroke-dasharray="120.95 345.58"
+    transform="rotate(-90 196.5 175)"/>
+  <!-- Center score text -->
+  <text x="196.5" y="185" text-anchor="middle" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="32" font-weight="700" fill="#111827">35</text>
+
+  <!-- Red capsule badge "Rest up" -->
+  <rect x="163" y="240" width="67" height="26" rx="13" fill="#EF4444" opacity="0.12"/>
+  <text x="196.5" y="257" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="600" fill="#EF4444">Rest up</text>
+
+  <!-- Summary text -->
+  <text x="196.5" y="286" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" fill="#6B7280">
+    <tspan x="196.5" dy="0">Your body is showing signs of strain. Recovery, sleep,</tspan>
+    <tspan x="196.5" dy="17">and stress levels are all below optimal. Consider a rest day.</tspan>
+  </text>
+
+  <!-- Divider -->
+  <line x1="24" y1="318" x2="369" y2="318" stroke="#F3F4F6" stroke-width="1"/>
+
+  <!-- ============ PILLAR 1: Sleep ============ -->
+  <g transform="translate(24, 332)">
+    <!-- Icon circle -->
+    <rect width="28" height="28" rx="14" fill="#8B5CF6" opacity="0.15"/>
+    <text x="14" y="19" text-anchor="middle" font-size="14">&#x1F6CF;&#xFE0F;</text>
+    <!-- Name and score -->
+    <text x="40" y="12" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">Sleep</text>
+    <text x="345" y="12" text-anchor="end" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="700" fill="#8B5CF6">0.35</text>
+    <!-- Score bar track -->
+    <rect x="40" y="18" width="280" height="8" rx="4" fill="#F3F4F6"/>
+    <!-- Score bar fill: 35% of 280 = 98 -->
+    <rect x="40" y="18" width="98" height="8" rx="4" fill="#8B5CF6"/>
+    <!-- Detail text -->
+    <text x="40" y="40" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">5.2 hours -- well below your 7.5hr target</text>
+  </g>
+
+  <!-- ============ PILLAR 2: Recovery ============ -->
+  <g transform="translate(24, 388)">
+    <rect width="28" height="28" rx="14" fill="#22C55E" opacity="0.15"/>
+    <text x="14" y="19" text-anchor="middle" font-size="14">&#x2764;&#xFE0F;</text>
+    <text x="40" y="12" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">Recovery</text>
+    <text x="345" y="12" text-anchor="end" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="700" fill="#EF4444">0.30</text>
+    <rect x="40" y="18" width="280" height="8" rx="4" fill="#F3F4F6"/>
+    <!-- 30% of 280 = 84 -->
+    <rect x="40" y="18" width="84" height="8" rx="4" fill="#EF4444"/>
+    <text x="40" y="40" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">Heart rate recovery is sluggish this week</text>
+  </g>
+
+  <!-- ============ PILLAR 3: Stress ============ -->
+  <g transform="translate(24, 444)">
+    <rect width="28" height="28" rx="14" fill="#0D9488" opacity="0.15"/>
+    <text x="14" y="19" text-anchor="middle" font-size="14">&#x1F9E0;</text>
+    <text x="40" y="12" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">Stress</text>
+    <text x="345" y="12" text-anchor="end" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="700" fill="#EF4444">0.25</text>
+    <rect x="40" y="18" width="280" height="8" rx="4" fill="#F3F4F6"/>
+    <!-- 25% of 280 = 70 -->
+    <rect x="40" y="18" width="70" height="8" rx="4" fill="#EF4444"/>
+    <text x="40" y="40" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">Elevated stress detected across multiple readings</text>
+  </g>
+
+  <!-- ============ PILLAR 4: Activity Balance ============ -->
+  <g transform="translate(24, 500)">
+    <rect width="28" height="28" rx="14" fill="#3B82F6" opacity="0.15"/>
+    <text x="14" y="19" text-anchor="middle" font-size="14">&#x1F6B6;</text>
+    <text x="40" y="12" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">Activity Balance</text>
+    <text x="345" y="12" text-anchor="end" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="700" fill="#F59E0B">0.45</text>
+    <rect x="40" y="18" width="280" height="8" rx="4" fill="#F3F4F6"/>
+    <!-- 45% of 280 = 126 -->
+    <rect x="40" y="18" width="126" height="8" rx="4" fill="#F59E0B"/>
+    <text x="40" y="40" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">45 of 150 active minutes this week</text>
+  </g>
+
+  <!-- ============ PILLAR 5: HRV Trend ============ -->
+  <g transform="translate(24, 556)">
+    <rect width="28" height="28" rx="14" fill="#8B5CF6" opacity="0.15"/>
+    <text x="14" y="19" text-anchor="middle" font-size="14">&#x1F493;</text>
+    <text x="40" y="12" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#111827">HRV Trend</text>
+    <text x="345" y="12" text-anchor="end" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="13" font-weight="700" fill="#EF4444">0.30</text>
+    <rect x="40" y="18" width="280" height="8" rx="4" fill="#F3F4F6"/>
+    <!-- 30% of 280 = 84 -->
+    <rect x="40" y="18" width="84" height="8" rx="4" fill="#EF4444"/>
+    <text x="40" y="40" font-family="-apple-system, SF Pro Text, Helvetica Neue, sans-serif" font-size="12" fill="#9CA3AF">HRV trending down -- 22ms vs 38ms baseline</text>
+  </g>
+</svg>

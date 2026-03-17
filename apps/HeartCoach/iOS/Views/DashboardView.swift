@@ -27,6 +27,7 @@ struct DashboardView: View {
     @EnvironmentObject private var healthKitService: HealthKitService
     @EnvironmentObject var localStore: LocalStore
     @EnvironmentObject private var notificationService: NotificationService
+    @EnvironmentObject var coordinator: DailyEngineCoordinator
 
     // MARK: - View Model
 
@@ -58,10 +59,20 @@ struct DashboardView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar(.hidden, for: .navigationBar)
                 .task {
+                    #if targetEnvironment(simulator) && DEBUG
+                    // Simulator: use MockHealthDataProvider loaded with real Apple Watch
+                    // export data. We can't write RHR/VO2/exercise time to HealthKit
+                    // (Apple-computed read-only types), so mock is the only way to get
+                    // all metrics on simulator.
+                    let provider: any HealthDataProviding = RealUserDataLoader.makeProvider(days: 74)
+                    #else
+                    let provider: any HealthDataProviding = healthKitService
+                    #endif
                     viewModel.bind(
-                        healthDataProvider: healthKitService,
+                        healthDataProvider: provider,
                         localStore: localStore,
-                        notificationService: notificationService
+                        notificationService: notificationService,
+                        coordinator: coordinator
                     )
                     await viewModel.refresh()
                 }
@@ -227,32 +238,32 @@ struct DashboardView: View {
     }
 
     /// Synthesizes ALL engine outputs into one human-readable sentence.
-    /// Pulls from: readiness, stress, zones, recovery, assessment status.
+    /// When coordinator is active, delegates to AdvicePresenter.
     private var buddyFocusInsight: String? {
+        // Coordinator path: use AdvicePresenter
+        if ConfigService.enableCoordinator,
+           let adviceState = coordinator.bundle?.adviceState {
+            return AdvicePresenter.focusInsight(for: adviceState)
+        }
+
+        // Legacy path
         guard let assessment = viewModel.assessment else { return nil }
 
-        // Priority 1: High stress overrides everything
         if assessment.stressFlag, let stress = viewModel.stressResult, stress.level == .elevated {
             return "Stress is running high. A rest day would do you good."
         }
-
-        // Priority 2: Poor recovery — body needs a break
         if let readiness = viewModel.readinessResult, readiness.score < 45 {
             let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep })
             if let sleep = sleepPillar, sleep.score < 50 {
-                return "Rough night. Take it easy — your body needs to catch up."
+                return "Rough night. Take it easy - your body needs to catch up."
             }
             return "Recovery is low. A light day will help you bounce back."
         }
-
-        // Priority 3: Good recovery + recent hard effort — earned rest
         if let readiness = viewModel.readinessResult, readiness.score < 65,
            let zones = viewModel.zoneAnalysis,
            zones.recommendation == .tooMuchIntensity {
             return "You pushed hard recently. A mellow day helps you absorb those gains."
         }
-
-        // Priority 4: Well recovered and ready to go
         if let readiness = viewModel.readinessResult, readiness.score >= 75 {
             if assessment.stressFlag == false,
                let stress = viewModel.stressResult, stress.level == .relaxed {
@@ -260,13 +271,9 @@ struct DashboardView: View {
             }
             return "Body is charged up. Good day to move."
         }
-
-        // Priority 5: Moderate readiness — keep it balanced
         if let readiness = viewModel.readinessResult, readiness.score >= 45 {
             return "Decent recovery. A moderate effort works well today."
         }
-
-        // Fallback: general status-based
         if assessment.status == .needsAttention {
             return "Your body is asking for a lighter day."
         }
@@ -361,6 +368,10 @@ struct DashboardView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
+
+                            Text("Wellness estimate based on your recent trends - not a medical assessment")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
 
                             // Mini metric badges
                             HStack(spacing: 6) {

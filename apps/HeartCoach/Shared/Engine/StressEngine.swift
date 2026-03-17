@@ -49,32 +49,35 @@ public struct StressEngine: Sendable {
     /// Whether to apply log-SDNN transformation before computing the HRV component.
     public let useLogSDNN: Bool
 
+    private let config: HealthPolicyConfig.StressOvertraining
+
     // Acute branch weights (HR-primary, validated on PhysioNet)
-    private let acuteRHRWeight: Double = 0.50
-    private let acuteHRVWeight: Double = 0.30
-    private let acuteCVWeight: Double = 0.20
+    private var acuteRHRWeight: Double { config.acuteWeights.rhr }
+    private var acuteHRVWeight: Double { config.acuteWeights.hrv }
+    private var acuteCVWeight: Double { config.acuteWeights.cv }
 
     // Desk branch weights (HRV-primary, for seated/cognitive contexts)
     // RHR inverted in desk mode (HR drop = cognitive engagement)
-    private let deskRHRWeight: Double = 0.20
-    private let deskHRVWeight: Double = 0.50
-    private let deskCVWeight: Double = 0.30
+    private var deskRHRWeight: Double { config.deskWeights.rhr }
+    private var deskHRVWeight: Double { config.deskWeights.hrv }
+    private var deskCVWeight: Double { config.deskWeights.cv }
 
     /// Sigmoid steepness — higher = sharper transition around midpoint.
-    private let sigmoidK: Double = 0.08
+    private var sigmoidK: Double { config.sigmoidK }
 
     /// Sigmoid midpoint (raw composite score that maps to stress = 50).
-    private let sigmoidMid: Double = 50.0
+    private var sigmoidMid: Double { config.sigmoidMid }
 
     /// Steps threshold below which desk mode is considered.
-    private let deskStepsThreshold: Double = 2000.0
+    private var deskStepsThreshold: Double { config.deskStepsThreshold }
 
     /// Workout minutes threshold above which acute mode is considered.
-    private let acuteWorkoutThreshold: Double = 15.0
+    private var acuteWorkoutThreshold: Double { config.acuteWorkoutThreshold }
 
-    public init(baselineWindow: Int = 14, useLogSDNN: Bool = true) {
+    public init(baselineWindow: Int = 14, useLogSDNN: Bool = true, config: HealthPolicyConfig.StressOvertraining = ConfigService.activePolicy.stressOvertraining) {
         self.baselineWindow = max(baselineWindow, 3)
         self.useLogSDNN = useLogSDNN
+        self.config = config
     }
 
     // MARK: - Context Detection
@@ -516,9 +519,9 @@ public struct StressEngine: Sendable {
             warnings.append("Heart rate and HRV signals show mixed patterns")
         }
 
-        if score >= 0.70 {
+        if score >= config.confidenceHighCutoff {
             return .high
-        } else if score >= 0.40 {
+        } else if score >= config.confidenceModerateCutoff {
             return .moderate
         } else {
             return .low
@@ -721,9 +724,9 @@ public struct StressEngine: Sendable {
         }
 
         let preceding = snapshots.filter { $0.date < targetDay }
-        guard let baseline = computeBaseline(snapshots: preceding) else {
-            return []
-        }
+        // Use preceding days for baseline when available; fall back to today's
+        // own HRV so the Day heatmap works on day 1 (BUG-072).
+        let baseline = computeBaseline(snapshots: preceding) ?? dailyHRV
 
         return hourlyStressEstimates(
             dailyHRV: dailyHRV,
@@ -813,12 +816,16 @@ public struct StressEngine: Sendable {
                 return "Your body seems to be working harder than usual "
                     + "while resting. Consider a short walk or some deep breaths."
             }
+            if score >= 85 {
+                return "Your body is really working hard today. Give yourself "
+                    + "permission to rest — even a few minutes of slow breathing can help."
+            }
             if percentDiff > 30 {
-                return "Your body might be working a bit harder than "
+                return "Your body might be working harder than "
                     + "usual today. A walk, some deep breaths, or "
                     + "extra sleep could help."
             }
-            return "You seem to be running a bit hot today. "
+            return "You seem to be running a bit warm today. "
                 + "A little recovery time could go a long way."
         }
     }

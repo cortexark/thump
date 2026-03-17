@@ -157,16 +157,61 @@ public struct NudgeGenerator: Sendable {
                     icon: "bed.double.fill"
                 ))
             } else {
-                // Sleep pillar is weak — direct sleep advice with the causal chain
-                let hours = current.sleepHours.map { String(format: "%.1f", $0) } ?? "not enough"
+                // Sleep pillar is weak — direct sleep advice with the causal chain.
+                // Severity-graduated: <4h acknowledges user may have had no choice,
+                // 4-6h gives actionable bedtime advice.
+                let hours = current.sleepHours ?? 0
+                let hoursStr = String(format: "%.1f", hours)
+                if hours > 0 && hours < 4.0 {
+                    addIfNew(DailyNudge(
+                        category: .rest,
+                        title: "Rest When You Can Today",
+                        description: "You got \(hoursStr) hours last night — sometimes life doesn't "
+                            + "let you sleep. A short nap or even just sitting quietly helps. "
+                            + "Tonight, protect your sleep window however you can.",
+                        durationMinutes: nil,
+                        icon: "bed.double.fill"
+                    ))
+                } else {
+                    addIfNew(DailyNudge(
+                        category: .rest,
+                        title: "Earlier Bedtime = Better Tomorrow",
+                        description: "You got \(hoursStr) hours last night. Less sleep can show up as "
+                            + "a higher resting heart rate and lower HRV the next morning — which is "
+                            + "what your metrics are showing. Whenever your next sleep window comes, "
+                            + "try to protect it — even an extra 30 minutes makes a difference.",
+                        durationMinutes: nil,
+                        icon: "bed.double.fill"
+                    ))
+                }
+            }
+
+            // Fix 7: Medical escalation — when recovering AND stress is elevated,
+            // surface a "talk to your doctor" nudge. This is highest priority (P0 liability)
+            // so it goes before optional breathing/affirming nudges.
+            if stress {
                 addIfNew(DailyNudge(
-                    category: .rest,
-                    title: "Earlier Bedtime = Better Tomorrow",
-                    description: "You got \(hours) hours last night. Less sleep can show up as "
-                        + "a higher resting heart rate and lower HRV the next morning — which is "
-                        + "what your metrics are showing. Aim to be in bed by 10 PM tonight.",
+                    category: .seekGuidance,
+                    title: "Worth Sharing With Your Doctor",
+                    description: "Your metrics have been outside your usual range. "
+                        + "Some people find it helpful to share these patterns with their "
+                        + "healthcare provider. This app is not intended to diagnose, treat, "
+                        + "cure, or prevent any disease — your care team can give this data context.",
                     durationMinutes: nil,
-                    icon: "bed.double.fill"
+                    icon: "stethoscope"
+                ))
+            }
+
+            // Fix 6B: Positive anchor — when recovering, add an affirming nudge
+            // (prioritized over breathing nudge per BCTTv1 positive-framing requirement)
+            if r.level == .recovering && nudges.count < 3 {
+                addIfNew(DailyNudge(
+                    category: .celebrate,
+                    title: "One Thing That Helps",
+                    description: "On days like this, even 5 minutes outside or an extra 20 minutes of sleep tonight "
+                        + "makes a real difference. Pick whichever one fits your day.",
+                    durationMinutes: nil,
+                    icon: "heart.fill"
                 ))
             }
 
@@ -186,8 +231,9 @@ public struct NudgeGenerator: Sendable {
             // Normal secondary nudge logic when readiness is fine
 
             // Sleep signal: too little or too much sleep
+            let sleepPolicy = ConfigService.activePolicy.view
             if let sleep = current.sleepHours {
-                if sleep < 6.5 {
+                if sleep < sleepPolicy.lowSleepNudgeHours {
                     addIfNew(DailyNudge(
                         category: .rest,
                         title: "Catch Up on Sleep",
@@ -196,7 +242,7 @@ public struct NudgeGenerator: Sendable {
                         durationMinutes: nil,
                         icon: "bed.double.fill"
                     ))
-                } else if sleep > 9.5 {
+                } else if sleep > sleepPolicy.longSleepNudgeHours {
                     addIfNew(DailyNudge(
                         category: .walk,
                         title: "Get Some Fresh Air",
@@ -233,6 +279,13 @@ public struct NudgeGenerator: Sendable {
                     durationMinutes: 3,
                     icon: "wind"
                 ))
+            }
+
+            // Intensity signal: readiness is high, encourage effort not just volume.
+            // Only when .primed or .ready — never when .recovering or .moderate.
+            if let r = readiness, (r.level == .primed || r.level == .ready) && nudges.count < 3 {
+                let intensityNudges = intensityNudgeLibrary()
+                addIfNew(intensityNudges[dayIndex % intensityNudges.count])
             }
         }
 
@@ -594,12 +647,54 @@ public struct NudgeGenerator: Sendable {
         return nudges[dayIndex % nudges.count]
     }
 
+    /// Intensity-focused nudges — only served when readiness is .ready or .primed.
+    private func intensityNudgeLibrary() -> [DailyNudge] {
+        [
+            DailyNudge(
+                category: .intensity,
+                title: "Push Your Pace Today",
+                description: "Your body is ready for more. Try picking up the pace for 2-3 minutes "
+                    + "during your walk or run — get your breathing heavy, then ease back. "
+                    + "Repeat a few times. That's where the real gains happen.",
+                durationMinutes: 20,
+                icon: "bolt.heart.fill"
+            ),
+            DailyNudge(
+                category: .intensity,
+                title: "10 Minutes in the Hard Zone",
+                description: "Aim for 10 minutes today where you're breathing hard — a hill walk, "
+                    + "stairs, or a jog all count. Intensity builds fitness faster than extra "
+                    + "minutes at an easy pace.",
+                durationMinutes: 10,
+                icon: "flame.fill"
+            ),
+            DailyNudge(
+                category: .intensity,
+                title: "Make Today's Walk Count",
+                description: "Instead of a longer easy walk, try a shorter one at a pace where "
+                    + "talking feels hard. 15 minutes at real effort beats 30 minutes of "
+                    + "strolling for your heart.",
+                durationMinutes: 15,
+                icon: "figure.walk.motion"
+            ),
+            DailyNudge(
+                category: .intensity,
+                title: "Challenge Your Heart Today",
+                description: "Your recovery says you're primed. This is the day to push — intervals, "
+                    + "a tempo run, or anything that gets your heart rate up for a few minutes. "
+                    + "You'll feel it tomorrow in a good way.",
+                durationMinutes: 20,
+                icon: "heart.circle.fill"
+            ),
+        ]
+    }
+
     private func defaultNudgeLibrary() -> [DailyNudge] {
         [
             DailyNudge(
                 category: .walk,
-                title: "A Brisk Walk Could Feel Great",
-                description: "A 15-minute brisk walk is one of the nicest things you can do " +
+                title: "A Walk Could Feel Great",
+                description: "A 15-minute walk is one of the nicest things you can do " +
                     "for yourself. Find a pace that feels good and just enjoy it.",
                 durationMinutes: 15,
                 icon: "figure.walk"
@@ -608,8 +703,9 @@ public struct NudgeGenerator: Sendable {
                 category: .moderate,
                 title: "Try Something Different Today",
                 description: "Mixing things up keeps it fun! " +
-                    "You might enjoy trying something different today, like cycling, " +
-                    "swimming, or a fitness class.",
+                    "You might enjoy trying something different today, like gentle cycling, " +
+                    "a swim, or a yoga session. If you have any health conditions, " +
+                    "check with your care team first.",
                 durationMinutes: 20,
                 icon: "figure.mixed.cardio"
             ),

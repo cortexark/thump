@@ -2,20 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>Thump reads your heart rate, HRV, recovery, VO2 max, steps, exercise, and sleep data to generate wellness insights and training suggestions.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Thump may request permission to write future wellness data to Apple Health if you enable that feature in a later release.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Thump</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Thump reads your heart rate, HRV, recovery, VO2 max, steps, exercise, and sleep data to generate wellness insights and training suggestions.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Thump may request permission to write future wellness data to Apple Health if you enable that feature in a later release.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchScreen</key>
+	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>healthkit</string>
@@ -25,11 +31,5 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
-	<key>UILaunchScreen</key>
-	<dict/>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
 </dict>
 </plist>

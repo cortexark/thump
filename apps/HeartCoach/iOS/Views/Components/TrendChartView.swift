@@ -39,7 +39,7 @@ struct TrendChartView: View {
 
     /// The average value across all data points.
     private var averageValue: Double {
-        guard !dataPoints.isEmpty else { return 0 }
+        guard dataPoints.count > 0 else { return 0 }
         return dataPoints.map(\.value).reduce(0, +) / Double(dataPoints.count)
     }
 
