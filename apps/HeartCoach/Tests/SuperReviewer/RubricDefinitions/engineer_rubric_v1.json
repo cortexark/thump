@@ -1,0 +1,250 @@
+{
+  "version": "1.0",
+  "source_agent": "engineer",
+  "perspective": "Software engineer validating data-to-text correctness and deterministic behavior",
+  "scoring_range": [1, 5],
+  "total_criteria": 10,
+  "max_score": 50,
+  "criteria": [
+    {
+      "id": "ENG-001",
+      "source_agent": "engineer",
+      "category": "data_text_consistency",
+      "description": "Data-text consistency - if sleep=2h, text should reflect severe sleep deprivation",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text completely contradicts the data (e.g. 'Great sleep!' when sleep=2h)",
+        "2": "Text understates or overstates the data significantly",
+        "3": "Text roughly matches data but misses severity or nuance",
+        "4": "Text accurately reflects data with one minor mismatch",
+        "5": "Text perfectly mirrors the severity and meaning of the underlying data"
+      },
+      "fail_examples": [
+        "Sleep=2h: 'Solid night of rest, you're well recovered'",
+        "Steps=500: 'Great activity day, keep it up!'",
+        "Readiness=20: 'You're primed for a big workout'"
+      ],
+      "pass_examples": [
+        "Sleep=2h: 'Very low sleep last night - prioritize rest today'",
+        "Steps=500: 'Light movement day. Even a short walk adds up'",
+        "Readiness=20: 'Recovery is low. Take it easy and let your body reset'"
+      ]
+    },
+    {
+      "id": "ENG-002",
+      "source_agent": "engineer",
+      "category": "score_mode_alignment",
+      "description": "Score-mode alignment - readiness score matches guidance mode (low score produces rest mode)",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Mode completely mismatches score (push mode at readiness=15)",
+        "2": "Mode is wrong by one level (moderate mode at readiness=15)",
+        "3": "Mode direction is correct but intensity is off",
+        "4": "Mode matches score with minor calibration issue",
+        "5": "Mode perfectly corresponds to the readiness score range"
+      },
+      "fail_examples": [
+        "Readiness=15, mode=push: 'Time to go all out today!'",
+        "Readiness=90, mode=rest: 'Take a full rest day'",
+        "Readiness=30, mode=moderate: 'A solid moderate effort is great today'"
+      ],
+      "pass_examples": [
+        "Readiness=15, mode=rest: 'Prioritize rest tonight - sleep is the biggest lever for recovery.'",
+        "Readiness=70, mode=moderate: 'Decent recovery. A moderate effort works well today.'",
+        "Readiness=90, mode=push: 'Strong recovery - your body is ready to push today'"
+      ]
+    },
+    {
+      "id": "ENG-003",
+      "source_agent": "engineer",
+      "category": "monotonic_graduation",
+      "description": "Monotonic graduation - as metrics worsen day-over-day, text severity increases",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text severity decreases while metrics worsen across days",
+        "2": "Text severity stays flat despite significant metric decline",
+        "3": "Text severity increases but not proportionally to metric decline",
+        "4": "Text severity tracks metric decline with minor lag",
+        "5": "Text severity smoothly and proportionally tracks metric changes"
+      },
+      "fail_examples": [
+        "Day1 sleep=6h: 'Rest up' → Day3 sleep=3h: 'Looking good!'",
+        "Day1 stress=high: 'Take it easy' → Day5 stress=critical: 'Manageable stress today'",
+        "Declining readiness over 5 days but text stays 'Decent recovery' every day"
+      ],
+      "pass_examples": [
+        "Day1 sleep=6h: 'A bit less sleep' → Day3 sleep=3h: 'Very low sleep - rest is essential'",
+        "Gradually escalating concern as stress stays elevated across days",
+        "Recovery text shifts from 'moderate day' to 'take it easy' to 'full rest' as readiness drops"
+      ]
+    },
+    {
+      "id": "ENG-004",
+      "source_agent": "engineer",
+      "category": "no_stale_recommendations",
+      "description": "No stale recommendations - if day 5 is improving, don't show day 3's 'rest up' text",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Recommendations clearly reference a past state that no longer applies",
+        "2": "Recommendations lag behind current data by multiple days",
+        "3": "Recommendations are slightly behind current trajectory",
+        "4": "Recommendations match current data with slight delay in tone shift",
+        "5": "Recommendations precisely reflect the current day's data and trajectory"
+      },
+      "fail_examples": [
+        "Day 5 readiness=80 but text says 'Still recovering, keep resting'",
+        "Metrics improved 3 days ago but text still warns about decline",
+        "Sleep normalized but text says 'Sleep has been poor recently'"
+      ],
+      "pass_examples": [
+        "Day 5 readiness=80: 'Recovery is bouncing back - moderate effort looks good'",
+        "Improving sleep trend: 'Sleep is trending up. Keep the momentum going'",
+        "After 3 bad days then 2 good: 'Nice rebound. Your body is responding well'"
+      ]
+    },
+    {
+      "id": "ENG-005",
+      "source_agent": "engineer",
+      "category": "number_accuracy",
+      "description": "Number accuracy - step remaining = target minus current, sleep hours match input data",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Numbers in text are clearly wrong (math errors, wrong values)",
+        "2": "One number is incorrect or inconsistent with input",
+        "3": "Numbers are approximately correct but imprecise",
+        "4": "All numbers correct with minor rounding inconsistency",
+        "5": "All numbers are exactly correct and consistent with input data"
+      },
+      "fail_examples": [
+        "Steps=3000, target=10000: 'Only 5,000 steps to go' (should be 7,000)",
+        "Sleep=5.5h displayed as 'about 7 hours of sleep'",
+        "Goal=8000 steps, current=6000: '4,000 remaining'"
+      ],
+      "pass_examples": [
+        "Steps=3000, target=10000: '7,000 steps to go - a walk gets you closer'",
+        "Sleep=5.5h: 'About 5 and a half hours of sleep last night'",
+        "Goal=8000, current=6000: '2,000 more steps to hit your goal'"
+      ]
+    },
+    {
+      "id": "ENG-006",
+      "source_agent": "engineer",
+      "category": "cross_page_data_consistency",
+      "description": "Cross-page data consistency - same metric appears the same on all pages",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Same metric shows different values on different pages",
+        "2": "Metric interpretation conflicts between pages",
+        "3": "Values match but characterization differs (e.g. 'good' vs 'poor' for same value)",
+        "4": "Consistent values and interpretation with minor tone difference",
+        "5": "Identical values and consistent interpretation across all pages"
+      },
+      "fail_examples": [
+        "Dashboard shows sleep=7h, insights page says sleep=5h",
+        "Dashboard calls recovery 'excellent', stress page calls it 'concerning'",
+        "Step count differs between goal card and activity summary"
+      ],
+      "pass_examples": [
+        "Sleep=6h shown consistently on dashboard, insights, and recovery sections",
+        "Recovery characterized as 'moderate' across all page references",
+        "Step count matches between goal progress and activity summary"
+      ]
+    },
+    {
+      "id": "ENG-007",
+      "source_agent": "engineer",
+      "category": "null_handling",
+      "description": "Null handling - nil metrics produce graceful text, not crashes or blanks",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Nil metric causes blank text, 'nil', 'N/A', or visible error",
+        "2": "Nil metric produces awkward or broken sentence",
+        "3": "Nil metric produces generic placeholder that feels out of place",
+        "4": "Nil metric produces reasonable fallback text with minor awkwardness",
+        "5": "Nil metric produces natural, context-appropriate fallback text"
+      },
+      "fail_examples": [
+        "Sleep=nil: '' (empty string)",
+        "HRV=nil: 'Your HRV is nil today'",
+        "Steps=nil: 'You took N/A steps'"
+      ],
+      "pass_examples": [
+        "Sleep=nil: 'No sleep data available yet - wear your watch tonight'",
+        "HRV=nil: 'Waiting for enough heart data to show your recovery trend'",
+        "Steps=nil: 'Step tracking starts once we get data from your watch'"
+      ]
+    },
+    {
+      "id": "ENG-008",
+      "source_agent": "engineer",
+      "category": "edge_case_text",
+      "description": "Edge case text - extreme values (0 sleep, 200 RHR) produce sensible text",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Extreme value produces nonsensical or dangerous recommendation",
+        "2": "Extreme value produces text that ignores the severity",
+        "3": "Text acknowledges the extreme but response is generic",
+        "4": "Text correctly identifies the extreme with appropriate urgency",
+        "5": "Text handles the extreme gracefully, with appropriate concern and safe guidance"
+      },
+      "fail_examples": [
+        "Sleep=0h: 'Decent night of sleep'",
+        "RHR=200: 'Heart rate is a little elevated today'",
+        "Steps=0, day 5 in a row: 'Keep up the activity!'"
+      ],
+      "pass_examples": [
+        "Sleep=0h: 'No sleep recorded. Rest is essential today - take it very easy'",
+        "RHR=200: 'Unusually high heart rate detected. If you feel unwell, consult a doctor'",
+        "Steps=0 for days: 'Activity has been very low. Even brief movement helps'"
+      ]
+    },
+    {
+      "id": "ENG-009",
+      "source_agent": "engineer",
+      "category": "mode_goal_coherence",
+      "description": "Mode-goal coherence - rest mode doesn't show ambitious step goals",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Rest mode paired with aggressive goals (10k step push)",
+        "2": "Mode and goal direction conflict noticeably",
+        "3": "Mode and goal don't conflict but aren't well aligned",
+        "4": "Mode and goal are aligned with minor inconsistency",
+        "5": "Mode and goal are perfectly coherent and mutually reinforcing"
+      },
+      "fail_examples": [
+        "Mode=rest: 'Aim for 12,000 steps today!'",
+        "Mode=push: 'Take it easy, maybe skip the workout'",
+        "Mode=rest: 'Try to beat yesterday's step count'"
+      ],
+      "pass_examples": [
+        "Mode=rest: 'Adjusted goal: gentle movement. Even 2,000 steps count'",
+        "Mode=push: 'Strong day ahead - aim for your full step target'",
+        "Mode=moderate: 'Decent recovery. A moderate effort works well today.'"
+      ]
+    },
+    {
+      "id": "ENG-010",
+      "source_agent": "engineer",
+      "category": "determinism",
+      "description": "Determinism - same input always produces same output",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Same input produces completely different text across runs",
+        "2": "Same input produces noticeably different phrasing or recommendations",
+        "3": "Same input produces similar but not identical text",
+        "4": "Same input produces identical text with minor formatting variance",
+        "5": "Same input always produces byte-identical output"
+      },
+      "fail_examples": [
+        "Run 1: 'Take it easy' / Run 2: 'Push hard today' for identical inputs",
+        "Same persona day produces different mode assignments across runs",
+        "Greeting changes between runs despite same time-of-day input"
+      ],
+      "pass_examples": [
+        "Identical inputs always produce identical greeting, mode, and recommendations",
+        "Re-running the same persona day produces byte-for-byte identical JSON",
+        "Deterministic engine with no random components"
+      ]
+    }
+  ]
+}
