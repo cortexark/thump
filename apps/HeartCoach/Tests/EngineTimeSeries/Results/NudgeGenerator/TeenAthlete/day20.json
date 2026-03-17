@@ -2,13 +2,13 @@
   "anomalyScore" : 0.72659888772889714,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "walk",
+    "rest",
     "intensity",
     "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "How About Some Easy Movement Today?",
+  "nudgeCategory" : "rest",
+  "nudgeTitle" : "A Cozy Bedtime Routine",
   "readinessLevel" : "primed",
   "readinessScore" : 81,
   "regressionFlag" : true,

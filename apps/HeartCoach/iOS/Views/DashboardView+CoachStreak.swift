@@ -24,15 +24,16 @@ extension DashboardView {
                     Spacer()
 
                     // Progress score
+                    let policy = ConfigService.activePolicy
                     Text("\(report.weeklyProgressScore)")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(width: 38, height: 38)
                         .background(
                             Circle().fill(
-                                report.weeklyProgressScore >= 70
+                                report.weeklyProgressScore >= policy.view.streakGreenScore
                                     ? Color(hex: 0x22C55E)
-                                    : (report.weeklyProgressScore >= 45
+                                    : (report.weeklyProgressScore >= policy.view.streakBlueScore
                                        ? Color(hex: 0x3B82F6)
                                        : Color(hex: 0xF59E0B))
                             )

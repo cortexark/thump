@@ -2,13 +2,13 @@
   "anomalyScore" : 0.10152950395477166,
   "confidence" : "low",
   "multiNudgeCategories" : [
-    "walk",
+    "seekGuidance",
     "intensity",
     "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "A Quick Walk to Get Started",
+  "nudgeCategory" : "seekGuidance",
+  "nudgeTitle" : "Quick Sync Check",
   "readinessLevel" : "primed",
   "readinessScore" : 89,
   "regressionFlag" : false,
