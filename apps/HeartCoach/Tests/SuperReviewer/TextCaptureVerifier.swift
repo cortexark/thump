@@ -59,6 +59,8 @@ struct TextCaptureVerifier {
         violations += checkMedicalSafety(capture)
         violations += checkEmotionalSafety(capture)
         violations += checkDataTextConsistency(capture)
+        violations += checkNoDashHyphens(capture)
+        violations += checkTrendLanguage(capture)
 
         let captureID = "\(capture.personaName)_\(capture.journeyID)_d\(capture.dayIndex)_\(capture.timeStampLabel)"
         return VerificationResult(captureID: captureID, violations: violations)
@@ -329,6 +331,65 @@ struct TextCaptureVerifier {
                     message: "Readiness \(score) (recovering) but hero is celebratory",
                     field: "heroMessage"))
             }
+        }
+
+        return v
+    }
+
+    // V-012: No hyphen used as an em dash in sentence-level coaching text
+    // App text should use em dashes (—) or restructure. Hyphens are for compound words only.
+    static func checkNoDashHyphens(_ cap: SuperReviewerCapture) -> [VerificationResult.Violation] {
+        var v: [VerificationResult.Violation] = []
+
+        // Pattern: word[space]-[space]word — hyphen used as sentence connector
+        let sentenceConnectorFields: [(String, String?)] = [
+            ("heroMessage", cap.heroMessage),
+            ("checkRecommendation", cap.checkRecommendation),
+            ("recoveryNarrative", cap.recoveryNarrative),
+            ("guidanceHeadline", cap.guidanceHeadline),
+            ("guidanceDetail", cap.guidanceDetail),
+            ("friendlyMessage", cap.friendlyMessage),
+            ("coachingHeroMessage", cap.coachingHeroMessage),
+        ]
+
+        for (field, text) in sentenceConnectorFields {
+            guard let text, !text.isEmpty else { continue }
+            // Detect " - " used as a sentence bridge (not a list bullet or compound word)
+            if text.contains(" - ") {
+                v.append(.init(ruleID: "V-012", severity: .medium,
+                    message: "Hyphen used as em dash in \(field): use — or restructure the sentence",
+                    field: field))
+            }
+        }
+
+        return v
+    }
+
+    // V-013: Trend language present when journey has enough history (day 4+)
+    // When the engine has a week of data, text should reference trajectory, not just today.
+    static func checkTrendLanguage(_ cap: SuperReviewerCapture) -> [VerificationResult.Violation] {
+        var v: [VerificationResult.Violation] = []
+
+        // Only check once enough history exists (day 4 onward = at least 4 prior days in engine)
+        guard cap.dayIndex >= 4 else { return [] }
+
+        let trendWords = [
+            "week", "days", "trending", "recent", "past", "pattern",
+            "been building", "improving", "declining", "consistently",
+            "this week", "over the", "all week", "past few",
+        ]
+
+        let heroLower = (cap.heroMessage ?? "").lowercased()
+        let recoveryLower = (cap.recoveryNarrative ?? "").lowercased()
+        let coachingLower = cap.coachingInsights.joined(separator: " ").lowercased()
+        let combinedText = "\(heroLower) \(recoveryLower) \(coachingLower)"
+
+        let hasTrendWord = trendWords.contains { combinedText.contains($0) }
+
+        if !hasTrendWord {
+            v.append(.init(ruleID: "V-013", severity: .low,
+                message: "Day \(cap.dayIndex): engine has week of history but no trend language found in hero/recovery/coaching",
+                field: "heroMessage"))
         }
 
         return v

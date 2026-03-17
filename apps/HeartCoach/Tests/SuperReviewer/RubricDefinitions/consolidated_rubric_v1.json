@@ -1,24 +1,24 @@
 {
   "version": "1.0",
-  "total_criteria": 30,
-  "max_score": 150,
+  "total_criteria": 37,
+  "max_score": 185,
   "scoring_range": [1, 5],
   "source_agents": ["customer", "engineer", "qae"],
   "groups": {
     "customer": {
       "perspective": "Non-expert consumer who does not know heart rate terminology",
-      "criteria_count": 10,
-      "criteria_ids": ["CLR-001", "CLR-002", "CLR-003", "CLR-004", "CLR-005", "CLR-006", "CLR-007", "CLR-008", "CLR-009", "CLR-010"]
+      "criteria_count": 13,
+      "criteria_ids": ["CLR-001", "CLR-002", "CLR-003", "CLR-004", "CLR-005", "CLR-006", "CLR-007", "CLR-008", "CLR-009", "CLR-010", "CLR-011", "CLR-012", "CLR-013"]
     },
     "engineer": {
       "perspective": "Software engineer validating data-to-text correctness and deterministic behavior",
-      "criteria_count": 10,
-      "criteria_ids": ["ENG-001", "ENG-002", "ENG-003", "ENG-004", "ENG-005", "ENG-006", "ENG-007", "ENG-008", "ENG-009", "ENG-010"]
+      "criteria_count": 12,
+      "criteria_ids": ["ENG-001", "ENG-002", "ENG-003", "ENG-004", "ENG-005", "ENG-006", "ENG-007", "ENG-008", "ENG-009", "ENG-010", "ENG-011", "ENG-012"]
     },
     "qae": {
       "perspective": "QA engineer validating completeness, safety, and regression behavior",
-      "criteria_count": 10,
-      "criteria_ids": ["QAE-001", "QAE-002", "QAE-003", "QAE-004", "QAE-005", "QAE-006", "QAE-007", "QAE-008", "QAE-009", "QAE-010"]
+      "criteria_count": 12,
+      "criteria_ids": ["QAE-001", "QAE-002", "QAE-003", "QAE-004", "QAE-005", "QAE-006", "QAE-007", "QAE-008", "QAE-009", "QAE-010", "QAE-011", "QAE-012"]
     }
   },
   "criteria": [
@@ -740,6 +740,174 @@
         "Unusually high heart rate detected. If you feel unwell, consult a doctor",
         "Patterns suggest your body needs more rest. This is not medical advice",
         "Prioritize rest tonight - sleep is the biggest lever for recovery."
+      ]
+    },
+    {
+      "id": "CLR-011",
+      "source_agent": "customer",
+      "category": "trend_narrative",
+      "description": "Trend narrative — when week data is available, text conveys trajectory from the past, not just a today snapshot",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text gives only today's number with zero reference to how it got there",
+        "2": "Text hints at history with a vague word like 'recently' but no direction",
+        "3": "Text references the past but trajectory direction is unclear",
+        "4": "Text clearly names the trajectory with one minor phrasing gap",
+        "5": "Text grounds today's state in a clear week-long narrative the user can feel"
+      },
+      "fail_examples": [
+        "Recovery is low today (no context of how it got there)",
+        "Sleep was 5 hours (was this the same all week?)",
+        "Stress is elevated (is it getting better or worse?)"
+      ],
+      "pass_examples": [
+        "Sleep has been building back up all week. Tonight keeps the streak going.",
+        "Recovery has been slipping over recent days. Rest is the right call today.",
+        "Stress patterns have been settling down since Wednesday. Keep the calm momentum."
+      ]
+    },
+    {
+      "id": "CLR-012",
+      "source_agent": "customer",
+      "category": "dual_audience_layering",
+      "description": "Dual-audience layering — the same sentence works for a layman (plain outcome) and an expert (can infer data depth) without jargon being visible",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Text is either pure jargon (layman lost) or so stripped down the expert learns nothing",
+        "2": "Text serves one audience but clearly fails the other",
+        "3": "Text is safe for both but neither audience gets real value",
+        "4": "Both audiences served with one minor gap in depth or clarity",
+        "5": "Layman reads a clear human outcome; expert can sense the data story behind it"
+      },
+      "fail_examples": [
+        "Rest. (layman: ok but why? expert: what data?)",
+        "Your 7-day SDNN rolling average has dropped below the 15th percentile baseline. (layman: lost)",
+        "Body stuff is happening. (expert: useless)"
+      ],
+      "pass_examples": [
+        "Recovery has been building steadily this week. A moderate effort suits you well today.",
+        "Sleep patterns have been consistent. Your body is running on a good rhythm right now.",
+        "Heart patterns have been quieter than usual lately. A lighter day works well today."
+      ]
+    },
+    {
+      "id": "CLR-013",
+      "source_agent": "customer",
+      "category": "achievement_celebration",
+      "description": "Achievement celebration — genuine wins (best sleep week, goal streak, strong recovery run) are surfaced with warmth when the data supports it",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "A clear personal best or strong week goes completely unacknowledged",
+        "2": "A win is present in the data but text is neutral or negative",
+        "3": "Text is positive but generic, not tied to the specific achievement",
+        "4": "Text acknowledges the win with one missed opportunity for specificity",
+        "5": "Text names the achievement specifically and makes the user feel it"
+      },
+      "fail_examples": [
+        "Best recovery week in 30 days but text says: 'Decent recovery. Moderate effort works today.'",
+        "5-day sleep streak but text says: 'Sleep was 7 hours last night.'",
+        "Hit step goal 6 days in a row but text ignores it entirely"
+      ],
+      "pass_examples": [
+        "Best recovery week in a month. Your body is responding really well to the pattern you've built.",
+        "Six days hitting your sleep target in a row. That kind of consistency is where change happens.",
+        "Strongest 5-day stretch this month. Whatever you did this week, it's working."
+      ]
+    },
+    {
+      "id": "ENG-011",
+      "source_agent": "engineer",
+      "category": "data_horizon_signaling",
+      "description": "Data horizon signaling — text correctly communicates whether implications are drawn from today's data or the past week's trend",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text makes week-level claims with only 1 day of data, or ignores week context entirely when 7 days are available",
+        "2": "Horizon is ambiguous in a way that would confuse a user reading carefully",
+        "3": "Horizon is technically correct but not communicated naturally",
+        "4": "Horizon is clear with one minor phrasing ambiguity",
+        "5": "Text precisely signals its data window: today's snapshot vs week trend vs recent pattern"
+      },
+      "fail_examples": [
+        "Day 1 only: 'Your sleep has been declining all week' (no week exists yet)",
+        "Day 6: 'Sleep was 5 hours tonight' (ignores 5 nights of trend that drove the guidance)",
+        "'Recovery is low' with no signal of whether this is today or a pattern"
+      ],
+      "pass_examples": [
+        "Day 1: 'Sleep was lighter than usual last night. One good night resets a lot.'",
+        "Day 6: 'Sleep has been building back up over the past few days. Tonight matters.'",
+        "Day 3: 'Today's recovery is lower than your recent week average. Rest is the right call.'"
+      ]
+    },
+    {
+      "id": "ENG-012",
+      "source_agent": "engineer",
+      "category": "trend_direction_accuracy",
+      "description": "Trend direction accuracy — when week data drives the message, the trending language matches the actual metric direction",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text says 'improving' when metrics clearly declined over the week, or vice versa",
+        "2": "Trend direction is wrong for one metric but correct for another",
+        "3": "Trend direction is correct but magnitude is significantly off",
+        "4": "Trend direction and magnitude are correct with one minor overshoot",
+        "5": "Trend language precisely matches the actual slope and magnitude of the data"
+      },
+      "fail_examples": [
+        "Readiness: 70, 65, 58, 50, 42 over 5 days — text says 'You've been improving this week'",
+        "Sleep: 5h, 6h, 7h, 7.5h, 8h — text says 'Sleep has been rough lately'",
+        "HRV flat within 2ms for 6 days — text says 'Strong upward trend in recovery signals'"
+      ],
+      "pass_examples": [
+        "Readiness declining: 'Recovery has been slipping over recent days. Prioritize rest tonight.'",
+        "Sleep improving: 'Sleep has been climbing all week. Keep the momentum going.'",
+        "Flat metrics: 'Things have been holding steady this week. Consistency is its own kind of progress.'"
+      ]
+    },
+    {
+      "id": "QAE-011",
+      "source_agent": "qae",
+      "category": "no_hyphen_as_dash",
+      "description": "No hyphen as em dash — app text uses em dashes (—) or restructures sentences. A hyphen (-) surrounded by spaces is a formatting error, not a style choice.",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Multiple instances of ' - ' used as sentence connectors across coaching text",
+        "2": "One clear instance of hyphen-as-dash in a coaching text field",
+        "3": "No hyphen-as-dash in primary fields but one appears in a secondary field",
+        "4": "Clean formatting with one borderline case in a goal or nudge label",
+        "5": "Zero hyphen-as-dash anywhere. Em dashes (—) used correctly or sentences restructured."
+      },
+      "fail_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Recovery is lower today - rest is the best lever right now.",
+        "Decent recovery - a moderate effort works well today."
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight. Sleep is the biggest lever for recovery.",
+        "Recovery is lower today. Rest is the best lever right now.",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "QAE-012",
+      "source_agent": "qae",
+      "category": "text_freshness",
+      "description": "Text freshness — text changes meaningfully across journey days. The same phrasing must not appear on days with meaningfully different metrics.",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Day 1 and Day 7 produce byte-identical hero messages despite very different metrics",
+        "2": "Text changes word-for-word in minor ways but the meaning is identical across days",
+        "3": "Text changes noticeably but one frozen phrase appears regardless of day state",
+        "4": "Text is fresh across most days with one reused phrase that is tolerable",
+        "5": "Every day produces text that could only have been written for that specific day and state"
+      },
+      "fail_examples": [
+        "Day 1 readiness=72 and Day 7 readiness=28 both produce: 'Decent recovery. A moderate effort works well today.'",
+        "All 7 days start with 'Recovery is building.' regardless of whether it is",
+        "Hero message on day 2 and day 6 are identical despite one being a crash day"
+      ],
+      "pass_examples": [
+        "Day 1: 'Solid start. Your body is in a good rhythm.' / Day 7: 'Best recovery week in a month. Whatever you did, it worked.'",
+        "Crash day: 'Recovery took a hit today. Rest is the one lever that actually works right now.' / Recovery day: 'Bouncing back. Your body responded fast.'",
+        "Each day's text reflects the specific intersection of that day's metrics and the week's trajectory"
       ]
     }
   ]
