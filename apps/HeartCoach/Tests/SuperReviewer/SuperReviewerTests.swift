@@ -291,9 +291,9 @@ final class SuperReviewerTierBTests: XCTestCase {
 
     func testTierB_2judges_nightlyEvaluation() async throws {
         let judges = LLMJudgeRegistry.availableJudges(for: .secondary)
-        try XCTSkipIf(judges.isEmpty, "No LLM judge API keys available. Set OPENAI_API_KEY and/or ANTHROPIC_API_KEY.")
+        try XCTSkipIf(judges.isEmpty, "No LLM judge API key available. Set ANTHROPIC_API_KEY.")
 
-        print("[SuperReviewer] Tier B: \(judges.count) judges available: \(judges.map(\.name).joined(separator: ", "))")
+        print("[SuperReviewer] Tier B: \(judges.count) judges available: \(judges.map(\.personaName).joined(separator: ", "))")
 
         // Generate captures
         let config = SuperReviewerRunConfig.tierB
@@ -342,7 +342,7 @@ final class SuperReviewerTierCTests: XCTestCase {
         let judges = LLMJudgeRegistry.availableJudges(for: .tertiary)
         try XCTSkipIf(judges.count < 4, "Need at least 4 LLM judge API keys for Tier C. Have \(judges.count).")
 
-        print("[SuperReviewer] Tier C: \(judges.count) judges available: \(judges.map(\.name).joined(separator: ", "))")
+        print("[SuperReviewer] Tier C: \(judges.count) judges available: \(judges.map(\.personaName).joined(separator: ", "))")
 
         // Full capture generation
         let config = SuperReviewerRunConfig.tierC
@@ -408,12 +408,12 @@ final class SuperReviewerVolumeTests: XCTestCase {
         print("")
         print("Tier B (Nightly):")
         print("  Total captures: \(tierB.totalCaptures)")
-        print("  Judges: 2 (GPT-4o, Claude Sonnet)")
+        print("  Judges: 4 Claude persona judges (Marcus, Priya, David, Jordan)")
         print("  LLM eval sample: ~100 captures")
         print("")
         print("Tier C (Manual):")
         print("  Total captures: \(tierC.totalCaptures)")
-        print("  Judges: 6 (all models)")
+        print("  Judges: 6 Claude persona judges (all 6 PM research personas)")
         print("  LLM eval sample: ~200 captures")
         print("")
         print("Rubric: 30 criteria x 3 perspectives")
