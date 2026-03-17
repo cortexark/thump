@@ -54,6 +54,8 @@ targets:
       - path: iOS/Assets.xcassets
       - path: iOS/GoogleService-Info.plist
         optional: true
+      - path: iOS/Resources/RealUserSnapshots.json
+        optional: true
     settings:
       base:
         INFOPLIST_FILE: iOS/Info.plist
@@ -124,6 +126,23 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Thump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thump"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
+  # ----------------------------------------------------------
+  # UI Tests (E2E)
+  # ----------------------------------------------------------
+  ThumpUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests/
+    dependencies:
+      - target: Thump
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: "YES"
+        PRODUCT_BUNDLE_IDENTIFIER: com.health.thump.uitests
+        DEVELOPMENT_TEAM: RSF2UZJ4Y3
+        TEST_TARGET_NAME: Thump
+
 ############################################################
 # Schemes
 ############################################################
@@ -135,6 +154,7 @@ schemes:
       targets:
         Thump: all
         ThumpCoreTests: [test]
+        ThumpUITests: [test]
     run:
       config: Debug
     test:
@@ -142,6 +162,7 @@ schemes:
       gatherCoverageData: true
       targets:
         - ThumpCoreTests
+        - ThumpUITests
     profile:
       config: Release
     analyze:

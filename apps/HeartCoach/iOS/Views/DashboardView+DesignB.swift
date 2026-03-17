@@ -393,6 +393,7 @@ extension DashboardView {
         case .celebrate:    return .yellow
         case .seekGuidance: return .red
         case .sunlight:     return .orange
+        case .intensity:    return .pink
         }
     }
 

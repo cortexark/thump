@@ -203,9 +203,9 @@ public struct BuddyRecommendationEngine: Sendable {
             priority: .critical,
             category: .rest,
             title: "Your heart rate has been elevated",
-            message: "Your resting heart rate has been above your normal range "
-                + "for \(alert.consecutiveDays) days in a row. This sometimes "
-                + "means your body is fighting something off.",
+            message: "Your resting heart rate has been elevated for "
+                + "\(alert.consecutiveDays) days. This usually reflects recent sleep, "
+                + "stress, or activity changes — and typically normalizes once those settle.",
             detail: String(format: "RHR avg: %.0f bpm vs your usual %.0f bpm",
                            alert.elevatedMean, alert.personalMean),
             icon: "heart.fill",

@@ -125,6 +125,7 @@ final class DashboardViewModel: ObservableObject {
         AppLogger.engine.info("Dashboard refresh started")
         isLoading = true
         errorMessage = nil
+        healthDataProvider.clearQueryWarnings()
 
         do {
             // Ensure HealthKit authorization
@@ -285,6 +286,9 @@ final class DashboardViewModel: ObservableObject {
             AppLogger.engine.info("Dashboard refresh complete in \(String(format: "%.0f", totalMs))ms — history=\(history.count) days")
 
             isLoading = false
+
+            // Write diagnostic snapshot for bug reports (BUG-070)
+            writeDiagnosticSnapshot(assessment: result, snapshot: snapshot)
 
             // Upload engine pipeline trace for quality baselining
             var trace = PipelineTrace(
@@ -575,7 +579,8 @@ final class DashboardViewModel: ObservableObject {
         coachingReport = engine.generateReport(
             current: snapshot,
             history: history,
-            streakDays: localStore.profile.streakDays
+            streakDays: localStore.profile.streakDays,
+            readiness: readinessResult
         )
     }
 
@@ -654,6 +659,187 @@ final class DashboardViewModel: ObservableObject {
             )
             AppLogger.engine.info("Notification: smart nudge scheduled for category=\(nudge.category.rawValue)")
         }
+    }
+
+    // MARK: - Diagnostic Snapshot (BUG-070)
+
+    /// Writes all engine outputs and UI display strings to LocalStore so
+    /// the bug report can capture exactly what the user sees on screen.
+    private func writeDiagnosticSnapshot(
+        assessment: HeartAssessment,
+        snapshot: HeartSnapshot
+    ) {
+        var diag: [String: Any] = [:]
+
+        // Assessment display text
+        diag["assessmentStatus"] = assessment.status.rawValue
+        diag["assessmentExplanation"] = assessment.explanation
+        diag["assessmentConfidence"] = assessment.confidence.rawValue
+        diag["anomalyScore"] = assessment.anomalyScore
+        diag["regressionFlag"] = assessment.regressionFlag
+        diag["stressFlag"] = assessment.stressFlag
+        if let score = assessment.cardioScore {
+            diag["cardioScore"] = score
+        }
+
+        // Nudge display text
+        let nudge = assessment.dailyNudge
+        diag["nudgeTitle"] = nudge.title
+        diag["nudgeDescription"] = nudge.description
+        diag["nudgeCategory"] = nudge.category.rawValue
+        diag["nudgeIcon"] = nudge.icon
+        if let dur = nudge.durationMinutes {
+            diag["nudgeDurationMinutes"] = dur
+        }
+
+        // All nudges
+        var nudgeTexts: [[String: String]] = []
+        for n in assessment.dailyNudges {
+            nudgeTexts.append([
+                "title": n.title,
+                "description": n.description,
+                "category": n.category.rawValue,
+                "icon": n.icon
+            ])
+        }
+        diag["allNudges"] = nudgeTexts
+
+        // Week-over-week trend text
+        if let wow = assessment.weekOverWeekTrend {
+            diag["wowDirection"] = wow.direction.rawValue
+            diag["wowCurrentMean"] = wow.currentWeekMean
+            diag["wowBaselineMean"] = wow.baselineMean
+        }
+
+        // Consecutive alert
+        if let alert = assessment.consecutiveAlert {
+            diag["consecutiveAlertDays"] = alert.consecutiveDays
+            diag["consecutiveAlertThreshold"] = alert.threshold
+            diag["consecutiveAlertElevatedMean"] = alert.elevatedMean
+        }
+
+        // Coaching scenario
+        if let scenario = assessment.scenario {
+            diag["coachingScenario"] = scenario.rawValue
+        }
+
+        // Readiness (rendered text)
+        if let r = readinessResult {
+            diag["readinessScore"] = r.score
+            diag["readinessLevel"] = r.level.rawValue
+            diag["readinessSummary"] = r.summary
+            var pillars: [[String: Any]] = []
+            for p in r.pillars {
+                pillars.append([
+                    "type": p.type.rawValue,
+                    "score": p.score,
+                    "detail": p.detail
+                ])
+            }
+            diag["readinessPillars"] = pillars
+        }
+
+        // Stress (rendered text)
+        if let s = stressResult {
+            diag["stressScore"] = s.score
+            diag["stressLevel"] = s.level.rawValue
+            diag["stressDescription"] = s.description
+            diag["stressMode"] = s.mode.rawValue
+            diag["stressConfidence"] = s.confidence.rawValue
+            if !s.warnings.isEmpty {
+                diag["stressWarnings"] = s.warnings
+            }
+        }
+
+        // Bio age (rendered text)
+        if let b = bioAgeResult {
+            diag["bioAge"] = b.bioAge
+            diag["chronologicalAge"] = b.chronologicalAge
+            diag["bioAgeDifference"] = b.difference
+            diag["bioAgeCategory"] = b.category.rawValue
+            diag["bioAgeExplanation"] = b.explanation
+        }
+
+        // Coaching report (rendered text)
+        if let c = coachingReport {
+            diag["coachingHeroMessage"] = c.heroMessage
+            diag["coachingProgressScore"] = c.weeklyProgressScore
+            diag["coachingStreak"] = c.streakDays
+            var insights: [[String: String]] = []
+            for i in c.insights {
+                insights.append([
+                    "metric": i.metric.rawValue,
+                    "direction": i.direction.rawValue,
+                    "message": i.message
+                ])
+            }
+            diag["coachingInsights"] = insights
+        }
+
+        // Zone analysis (rendered text)
+        if let z = zoneAnalysis {
+            diag["zoneOverallScore"] = z.overallScore
+            diag["zoneCoachingMessage"] = z.coachingMessage
+            if let rec = z.recommendation {
+                diag["zoneRecommendation"] = rec.rawValue
+            }
+        }
+
+        // Buddy recommendations (rendered text — every card the user sees)
+        if let recs = buddyRecommendations {
+            var buddyCards: [[String: String]] = []
+            for r in recs {
+                buddyCards.append([
+                    "title": r.title,
+                    "message": r.message,
+                    "detail": r.detail,
+                    "icon": r.icon,
+                    "category": r.category.rawValue,
+                    "priority": "\(r.priority.rawValue)",
+                    "source": r.source.rawValue
+                ])
+            }
+            diag["buddyRecommendations"] = buddyCards
+        }
+
+        // Weekly trend summary
+        if let trend = weeklyTrendSummary {
+            diag["weeklyTrendSummary"] = trend
+        }
+
+        // Streak and mood
+        diag["streakDays"] = localStore.profile.streakDays
+        if let mood = todayMood {
+            diag["todayMood"] = mood.rawValue
+        }
+        diag["hasCheckedIn"] = hasCheckedInToday
+
+        // Stress hourly data availability (BUG-070 gap: heatmap debugging)
+        let diagStressEngine = StressEngine()
+        if let snap = todaySnapshot {
+            let allSnapshots = localStore.loadHistory().map(\.snapshot) + [snap]
+            let hourlyPoints = diagStressEngine.hourlyStressForDay(
+                snapshots: allSnapshots,
+                date: snap.date
+            )
+            diag["stressHourlyPointCount"] = hourlyPoints.count
+            if hourlyPoints.isEmpty {
+                diag["stressHourlyEmpty"] = true
+                diag["stressHourlyEmptyReason"] = "hourlyStressForDay returned 0 points — likely no HRV data"
+            }
+        }
+
+        // HealthKit query warnings (BUG-070 gap: explains why metrics are nil)
+        let warnings = healthDataProvider.queryWarnings
+        if !warnings.isEmpty {
+            diag["healthKitQueryWarnings"] = warnings
+            diag["healthKitQueryWarningCount"] = warnings.count
+        }
+
+        // Timestamp
+        diag["capturedAt"] = ISO8601DateFormatter().string(from: Date())
+
+        localStore.diagnosticSnapshot = diag
     }
 
     private func bindToLocalStore(_ localStore: LocalStore) {

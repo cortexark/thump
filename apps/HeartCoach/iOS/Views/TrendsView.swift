@@ -167,7 +167,8 @@ struct TrendsView: View {
     private var timeRangePicker: some View {
         HStack(spacing: 8) {
             ForEach(
-                [(TrendsViewModel.TimeRange.week, "7D"),
+                [(TrendsViewModel.TimeRange.today, "1D"),
+                 (.week, "7D"),
                  (.twoWeeks, "14D"),
                  (.month, "30D")],
                 id: \.0
@@ -345,7 +346,7 @@ struct TrendsView: View {
         let rangeDescription = change < 2 ? "barely any" : (change < 5 ? "about \(Int(change))%" : "\(Int(change))%")
         let metricName = metricDisplayName.lowercased()
 
-        let shortWindow = viewModel.timeRange == .week
+        let shortWindow = viewModel.timeRange == .week || viewModel.timeRange == .today
         let windowNote = shortWindow
             ? " Try 14D or 30D for the bigger picture."
             : ""
@@ -385,7 +386,7 @@ struct TrendsView: View {
 
     @ViewBuilder
     private func missedDaysCard(points: [(date: Date, value: Double)]) -> some View {
-        let expectedDays = viewModel.timeRange == .week ? 7 : (viewModel.timeRange == .twoWeeks ? 14 : 30)
+        let expectedDays = viewModel.timeRange.rawValue
         let missedCount = expectedDays - points.count
 
         if missedCount >= 2 {

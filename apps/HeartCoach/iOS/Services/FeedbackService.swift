@@ -29,23 +29,35 @@ final class FeedbackService {
 
     // MARK: - Bug Reports
 
-    /// Uploads a bug report document to Firestore.
+    /// Uploads a bug report document to Firestore including all current health
+    /// metrics and engine outputs so the team can reproduce the exact UI state.
     func submitBugReport(
         description: String,
         appVersion: String,
         deviceModel: String,
-        iosVersion: String
+        iosVersion: String,
+        healthMetrics: [String: Any],
+        completion: ((Error?) -> Void)? = nil
     ) {
         let userId = EngineTelemetryService.shared.hashedUserId ?? "anonymous"
 
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "description": description,
             "appVersion": appVersion,
             "deviceModel": deviceModel,
             "iosVersion": iosVersion,
             "timestamp": FieldValue.serverTimestamp(),
-            "status": "new"
+            "status": "new",
+            "healthMetrics": healthMetrics
         ]
+
+        // Add user profile context (age, sex) for metric interpretation
+        let profile = LocalStore().profile
+        if let dob = profile.dateOfBirth {
+            let ageYears = Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 0
+            data["userAge"] = ageYears
+        }
+        data["userSex"] = profile.biologicalSex.rawValue
 
         db.collection("users")
             .document(userId)
@@ -56,6 +68,7 @@ final class FeedbackService {
                 } else {
                     AppLogger.engine.info("[FeedbackService] Bug report uploaded successfully")
                 }
+                completion?(error)
             }
     }
 
@@ -66,9 +79,10 @@ final class FeedbackService {
         appVersion: String,
         deviceModel: String,
         iosVersion: String,
+        healthMetrics: [String: Any] = [:],
         completion: @escaping (Error?) -> Void
     ) {
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "description": description,
             "appVersion": appVersion,
             "deviceModel": deviceModel,
@@ -76,6 +90,9 @@ final class FeedbackService {
             "timestamp": FieldValue.serverTimestamp(),
             "status": "new"
         ]
+        if !healthMetrics.isEmpty {
+            data["healthMetrics"] = healthMetrics
+        }
 
         db.collection("users")
             .document(userId)

@@ -72,6 +72,7 @@ public enum NudgeCategory: String, Codable, Equatable, Sendable, CaseIterable {
     case celebrate
     case seekGuidance
     case sunlight
+    case intensity
 
     /// SF Symbol icon for this nudge category.
     public var icon: String {
@@ -84,6 +85,7 @@ public enum NudgeCategory: String, Codable, Equatable, Sendable, CaseIterable {
         case .celebrate: return "star.fill"
         case .seekGuidance: return "heart.text.square"
         case .sunlight: return "sun.max.fill"
+        case .intensity: return "bolt.heart.fill"
         }
     }
 
@@ -98,6 +100,7 @@ public enum NudgeCategory: String, Codable, Equatable, Sendable, CaseIterable {
         case .celebrate: return "nudgeCelebrate"
         case .seekGuidance: return "nudgeGuidance"
         case .sunlight: return "nudgeSunlight"
+        case .intensity: return "nudgeIntensity"
         }
     }
 }

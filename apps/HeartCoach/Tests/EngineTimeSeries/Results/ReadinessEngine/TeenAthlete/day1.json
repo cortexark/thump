@@ -8,10 +8,10 @@
     "activityBalance"
   ],
   "pillarScores" : {
-    "activityBalance" : 55,
+    "activityBalance" : 85,
     "recovery" : 100,
     "sleep" : 97.330077047409944
   },
-  "score" : 89,
+  "score" : 96,
   "stressScoreInput" : null
 }

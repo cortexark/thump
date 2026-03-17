@@ -61,13 +61,30 @@ public struct ReadinessEngine: Sendable {
         var pillars: [ReadinessPillar] = []
 
         // 1. Sleep Quality
+        // Missing sleep penalizes readiness (floor score 40) rather than being
+        // excluded, which would inflate the composite from remaining pillars.
         if let pillar = scoreSleep(snapshot: snapshot) {
             pillars.append(pillar)
+        } else {
+            pillars.append(ReadinessPillar(
+                type: .sleep,
+                score: 40.0,
+                weight: pillarWeights[.sleep, default: 0.25],
+                detail: "No sleep data — we're working with limited info today"
+            ))
         }
 
         // 2. Recovery (HR Recovery 1 min)
+        // Missing recovery also uses a floor score to prevent inflation.
         if let pillar = scoreRecovery(snapshot: snapshot) {
             pillars.append(pillar)
+        } else {
+            pillars.append(ReadinessPillar(
+                type: .recovery,
+                score: 40.0,
+                weight: pillarWeights[.recovery, default: 0.25],
+                detail: "No recovery data yet"
+            ))
         }
 
         // 3. Stress (attenuated by confidence)
@@ -91,7 +108,8 @@ public struct ReadinessEngine: Sendable {
             pillars.append(pillar)
         }
 
-        // Need at least 2 pillars for a meaningful result
+        // Sleep and recovery always contribute (with floor scores if missing),
+        // so we always have at least 2 pillars. Guard kept for safety.
         guard pillars.count >= 2 else { return nil }
 
         // Normalize by actual weight coverage
@@ -105,14 +123,32 @@ public struct ReadinessEngine: Sendable {
             finalScore = min(finalScore, 50)
         }
 
+        // Sleep deprivation cap: <5h sleep caps readiness at "moderate" (59 max),
+        // <4h caps at "recovering" (39 max). Acute sleep deprivation impairs
+        // reaction time, judgment, and recovery regardless of other metrics.
+        // sleepHours == nil means "no data" (handled by floor score above).
+        // sleepHours == 0.0 means "tracked zero sleep" — cap hardest.
+        if let hours = snapshot.sleepHours {
+            if hours < 3.0 {
+                finalScore = min(finalScore, 20)
+            } else if hours < 4.0 {
+                finalScore = min(finalScore, 35)
+            } else if hours < 5.0 {
+                finalScore = min(finalScore, 50)
+            }
+        }
+
         let clampedScore = Int(round(max(0, min(100, finalScore))))
         let level = ReadinessLevel.from(score: clampedScore)
+
+        // Build summary with pillar awareness — sleep deprivation overrides generic text
+        let summary = buildSummary(level: level, sleepHours: snapshot.sleepHours, pillars: pillars)
 
         return ReadinessResult(
             score: clampedScore,
             level: level,
             pillars: pillars,
-            summary: buildSummary(level: level)
+            summary: summary
         )
     }
 
@@ -120,7 +156,7 @@ public struct ReadinessEngine: Sendable {
 
     /// Sleep Quality: bell curve centered at 8h, optimal 7-9h = 100.
     private func scoreSleep(snapshot: HeartSnapshot) -> ReadinessPillar? {
-        guard let hours = snapshot.sleepHours, hours > 0 else { return nil }
+        guard let hours = snapshot.sleepHours, hours >= 0 else { return nil }
 
         let optimal = 8.0
         let deviation = abs(hours - optimal)
@@ -132,10 +168,14 @@ public struct ReadinessEngine: Sendable {
         let detail: String
         if hours >= 7.0 && hours <= 9.0 {
             detail = String(format: "%.1f hours — right in the sweet spot", hours)
-        } else if hours < 7.0 {
-            detail = String(format: "%.1f hours — a bit short on sleep", hours)
+        } else if hours > 9.0 {
+            detail = String(format: "%.1f hours — more rest than usual. If this keeps up, mention it to your care team.", hours)
+        } else if hours >= 6.0 {
+            detail = String(format: "%.1f hours — a bit under, an earlier bedtime could help", hours)
+        } else if hours >= 5.0 {
+            detail = String(format: "%.1f hours — well below the 7+ hours your body needs", hours)
         } else {
-            detail = String(format: "%.1f hours — more rest than usual", hours)
+            detail = String(format: "%.1f hours — very low. Even if other metrics look good, sleep debt overrides them.", hours)
         }
 
         return ReadinessPillar(
@@ -250,15 +290,21 @@ public struct ReadinessEngine: Sendable {
         guard let yesterday = day2 else {
             let todayScore: Double
             let todayDetail: String
-            if day1 >= 20 && day1 <= 45 {
-                todayScore = 75.0
-                todayDetail = "Active today — keep it up"
+            if day1 < 1 {
+                todayScore = 40.0
+                todayDetail = "Rest day — recovery counts too"
             } else if day1 < 5 {
                 todayScore = 35.0
-                todayDetail = "Movement is low — a short walk helps"
-            } else {
+                todayDetail = "Movement is low — even a short walk helps"
+            } else if day1 < 20 {
                 todayScore = 55.0
-                todayDetail = "Some activity logged"
+                todayDetail = String(format: "%.0f min today — a good start, try for 20", day1)
+            } else if day1 <= 45 {
+                todayScore = 75.0
+                todayDetail = String(format: "%.0f min today — keep it up", day1)
+            } else {
+                todayScore = 85.0
+                todayDetail = String(format: "%.0f min today — active day!", day1)
             }
             return ReadinessPillar(
                 type: .activityBalance,
@@ -311,8 +357,11 @@ public struct ReadinessEngine: Sendable {
         )
     }
 
-    /// HRV Trend: compare today's HRV to 7-day average.
-    /// At or above average = 100. Each 10% below loses ~20 points.
+    /// HRV Trend: compare today's HRV to a stable baseline.
+    /// Uses the 75th percentile of a 14-day window to prevent baseline
+    /// normalization during prolonged stress/illness (where the mean would
+    /// adapt downward, masking continued depression).
+    /// At or above baseline = 100. Each 10% below loses ~20 points.
     private func scoreHRVTrend(
         snapshot: HeartSnapshot,
         recentHistory: [HeartSnapshot]
@@ -321,16 +370,21 @@ public struct ReadinessEngine: Sendable {
             return nil
         }
 
-        // Compute 7-day average from history
+        // Use up to 14 days of history for a more stable baseline
         let recentHRVs = recentHistory
             .filter { $0.date < snapshot.date }
-            .suffix(7)
+            .suffix(14)
             .compactMap(\.hrvSDNN)
             .filter { $0 > 0 }
 
         guard !recentHRVs.isEmpty else { return nil }
 
-        let avgHRV = recentHRVs.reduce(0, +) / Double(recentHRVs.count)
+        // Use the 75th percentile instead of the mean. This anchors the
+        // baseline closer to the user's "good days" so that a sustained
+        // stress spiral doesn't drag the reference point down with it.
+        let sorted = recentHRVs.sorted()
+        let p75Index = Int(Double(sorted.count - 1) * 0.75)
+        let avgHRV = sorted[p75Index]
         guard avgHRV > 0 else { return nil }
 
         let score: Double
@@ -348,8 +402,12 @@ public struct ReadinessEngine: Sendable {
             detail = String(format: "HRV %.0f ms — above your recent average", todayHRV)
         } else if ratio >= 0.95 {
             detail = String(format: "HRV %.0f ms — right at your baseline", todayHRV)
+        } else if ratio >= 0.80 {
+            detail = String(format: "HRV %.0f ms — a bit below your usual", todayHRV)
+        } else if ratio >= 0.60 {
+            detail = String(format: "HRV %.0f ms — noticeably lower than your recent trend", todayHRV)
         } else {
-            detail = String(format: "HRV %.0f ms — a bit below your average", todayHRV)
+            detail = String(format: "HRV %.0f ms — well below your usual. Rest and sleep are the best levers — this typically rebounds within a day or two.", todayHRV)
         }
 
         return ReadinessPillar(
@@ -363,16 +421,37 @@ public struct ReadinessEngine: Sendable {
     // MARK: - Helpers
 
     /// Generates a friendly one-line summary based on the readiness level.
-    private func buildSummary(level: ReadinessLevel) -> String {
+    private func buildSummary(
+        level: ReadinessLevel,
+        sleepHours: Double? = nil,
+        pillars: [ReadinessPillar] = []
+    ) -> String {
+        // Sleep deprivation overrides — when sleep is critically low, the summary
+        // MUST mention it regardless of the composite readiness level.
+        if let hours = sleepHours {
+            if hours < 1.0 {
+                return "No sleep last night. Your body can't recover or perform safely — rest is the only option today."
+            } else if hours < 3.0 {
+                return String(format: "About %.0f hours of sleep — your body is asking for gentleness today. This is a rest day, not a push day. Even small moments of stillness help.", hours)
+            } else if hours < 4.0 {
+                return String(format: "Rough night — about %.0f hours of sleep. Your body needs rest today, not effort. Protect tonight's sleep window.", hours)
+            } else if hours < 5.0 {
+                return String(format: "About %.0f hours of sleep. Take it easy today — sleep is what will help most tonight.", hours)
+            } else if hours < 6.0 && (level == .ready || level == .primed) {
+                return String(format: "%.1f hours of sleep — not ideal. You may feel okay, but your body recovers better with 7+.", hours)
+            }
+        }
+
+        // Default level-based summaries
         switch level {
         case .primed:
             return "You're firing on all cylinders today."
         case .ready:
-            return "Looking solid — a good day for a workout."
+            return "Looking solid — a good day to be active."
         case .moderate:
             return "Your body is doing okay. Listen to how you feel."
         case .recovering:
-            return "Take it easy today — your body could use some rest."
+            return "Tough day for your body. One small thing that helps: an extra 30 minutes of sleep tonight."
         }
     }
 }
@@ -440,10 +519,10 @@ public struct ReadinessResult: Codable, Equatable, Sendable {
                     type: .hrvTrend,
                     score: 60.0,
                     weight: 0.15,
-                    detail: "HRV 42 ms — a bit below your average"
+                    detail: "HRV 42 ms — a bit below your usual"
                 )
             ],
-            summary: "Looking solid — a good day for a workout."
+            summary: "Looking solid — a good day to be active."
         )
     }
     #endif

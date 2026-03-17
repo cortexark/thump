@@ -39,11 +39,15 @@ public struct CoachingEngine: Sendable {
     ///   - current: Today's snapshot.
     ///   - history: 14-30 days of historical snapshots.
     ///   - streakDays: Current nudge completion streak.
+    ///   - readiness: Optional readiness result for cross-module coherence.
+    ///     When recovering, volume-praise messages are suppressed to avoid
+    ///     contradicting the readiness engine's "take it easy" guidance.
     /// - Returns: A ``CoachingReport`` with messages and projections.
     public func generateReport(
         current: HeartSnapshot,
         history: [HeartSnapshot],
-        streakDays: Int
+        streakDays: Int,
+        readiness: ReadinessResult? = nil
     ) -> CoachingReport {
         let calendar = Calendar.current
         // Use snapshot date for deterministic replay, not wall-clock Date() (ENG-1)
@@ -54,7 +58,7 @@ public struct CoachingEngine: Sendable {
         let thisWeek = history.filter { $0.date >= weekAgo }
         let lastWeek = history.filter { $0.date >= twoWeeksAgo && $0.date < weekAgo }
 
-        var insights: [CoachingInsight] = []
+        var insights: [CoachingInsight] = []  // mutable — coherence filter may rewrite entries
 
         // RHR trend analysis
         if let rhrInsight = analyzeRHRTrend(thisWeek: thisWeek, lastWeek: lastWeek, current: current) {
@@ -94,11 +98,30 @@ public struct CoachingEngine: Sendable {
             streakDays: streakDays
         )
 
+        // Cross-module coherence: when readiness is recovering, suppress
+        // activity volume praise that would contradict "take it easy" guidance.
+        if let r = readiness, r.level == .recovering {
+            insights = insights.map { insight in
+                if insight.metric == .activity && insight.direction == .improving {
+                    return CoachingInsight(
+                        metric: insight.metric,
+                        direction: .stable,
+                        message: "Your activity has been consistent. On days like today, rest is more valuable than extra minutes.",
+                        projection: insight.projection,
+                        changeValue: insight.changeValue,
+                        icon: insight.icon
+                    )
+                }
+                return insight
+            }
+        }
+
         // Build the hero coaching message
         let heroMessage = buildHeroMessage(
             insights: insights,
             projections: projections,
-            streakDays: streakDays
+            streakDays: streakDays,
+            readiness: readiness
         )
 
         // Weekly score
@@ -137,7 +160,7 @@ public struct CoachingEngine: Sendable {
 
         if change < -1.5 {
             direction = .improving
-            message = String(format: "Your resting heart rate dropped %.0f bpm this week — a sign your heart is getting more efficient.", abs(change))
+            message = String(format: "Your resting heart rate dropped %.0f bpm this week — that often tracks with good sleep and consistent activity.", abs(change))
             projection = "At this pace, you could see another 1-2 bpm improvement over the next two weeks."
         } else if change > 2.0 {
             direction = .declining
@@ -358,7 +381,7 @@ public struct CoachingEngine: Sendable {
             metric: .zoneBalance,
             direction: direction,
             message: message,
-            projection: "Meeting the AHA guideline consistently is associated with 30-40% lower cardiovascular risk.",
+            projection: "The AHA recommends 150+ minutes of moderate activity per week for heart health.",
             changeValue: zoneSummary.ahaCompletion * 100,
             icon: "chart.bar.fill"
         )
@@ -421,8 +444,16 @@ public struct CoachingEngine: Sendable {
     private func buildHeroMessage(
         insights: [CoachingInsight],
         projections: [CoachingProjection],
-        streakDays: Int
+        streakDays: Int,
+        readiness: ReadinessResult? = nil
     ) -> String {
+        // Cross-module coherence: when recovering, the hero message must
+        // align with the readiness engine's "take it easy" guidance.
+        // Never celebrate volume or push "keep going" on a recovery day.
+        if let r = readiness, r.level == .recovering {
+            return "Your body is asking for rest today. The best thing you can do right now is recover — the gains come after."
+        }
+
         let improving = insights.filter { $0.direction == .improving }
         let declining = insights.filter { $0.direction == .declining }
 

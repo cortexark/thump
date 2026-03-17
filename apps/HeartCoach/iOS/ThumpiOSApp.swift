@@ -144,6 +144,7 @@ struct ThumpiOSApp: App {
         }
 
         // Verify Apple Sign-In credential is still valid
+        #if !DEBUG
         if isSignedIn {
             let credentialValid = await AppleSignInService.isCredentialValid()
             if !credentialValid {
@@ -151,6 +152,7 @@ struct ThumpiOSApp: App {
                 AppLogger.info("Apple Sign-In credential revoked — returning to sign-in")
             }
         }
+        #endif
 
         // Configure engine telemetry for quality baselining
         EngineTelemetryService.shared.configureUserId()
