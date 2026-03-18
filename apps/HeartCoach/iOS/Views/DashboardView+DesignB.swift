@@ -505,11 +505,9 @@ extension DashboardView {
     }
 
     /// Chronic Steady flag: true when score has been 0–44 for 14+ consecutive days.
-    /// Tier A will inject this from the engine; using UserDefaults placeholder for now.
+    /// Wired to `localStore.profile.isChronicSteady` via the view model (§21.3).
     private var isChronicSteadyState: Bool {
-        // Placeholder: reads from UserDefaults key set by engine coordinator.
-        // Replace with: viewModel.assessment?.isChronicSteady ?? false
-        UserDefaults.standard.bool(forKey: "thump_is_chronic_steady")
+        viewModel.isChronicSteady
     }
 
     // MARK: - Driving Signal Computed Values

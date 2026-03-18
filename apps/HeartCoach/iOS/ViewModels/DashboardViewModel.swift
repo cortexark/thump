@@ -439,6 +439,12 @@ final class DashboardViewModel: ObservableObject {
         localStore.profile.streakDays
     }
 
+    /// Whether the user is in Chronic Steady state (score 0–44 for 14+ consecutive days).
+    /// Used by the Design B dashboard to activate the §21.3 score de-escalation hierarchy.
+    var isChronicSteady: Bool {
+        localStore.profile.isChronicSteady
+    }
+
     // MARK: - Private Helpers
 
     /// Updates the streak counter based on last check-in date.
