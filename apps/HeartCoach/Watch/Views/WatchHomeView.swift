@@ -142,12 +142,12 @@ struct WatchHomeView: View {
     /// Tells the user exactly what their score means and what action moves it.
     private func scoreMeaning(_ score: Double) -> String {
         switch score {
-        case 85...:   return "Excellent. You're building real momentum."
-        case 70..<85: return "Strong. Daily movement keeps it climbing."
-        case 55..<70: return "Good base. One workout bumps this up."
-        case 40..<55: return "Average. Walk today — it adds up fast."
-        case 25..<40: return "Below avg. Short walks make a real dent."
-        default:      return "Let's build from here. Start small."
+        case 85...:   return "Excellent. Your body is building momentum."
+        case 70..<85: return "Strong. Daily movement tends to keep it climbing."
+        case 55..<70: return "Good base. One workout often bumps this up."
+        case 40..<55: return "Moderate. A walk today tends to add up."
+        case 25..<40: return "Below your range. Short walks make a real dent."
+        default:      return "Good place to build from. Start small."
         }
     }
 

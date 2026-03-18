@@ -547,17 +547,17 @@ private struct ReadinessBreakdownScreen: View {
     private var readinessContext: String {
         // Find the weakest pillar
         guard let weakest = pillars.min(by: { $0.value < $1.value }) else {
-            return "All systems balanced"
+            return "All signals balanced"
         }
         if weakest.value >= 0.7 {
-            return "All pillars strong — great day to push"
+            return "All pillars strong — good day to push"
         }
         switch weakest.name {
-        case "Sleep":    return "Sleep is holding you back — prioritize tonight"
-        case "Recovery": return "Body still recovering — ease the intensity"
+        case "Sleep":    return "Sleep is the limiting factor — prioritize tonight"
+        case "Recovery": return "Your body is still recovering — ease up"
         case "Stress":   return "Stress is elevated — try a breathing session"
-        case "Activity": return "Movement is low — a short walk helps"
-        case "HRV":      return "HRV dipped — your nervous system needs rest"
+        case "Activity": return "Activity is low — a short walk helps"
+        case "HRV":      return "HRV (recovery signal) dipped — rest helps"
         default:         return "Focus on your lowest pillar today"
         }
     }
@@ -803,7 +803,7 @@ private struct StressPulseScreen: View {
                         .foregroundStyle(stressColor)
                 }
 
-                Text(isStressed ? "Nervous system running warm" : "Body is calm")
+                Text(isStressed ? "Your nervous system is elevated" : "Your body is calm")
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -1266,17 +1266,17 @@ private struct TrendsScreen: View {
     private var coachingNote: String {
         if let scenario = assessment.scenario {
             switch scenario {
-            case .overtrainingSignals: return "Recovery day — that's when you get stronger"
-            case .highStressDay:       return "Stress is high — a walk or breathe session helps"
-            case .greatRecoveryDay:    return "Great recovery — good day to push"
+            case .overtrainingSignals: return "Rest days are when your body gets stronger"
+            case .highStressDay:       return "Stress is up — a walk or breathe session helps"
+            case .greatRecoveryDay:    return "Strong recovery — good day to push"
             case .decliningTrend:      return "Check sleep and stress first"
-            case .improvingTrend:      return "Two weeks of progress — habits are paying off"
-            case .missingActivity:     return "Even a short walk changes the trajectory"
+            case .improvingTrend:      return "Two weeks of progress — your habits are working"
+            case .missingActivity:     return "A short walk tends to shift the trend"
             }
         }
         switch assessment.status {
-        case .improving:      return "Your numbers are trending in the right direction"
-        case .needsAttention: return "Body is asking for rest — listen to it"
+        case .improving:      return "Your numbers are trending in a good direction"
+        case .needsAttention: return "Your body is asking for rest — listen to it"
         default:              return "Consistency is your edge — keep showing up"
         }
     }

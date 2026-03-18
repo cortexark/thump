@@ -164,8 +164,8 @@ struct AdvicePresenter {
         switch level {
         case .relaxed:
             return StressGuidanceSpec(
-                headline: "Stress Is Low, Good Time to Push",
-                detail: "Your stress and recovery scores are both looking good right now. This tends to be a good window for hard training, focused deep work, or anything that demands full engagement.",
+                headline: "Stress Is Low Right Now",
+                detail: "Your stress and recovery scores are both in a favorable range. This tends to be a good window for focused work, hard training, or anything that demands full engagement.",
                 icon: "leaf.fill",
                 colorName: "relaxed",
                 actions: ["Workout", "Focus Time"]
