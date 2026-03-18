@@ -196,6 +196,7 @@ extension DashboardView {
         var isComplete: Bool { current >= target }
 
         var currentFormatted: String {
+            if current == 0 { return "–" }  // no data yet — show dash instead of "0.0k"
             if target >= 1000 {
                 return String(format: "%.1fk", current / 1000)
             }
@@ -212,20 +213,50 @@ extension DashboardView {
 
     /// Builds daily goals from today's snapshot data, dynamically adjusted
     /// by readiness, stress, and buddy engine signals.
+    /// When coordinator is active, maps GoalSpec from AdviceState.
     func dailyGoals(from snapshot: HeartSnapshot) -> [DailyGoal] {
-        var goals: [DailyGoal] = []
+        // Coordinator path: map GoalSpec → DailyGoal via AdvicePresenter
+        if ConfigService.enableCoordinator,
+           let adviceState = coordinator.bundle?.adviceState {
+            return adviceState.goals.map { spec in
+                let (icon, color, unit) = goalVisuals(for: spec.category)
+                let current: Double
+                switch spec.category {
+                case .steps:         current = snapshot.steps ?? 0
+                case .activeMinutes: current = (snapshot.walkMinutes ?? 0) + (snapshot.workoutMinutes ?? 0)
+                case .sleep:         current = snapshot.sleepHours ?? 0
+                case .zone:
+                    current = viewModel.zoneAnalysis?.pillars.first { $0.zone == .fatBurn }?.actualMinutes ?? 0
+                }
+                let goalWithCurrent = GoalSpec(
+                    category: spec.category, target: spec.target,
+                    current: current, nudgeTextID: spec.nudgeTextID, label: spec.label
+                )
+                return DailyGoal(
+                    label: spec.label,
+                    icon: icon,
+                    current: current,
+                    target: spec.target,
+                    unit: unit,
+                    color: color,
+                    nudgeText: AdvicePresenter.goalNudgeText(for: goalWithCurrent)
+                )
+            }
+        }
 
+        // Legacy path
+        var goals: [DailyGoal] = []
+        let policy = ConfigService.activePolicy
         let readiness = viewModel.readinessResult
         let stress = viewModel.stressResult
 
-        // Dynamic step target based on readiness
         let baseSteps: Double = 7000
         let stepTarget: Double
         if let r = readiness {
-            if r.score >= 80 { stepTarget = 8000 }       // Primed: push a bit
-            else if r.score >= 65 { stepTarget = 7000 }   // Ready: standard
-            else if r.score >= 45 { stepTarget = 5000 }   // Moderate: back off
-            else { stepTarget = 3000 }                     // Recovering: minimal
+            if r.score >= 80 { stepTarget = Double(policy.goals.stepsPrimed) }
+            else if r.score >= 65 { stepTarget = Double(policy.goals.stepsReady) }
+            else if r.score >= 45 { stepTarget = Double(policy.goals.stepsModerate) }
+            else { stepTarget = Double(policy.goals.stepsRecovering) }
         } else {
             stepTarget = baseSteps
         }
@@ -246,14 +277,13 @@ extension DashboardView {
                     : "Just \(stepsRemaining) more steps to go!")
         ))
 
-        // Dynamic active minutes target based on readiness + stress
         let baseActive: Double = 30
         let activeTarget: Double
         if let r = readiness {
-            if r.score >= 80 && stress?.level != .elevated { activeTarget = 45 }
-            else if r.score >= 65 { activeTarget = 30 }
-            else if r.score >= 45 { activeTarget = 20 }
-            else { activeTarget = 10 }  // Recovering: gentle movement only
+            if r.score >= 80 && stress?.level != .elevated { activeTarget = Double(policy.goals.activeMinPrimed) }
+            else if r.score >= 65 { activeTarget = Double(policy.goals.activeMinReady) }
+            else if r.score >= 45 { activeTarget = Double(policy.goals.activeMinModerate) }
+            else { activeTarget = Double(policy.goals.activeMinRecovering) }
         } else {
             activeTarget = baseActive
         }
@@ -273,13 +303,12 @@ extension DashboardView {
                     : "Almost there — keep moving!")
         ))
 
-        // Dynamic sleep target based on recovery needs
         if let sleep = snapshot.sleepHours, sleep > 0 {
             let sleepTarget: Double
             if let r = readiness {
-                if r.score < 45 { sleepTarget = 8 }        // Recovering: more sleep
-                else if r.score < 65 { sleepTarget = 7.5 }  // Moderate: slightly more
-                else { sleepTarget = 7 }                     // Good: standard
+                if r.score < 45 { sleepTarget = policy.goals.sleepTargetRecovering }
+                else if r.score < 65 { sleepTarget = policy.goals.sleepTargetModerate }
+                else { sleepTarget = policy.goals.sleepTargetReady }
             } else {
                 sleepTarget = 7
             }
@@ -306,22 +335,18 @@ extension DashboardView {
             ))
         }
 
-        // Zone goal: recommended zone minutes from buddy recs
         if let zones = viewModel.zoneAnalysis {
             let zoneTarget: Double
             let zoneName: String
             if let r = readiness, r.score >= 80, stress?.level != .elevated {
-                // Primed: cardio target
                 let cardio = zones.pillars.first { $0.zone == .aerobic }
                 zoneTarget = cardio?.targetMinutes ?? 22
                 zoneName = "Cardio"
             } else if let r = readiness, r.score < 45 {
-                // Recovering: easy zone only
                 let easy = zones.pillars.first { $0.zone == .recovery }
                 zoneTarget = easy?.targetMinutes ?? 20
                 zoneName = "Easy"
             } else {
-                // Default: fat burn zone
                 let fatBurn = zones.pillars.first { $0.zone == .fatBurn }
                 zoneTarget = fatBurn?.targetMinutes ?? 15
                 zoneName = "Fat Burn"
@@ -345,5 +370,15 @@ extension DashboardView {
         }
 
         return goals
+    }
+
+    /// Returns (icon, color, unit) for a goal category.
+    private func goalVisuals(for category: GoalSpec.GoalCategory) -> (String, Color, String) {
+        switch category {
+        case .steps:         return ("figure.walk", Color(hex: 0x3B82F6), "steps")
+        case .activeMinutes: return ("flame.fill", Color(hex: 0xEF4444), "min")
+        case .sleep:         return ("moon.fill", Color(hex: 0x8B5CF6), "hrs")
+        case .zone:          return ("heart.circle", Color(hex: 0x0D9488), "min")
+        }
     }
 }

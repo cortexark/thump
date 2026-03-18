@@ -69,16 +69,19 @@ public struct HeartTrendEngine: Sendable {
     /// Number of recent days used for regression slope checks.
     private let regressionWindow: Int = 7
 
-    // Signal weights for composite anomaly score
-    private let weightRHR: Double = 0.25
-    private let weightHRV: Double = 0.25
-    private let weightRecovery1m: Double = 0.20
-    private let weightRecovery2m: Double = 0.10
-    private let weightVO2: Double = 0.20
+    private let trendConfig: HealthPolicyConfig.TrendEngineThresholds
 
-    public init(lookbackWindow: Int = 21, policy: AlertPolicy = AlertPolicy()) {
+    // Signal weights for composite anomaly score
+    private var weightRHR: Double { trendConfig.weightRHR }
+    private var weightHRV: Double { trendConfig.weightHRV }
+    private var weightRecovery1m: Double { trendConfig.weightRecovery1m }
+    private var weightRecovery2m: Double { trendConfig.weightRecovery2m }
+    private var weightVO2: Double { trendConfig.weightVO2 }
+
+    public init(lookbackWindow: Int = 21, policy: AlertPolicy = AlertPolicy(), trendConfig: HealthPolicyConfig.TrendEngineThresholds = ConfigService.activePolicy.trendEngine) {
         self.lookbackWindow = max(lookbackWindow, 3)
         self.policy = policy
+        self.trendConfig = trendConfig
     }
 
     // MARK: - Public API
@@ -103,7 +106,8 @@ public struct HeartTrendEngine: Sendable {
         history: [HeartSnapshot],
         current: HeartSnapshot,
         feedback: DailyFeedback? = nil,
-        stressScore: Double? = nil
+        stressScore: Double? = nil,
+        readinessResult: ReadinessResult? = nil
     ) -> HeartAssessment {
         let relevantHistory = recentHistory(from: history)
         let confidence = confidenceLevel(current: current, history: relevantHistory)
@@ -132,13 +136,19 @@ public struct HeartTrendEngine: Sendable {
         // Compute readiness so NudgeGenerator can gate intensity by HRV/RHR/sleep state.
         // Poor sleep → HRV drops + RHR rises → readiness falls → goal backs off to walk/rest.
         // BUG-061 fix: use real StressEngine score when available, fall back to proxy only when not.
-        let effectiveStressScore: Double = stressScore
-            ?? (stress ? 70.0 : (anomaly > 0.5 ? 50.0 : 25.0))
-        let readiness = ReadinessEngine().compute(
-            snapshot: current,
-            stressScore: effectiveStressScore,
-            recentHistory: relevantHistory
-        )
+        // When readinessResult is provided (coordinator path), skip internal compute.
+        let readiness: ReadinessResult?
+        if let readinessResult {
+            readiness = readinessResult
+        } else {
+            let effectiveStressScore: Double = stressScore
+                ?? (stress ? 70.0 : (anomaly > 0.5 ? 50.0 : 25.0))
+            readiness = ReadinessEngine().compute(
+                snapshot: current,
+                stressScore: effectiveStressScore,
+                recentHistory: relevantHistory
+            )
+        }
 
         let nudgeGenerator = NudgeGenerator()
         let allNudges = nudgeGenerator.generateMultiple(
@@ -499,13 +509,13 @@ public struct HeartTrendEngine: Sendable {
         let z = (recentMean - baselineMean) / baselineStd
 
         let direction: WeeklyTrendDirection
-        if z < -1.5 {
+        if z < -trendConfig.weeklySignificantZ {
             direction = .significantImprovement
-        } else if z < -0.5 {
+        } else if z < -trendConfig.weeklyElevatedZ {
             direction = .improving
-        } else if z > 1.5 {
+        } else if z > trendConfig.weeklySignificantZ {
             direction = .significantElevation
-        } else if z > 0.5 {
+        } else if z > trendConfig.weeklyElevatedZ {
             direction = .elevated
         } else {
             direction = .stable
@@ -570,7 +580,7 @@ public struct HeartTrendEngine: Sendable {
             }
         }
 
-        guard consecutiveDays >= 3 else { return nil }
+        guard consecutiveDays >= trendConfig.consecutiveElevationDays else { return nil }
 
         let elevatedMean = elevatedRHRs.reduce(0, +) / Double(elevatedRHRs.count)
 
@@ -630,9 +640,9 @@ public struct HeartTrendEngine: Sendable {
         if baselineStd > 0.5 {
             let z = (recentMean - baselineMean) / baselineStd
             // For recovery, higher is better (more HR drop post-exercise)
-            if z > 1.0 {
+            if z > trendConfig.recoveryImprovingZ {
                 direction = .improving
-            } else if z < -1.0 {
+            } else if z < trendConfig.recoveryDecliningZ {
                 direction = .declining
             } else {
                 direction = .stable
@@ -682,8 +692,8 @@ public struct HeartTrendEngine: Sendable {
             let recentHRV = recentSnapshots.compactMap(\.hrvSDNN)
 
             if recentRHR.count >= 3 && recentHRV.count >= 3 {
-                let allElevated = recentRHR.allSatisfy { $0 > rhrMean + 7.0 }
-                let hrvDepressed = recentHRV.allSatisfy { $0 < hrvMean * 0.80 }
+                let allElevated = recentRHR.allSatisfy { $0 > rhrMean + trendConfig.overtainingRHRDelta }
+                let hrvDepressed = recentHRV.allSatisfy { $0 < hrvMean * trendConfig.overtainingHRVPercent }
                 if allElevated && hrvDepressed {
                     return .overtrainingSignals
                 }
@@ -698,8 +708,8 @@ public struct HeartTrendEngine: Sendable {
             let rhrMean = rhrValues.isEmpty ? currentRHR :
                 rhrValues.reduce(0, +) / Double(rhrValues.count)
 
-            let hrvBelow = currentHRV < hrvMean * 0.85
-            let rhrAbove = currentRHR > rhrMean + 5.0
+            let hrvBelow = currentHRV < hrvMean * trendConfig.highStressHRVPercent
+            let rhrAbove = currentRHR > rhrMean + trendConfig.highStressRHRDelta
 
             if hrvBelow && rhrAbove {
                 return .highStressDay
@@ -714,7 +724,7 @@ public struct HeartTrendEngine: Sendable {
             let rhrMean = rhrValues.isEmpty ? currentRHR :
                 rhrValues.reduce(0, +) / Double(rhrValues.count)
 
-            if currentHRV > hrvMean * 1.10 && currentRHR <= rhrMean {
+            if currentHRV > hrvMean * trendConfig.greatRecoveryHRVPercent && currentRHR <= rhrMean {
                 return .greatRecoveryDay
             }
         }
@@ -739,7 +749,7 @@ public struct HeartTrendEngine: Sendable {
                 let rhrRecent14 = allSnapshots.suffix(14).compactMap(\.restingHeartRate)
                 if rhrRecent14.count >= 10 {
                     let slope = linearSlope(values: rhrRecent14)
-                    if slope < -0.15 { // RHR declining at > 0.15 bpm/day
+                    if slope < -trendConfig.trendSlopeThreshold { // RHR declining at > threshold bpm/day
                         return .improvingTrend
                     }
                 }
@@ -750,7 +760,7 @@ public struct HeartTrendEngine: Sendable {
                 let rhrRecent14 = allSnapshots.suffix(14).compactMap(\.restingHeartRate)
                 if rhrRecent14.count >= 10 {
                     let slope = linearSlope(values: rhrRecent14)
-                    if slope > 0.15 { // RHR increasing at > 0.15 bpm/day
+                    if slope > trendConfig.trendSlopeThreshold { // RHR increasing at > threshold bpm/day
                         return .decliningTrend
                     }
                 }

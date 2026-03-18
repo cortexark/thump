@@ -33,3 +33,10 @@ DASHBOARD_REDESIGN.md
 Tests/Validation/Data/*
 !Tests/Validation/Data/.gitkeep
 !Tests/Validation/Data/README.md
+
+# Super Reviewer generated capture output (LLM judge artifacts, not source)
+# CaptureOutput/ = volatile JSON/MD per run — not committed
+Tests/SuperReviewer/CaptureOutput/*
+!Tests/SuperReviewer/CaptureOutput/.gitkeep
+# RegressionLocks/ = committed — these are the frozen regression fixtures
+# (no ignore rule needed; locks are intentionally versioned)

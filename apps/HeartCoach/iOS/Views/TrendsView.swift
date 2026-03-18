@@ -731,7 +731,7 @@ struct TrendsView: View {
                         Image(systemName: "heart.circle.fill")
                             .font(.caption)
                             .foregroundStyle(ahaPercent >= 1.0 ? Color(hex: 0x22C55E) : Color(hex: 0x3B82F6))
-                        Text("AHA Weekly Activity")
+                        Text("Weekly Activity (Heart Health)")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.primary)
@@ -819,14 +819,14 @@ struct TrendsView: View {
     /// Human-readable explanation of what AHA 150-min guideline progress means.
     private func ahaExplanation(percent: Double, totalMin: Double) -> String {
         if percent >= 1.0 {
-            return "You hit the AHA's 150-minute weekly guideline! This level of activity supports better endurance, faster recovery between workouts, and a stronger resting heart rate over time."
+            return "You hit the 150-minute weekly activity guideline — the level the American Heart Association (AHA) links to meaningful cardiovascular benefits. This level supports better endurance, faster recovery between workouts, and a stronger resting heart rate over time."
         } else if percent >= 0.7 {
             let remaining = Int(max(0, 150 - totalMin))
             return "Almost there — \(remaining) more minutes this week. At 100%, you're building the cardiovascular base that helps your body recover faster and maintain a lower resting heart rate."
         } else if percent >= 0.3 {
             return "You're building momentum. The 150-minute target is where your heart starts getting measurably more efficient — shorter recovery times, better endurance, and improved stress tolerance."
         } else {
-            return "The AHA recommends 150 minutes of moderate activity weekly. This is the threshold where cardiovascular benefits become significant — stronger heart, faster recovery, and better sleep quality."
+            return "Health guidelines recommend 150 minutes of moderate activity per week — the threshold where cardiovascular benefits tend to become significant: stronger heart, faster recovery, and better sleep quality."
         }
     }
 
@@ -1014,7 +1014,7 @@ struct TrendsView: View {
         case .vo2Max:
             return "An estimate of your VO2 max — how efficiently your body uses oxygen. Higher scores mean better endurance."
         case .activeMinutes:
-            return "Total minutes of walking and workout activity. The AHA recommends 150+ minutes of moderate activity per week."
+            return "Total minutes of walking and workout activity. Health guidelines recommend 150+ minutes of moderate activity per week for cardiovascular benefit."
         }
     }
 

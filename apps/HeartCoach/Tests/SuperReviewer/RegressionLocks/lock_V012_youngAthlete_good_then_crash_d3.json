@@ -1,0 +1,14 @@
+{
+  "captureID" : "youngAthlete_good_then_crash_d3_morning",
+  "criterionID" : "V-012",
+  "dayIndex" : 3,
+  "expectedVerdict" : "PASS",
+  "fixDescription" : "Replaced all ' - ' (space-hyphen-space) sentence connectors with sentence splits in AdvicePresenter.swift. Added Scripts/lint_coaching_text.sh repo-wide lint gate to prevent recurrence.",
+  "journeyID" : "good_then_crash",
+  "lockedAt" : "2026-03-17T00:00:00Z",
+  "lockedByCommit" : null,
+  "lockID" : "lock_V012_youngAthlete_good_then_crash_d3",
+  "personaName" : "youngAthlete",
+  "ruleID" : "V-012",
+  "timeStampLabel" : "morning"
+}

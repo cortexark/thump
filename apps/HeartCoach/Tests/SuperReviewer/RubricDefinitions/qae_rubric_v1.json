@@ -1,0 +1,298 @@
+{
+  "version": "1.0",
+  "source_agent": "qae",
+  "perspective": "QA engineer validating completeness, safety, and regression behavior",
+  "scoring_range": [1, 5],
+  "total_criteria": 12,
+  "max_score": 60,
+  "criteria": [
+    {
+      "id": "QAE-001",
+      "source_agent": "qae",
+      "category": "coverage_completeness",
+      "description": "Coverage completeness - all pages have non-empty text for every field",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Multiple pages or fields are missing text entirely",
+        "2": "One page is missing text or several fields are empty",
+        "3": "All pages have text but one or two fields are suspiciously generic",
+        "4": "All fields populated with minor placeholder-like text in one spot",
+        "5": "Every page and field has meaningful, context-specific text"
+      },
+      "fail_examples": [
+        "Dashboard greeting is empty, insights body is blank",
+        "Stress page has text but recovery section shows nothing",
+        "Goal card shows 'N/A' instead of actual goal text"
+      ],
+      "pass_examples": [
+        "All pages - dashboard, stress, insights, goals - have populated text",
+        "Every card, greeting, body, and recommendation field contains content",
+        "Even nil-data scenarios produce meaningful fallback text"
+      ]
+    },
+    {
+      "id": "QAE-002",
+      "source_agent": "qae",
+      "category": "no_judgment_language",
+      "description": "No judgment language - no 'lazy', 'failure', 'should have', 'only got', 'not enough' when referring to the user",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Multiple judgment words present directed at the user",
+        "2": "One clear judgment word or phrase directed at the user",
+        "3": "No direct judgment but tone implies user fault",
+        "4": "Entirely objective with one borderline word choice",
+        "5": "Zero judgment language; all framing is objective and data-driven"
+      },
+      "fail_examples": [
+        "You're being lazy, get moving",
+        "You only got 4 hours of sleep - that's not enough",
+        "You should have rested more yesterday, now recovery is poor"
+      ],
+      "pass_examples": [
+        "Sleep score dropping due to low hours",
+        "Recovery is lower today - rest is the best lever right now",
+        "Activity has been light. Even a short walk adds momentum"
+      ]
+    },
+    {
+      "id": "QAE-003",
+      "source_agent": "qae",
+      "category": "no_raw_metrics_leaking",
+      "description": "No raw metrics leaking - no 'HRV: 45ms', 'RHR: 78bpm' in coaching text",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Raw metric values with units appear in coaching text",
+        "2": "One raw metric value leaks into user-facing text",
+        "3": "No raw values but metric names appear without explanation",
+        "4": "All metrics are translated to plain language with one minor leak",
+        "5": "Zero raw metrics in coaching text; all data is translated to natural language"
+      },
+      "fail_examples": [
+        "Your HRV: 45ms is below your 7-day average of 52ms",
+        "RHR: 78bpm, trending up from 72bpm last week",
+        "SDNN dropped to 38ms overnight"
+      ],
+      "pass_examples": [
+        "Your body's recovery signal is a bit lower than your recent average",
+        "Resting heart patterns suggest taking it easy today",
+        "Sleep score dropping due to low hours"
+      ]
+    },
+    {
+      "id": "QAE-004",
+      "source_agent": "qae",
+      "category": "time_of_day_correctness",
+      "description": "Time-of-day correctness - greeting matches hour, nudges appropriate for time",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Greeting or nudge clearly wrong for the time (bedtime nudge at 7AM)",
+        "2": "One time-sensitive element is mismatched",
+        "3": "Time elements are generic rather than wrong",
+        "4": "All time elements correct with one slightly off timing",
+        "5": "Greeting and all nudges perfectly match the time of day"
+      },
+      "fail_examples": [
+        "8:00 AM: 'Time to wind down for bed'",
+        "11:00 PM: 'Get up and start moving!'",
+        "6:00 AM: 'Hope you had a great afternoon'"
+      ],
+      "pass_examples": [
+        "8:00 AM: 'Good morning - here's how last night went'",
+        "2:00 PM: 'Afternoon check-in: staying on track'",
+        "9:00 PM: 'Evening wind-down: tomorrow starts with tonight's rest'"
+      ]
+    },
+    {
+      "id": "QAE-005",
+      "source_agent": "qae",
+      "category": "accessibility_text_present",
+      "description": "Accessibility text present - all captured fields have non-empty content",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Multiple fields return empty strings or whitespace-only content",
+        "2": "One field is empty or whitespace-only",
+        "3": "All fields have content but some are just punctuation or fragments",
+        "4": "All fields have meaningful content with one minor gap",
+        "5": "Every field has complete, readable, accessible text"
+      },
+      "fail_examples": [
+        "Greeting field is '' (empty string)",
+        "Recovery body text is '.' (just punctuation)",
+        "Goal subtitle contains only whitespace"
+      ],
+      "pass_examples": [
+        "All fields contain at least one complete sentence",
+        "Greeting, body, subtitle, and recommendation fields all populated",
+        "Even low-data scenarios produce readable fallback content"
+      ]
+    },
+    {
+      "id": "QAE-006",
+      "source_agent": "qae",
+      "category": "text_length_bounds",
+      "description": "Text length bounds - no text > 300 chars, no text < 5 chars (except nil-allowed fields)",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Multiple fields exceed 300 chars or are under 5 chars",
+        "2": "One field is clearly out of bounds",
+        "3": "All fields within bounds but one is borderline (295+ chars)",
+        "4": "All fields comfortably within bounds with good density",
+        "5": "All fields are well-sized: concise, complete, within bounds"
+      },
+      "fail_examples": [
+        "Recovery body is 450 characters of rambling text",
+        "Greeting is 3 characters: 'Hi.'",
+        "Insight text is a 500-character paragraph"
+      ],
+      "pass_examples": [
+        "All text fields between 20 and 200 characters",
+        "Greeting is warm and brief (30-60 chars)",
+        "Body text is informative without being verbose (80-250 chars)"
+      ]
+    },
+    {
+      "id": "QAE-007",
+      "source_agent": "qae",
+      "category": "no_duplicate_text",
+      "description": "No duplicate text - adjacent sections don't repeat the same sentence",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Same sentence appears verbatim in multiple adjacent sections",
+        "2": "Near-duplicate sentences in adjacent sections",
+        "3": "Similar phrasing in adjacent sections but not identical",
+        "4": "All sections have unique text with minor thematic overlap",
+        "5": "Every section has distinctly different text with no repetition"
+      },
+      "fail_examples": [
+        "Greeting: 'Take it easy today' / Body: 'Take it easy today, recovery is low'",
+        "Goal text and recovery text contain the same sentence verbatim",
+        "Dashboard and insights show identical recommendation text"
+      ],
+      "pass_examples": [
+        "Greeting sets the tone, body explains why, recommendation says what to do",
+        "Each section adds new information without repeating previous sections",
+        "Recovery and goals reference the same theme but with different wording"
+      ]
+    },
+    {
+      "id": "QAE-008",
+      "source_agent": "qae",
+      "category": "journey_regression",
+      "description": "Journey regression - improving metrics produce improving text over days",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text gets worse or stays alarming as metrics improve over days",
+        "2": "Text fails to acknowledge improvement for multiple days",
+        "3": "Text slowly catches up but lags behind actual improvement",
+        "4": "Text tracks improvement with one day of lag",
+        "5": "Text immediately and accurately reflects metric improvement trajectory"
+      },
+      "fail_examples": [
+        "Sleep improving day 3-5 but text still says 'Sleep has been poor'",
+        "Readiness recovering but mode stays 'rest' for 3 extra days",
+        "Stress dropping but text keeps saying 'Elevated stress patterns'"
+      ],
+      "pass_examples": [
+        "Day 3 sleep improves: 'Sleep is trending up. Keep the momentum going'",
+        "Readiness climbing: text shifts from 'rest' to 'moderate effort looks good'",
+        "Stress normalizing: 'Stress patterns settling down - nice recovery'"
+      ]
+    },
+    {
+      "id": "QAE-009",
+      "source_agent": "qae",
+      "category": "persona_appropriateness",
+      "description": "Persona appropriateness - text doesn't assume fitness level user doesn't have",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Text assumes athlete-level fitness for a sedentary persona or vice versa",
+        "2": "Text makes one incorrect fitness assumption",
+        "3": "Text is generic enough to not offend but misses persona specifics",
+        "4": "Text mostly matches persona with one minor assumption",
+        "5": "Text perfectly calibrated to the persona's fitness level and context"
+      },
+      "fail_examples": [
+        "SedentarySenior: 'Time for your daily 5K run!'",
+        "TeenAthlete: 'Consider starting light, like a 5-minute walk'",
+        "ObeseSedentary: 'Push for a personal best today!'"
+      ],
+      "pass_examples": [
+        "SedentarySenior: 'A gentle walk around the block is a great start'",
+        "TeenAthlete: 'Strong recovery - your body can handle a solid session'",
+        "ObeseSedentary: 'Every bit of movement counts. Start with what feels good'"
+      ]
+    },
+    {
+      "id": "QAE-010",
+      "source_agent": "qae",
+      "category": "medical_safety",
+      "description": "Medical safety - no diagnostic claims, no treatment suggestions, includes disclaimers where appropriate",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text makes diagnostic claims or prescribes treatment",
+        "2": "Text strongly implies a diagnosis or specific medical action",
+        "3": "Text is medically neutral but misses a disclaimer where one would help",
+        "4": "Text is safe with appropriate hedging and one minor gap",
+        "5": "Zero diagnostic claims, no treatment advice, appropriate disclaimers present"
+      },
+      "fail_examples": [
+        "You may have sleep apnea based on your patterns",
+        "Take a beta-blocker if your heart rate stays this high",
+        "Your arrhythmia is getting worse"
+      ],
+      "pass_examples": [
+        "Unusually high heart rate detected. If you feel unwell, consult a doctor",
+        "Patterns suggest your body needs more rest. This is not medical advice",
+        "Prioritize rest tonight - sleep is the biggest lever for recovery."
+      ]
+    },
+    {
+      "id": "QAE-011",
+      "source_agent": "qae",
+      "category": "no_hyphen_as_dash",
+      "description": "No hyphen as em dash — app text uses em dashes (—) or restructures sentences. A hyphen (-) surrounded by spaces is a formatting error, not a style choice.",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Multiple instances of ' - ' used as sentence connectors across coaching text",
+        "2": "One clear instance of hyphen-as-dash in a coaching text field",
+        "3": "No hyphen-as-dash in primary fields but one appears in a secondary field",
+        "4": "Clean formatting with one borderline case in a goal or nudge label",
+        "5": "Zero hyphen-as-dash anywhere. Em dashes (—) used correctly or sentences restructured."
+      },
+      "fail_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Recovery is lower today - rest is the best lever right now.",
+        "Decent recovery - a moderate effort works well today."
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight. Sleep is the biggest lever for recovery.",
+        "Recovery is lower today. Rest is the best lever right now.",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "QAE-012",
+      "source_agent": "qae",
+      "category": "text_freshness",
+      "description": "Text freshness — text changes meaningfully across journey days. The same phrasing must not appear on days with meaningfully different metrics.",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Day 1 and Day 7 produce byte-identical hero messages despite very different metrics",
+        "2": "Text changes word-for-word in minor ways but the meaning is identical across days",
+        "3": "Text changes noticeably but one frozen phrase appears regardless of day state",
+        "4": "Text is fresh across most days with one reused phrase that is tolerable",
+        "5": "Every day produces text that could only have been written for that specific day and state"
+      },
+      "fail_examples": [
+        "Day 1 readiness=72 and Day 7 readiness=28 both produce: 'Decent recovery. A moderate effort works well today.'",
+        "All 7 days start with 'Recovery is building.' regardless of whether it is",
+        "Hero message on day 2 and day 6 are identical despite one being a crash day"
+      ],
+      "pass_examples": [
+        "Day 1: 'Solid start. Your body is in a good rhythm.' / Day 7: 'Best recovery week in a month. Whatever you did, it worked.'",
+        "Crash day: 'Recovery took a hit today. Rest is the one lever that actually works right now.' / Recovery day: 'Bouncing back. Your body responded fast.'",
+        "Each day's text reflects the specific intersection of that day's metrics and the week's trajectory"
+      ]
+    }
+  ]
+}
