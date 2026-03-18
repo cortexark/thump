@@ -160,9 +160,9 @@ extension DashboardView {
 
         if let hours = sleepHours, hours > 0, hours < policy.view.sleepLightOnlyHours {
             if hours < policy.view.sleepSkipWorkoutHours {
-                return "\(yesterdayZoneContext)You got \(String(format: "%.1f", hours)) hours of sleep. Skip the workout — rest is the only thing that helps today. Get to bed early tonight."
+                return "\(yesterdayZoneContext)You got \(String(format: "%.1f", hours)) hours of sleep. Skip the workout today — rest and an early bedtime are likely the most valuable things you can do right now."
             }
-            return "\(yesterdayZoneContext)About \(String(format: "%.1f", hours)) hours of sleep last night. Keep it very light today — a short walk at most. Sleep is what your body needs most."
+            return "\(yesterdayZoneContext)About \(String(format: "%.1f", hours)) hours of sleep last night. Keep it very light today — a short walk at most. Prioritizing sleep tonight tends to help more than exercise right now."
         }
 
         if result.score < 45 {
@@ -188,7 +188,7 @@ extension DashboardView {
         let sleepTooLow = sleepHours.map { $0 < 6.0 } ?? false
         if result.score >= 80 && !sleepTooLow {
             if let zones, zones.recommendation == .needsMoreThreshold {
-                return "\(yesterdayZoneContext)You're fully charged. Great day for a harder effort or tempo session."
+                return "\(yesterdayZoneContext)You're fully charged. Great day for a harder effort or a sustained cardio session."
             }
             return "\(yesterdayZoneContext)You're primed. Push it if you want — your body can handle it."
         }
