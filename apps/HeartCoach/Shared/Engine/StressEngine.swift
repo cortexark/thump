@@ -368,15 +368,32 @@ public struct StressEngine: Sendable {
     }
 
     /// Convenience: compute stress from a snapshot and recent history.
+    ///
+    /// On day 1 (empty history), uses a population-average HRV baseline
+    /// (40 ms SDNN) so users see a provisional reading immediately rather
+    /// than a "wait 3 days" empty state. Confidence is `.low` until the
+    /// personal baseline has at least 3 days of data.
     public func computeStress(
         snapshot: HeartSnapshot,
         recentHistory: [HeartSnapshot]
     ) -> StressResult? {
         guard let currentHRV = snapshot.hrvSDNN else { return nil }
-        let baseline = computeBaseline(snapshots: recentHistory)
-        guard let baselineHRV = baseline else { return nil }
+
         let hrvValues = recentHistory.compactMap(\.hrvSDNN)
         let n = Double(hrvValues.count)
+
+        // Use personal baseline if available, otherwise population average
+        let baselineHRV: Double
+        let isProvisional: Bool
+        if let personal = computeBaseline(snapshots: recentHistory) {
+            baselineHRV = personal
+            isProvisional = false
+        } else {
+            // Population-average SDNN baseline (adults 18-65)
+            baselineHRV = 40.0
+            isProvisional = true
+        }
+
         let baselineSD: Double? = n >= 2 ? {
             let mean = hrvValues.reduce(0, +) / n
             let ss = hrvValues.map { ($0 - mean) * ($0 - mean) }.reduce(0, +)
@@ -390,15 +407,32 @@ public struct StressEngine: Sendable {
             baselineHRV: baselineHRV,
             baselineHRVSD: baselineSD,
             currentRHR: snapshot.restingHeartRate,
-            baselineRHR: avgRHR,
-            recentHRVs: recentHistory.suffix(7).compactMap(\.hrvSDNN),
+            baselineRHR: avgRHR ?? snapshot.restingHeartRate,
+            recentHRVs: recentHistory.suffix(7).compactMap(\.hrvSDNN) + [currentHRV],
             recentSteps: snapshot.steps,
             recentWorkoutMinutes: snapshot.workoutMinutes,
             sedentaryMinutes: nil,
             sleepHours: snapshot.sleepHours
         )
 
-        return computeStress(context: contextInput)
+        var result = computeStress(context: contextInput)
+
+        // Downgrade confidence to .low for provisional (day-1) readings
+        if isProvisional {
+            var warnings = result.warnings
+            warnings.append("Baseline forming — score will refine over the next few days")
+            result = StressResult(
+                score: result.score,
+                level: result.level,
+                description: result.description,
+                mode: result.mode,
+                confidence: .low,
+                signalBreakdown: result.signalBreakdown,
+                warnings: warnings
+            )
+        }
+
+        return result
     }
 
     // MARK: - Weight Resolution
@@ -576,11 +610,15 @@ public struct StressEngine: Sendable {
     // MARK: - Stress Trend
 
     /// Produce a time series of stress data points over a given range.
+    ///
+    /// On day 1 (single snapshot, no preceding data), uses a population-average
+    /// baseline (40 ms SDNN) to produce a provisional data point so the user
+    /// sees something immediately rather than an empty chart.
     public func stressTrend(
         snapshots: [HeartSnapshot],
         range: TimeRange
     ) -> [StressDataPoint] {
-        guard snapshots.count >= 2 else { return [] }
+        guard !snapshots.isEmpty else { return [] }
 
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -603,9 +641,14 @@ public struct StressEngine: Sendable {
             let precedingSlice = Array(
                 snapshots[precedingStart..<precedingEnd]
             )
-            guard let baselineHRV = computeBaseline(
-                snapshots: precedingSlice
-            ) else { continue }
+
+            // Use personal baseline if available, population average otherwise
+            let baselineHRV: Double
+            if let personal = computeBaseline(snapshots: precedingSlice) {
+                baselineHRV = personal
+            } else {
+                baselineHRV = 40.0
+            }
 
             let recentHRVs = precedingSlice.compactMap(\.hrvSDNN)
             let baselineSD = computeBaselineSD(hrvValues: recentHRVs, mean: baselineHRV)

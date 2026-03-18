@@ -11,7 +11,7 @@
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>com.thump.ios</string>
+	<string>com.health.thump.ios</string>
 	<key>CFBundleDisplayName</key>
 	<string>Thump</string>
 	<key>CFBundleShortVersionString</key>
