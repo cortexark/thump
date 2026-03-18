@@ -275,6 +275,30 @@ public struct UserProfile: Codable, Equatable, Sendable {
         self.steadyStreakDays = steadyStreakDays
     }
 
+    // MARK: - Codable (migration-safe)
+
+    /// Custom decoder so pre-v1.7 profiles (missing the four new fields)
+    /// survive the upgrade without wiping existing user data.
+    /// All v1.7 fields fall back to their defaults if not present in the stored JSON.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        displayName          = try c.decode(String.self, forKey: .displayName)
+        joinDate             = try c.decode(Date.self, forKey: .joinDate)
+        onboardingComplete   = try c.decode(Bool.self, forKey: .onboardingComplete)
+        streakDays           = try c.decode(Int.self, forKey: .streakDays)
+        lastStreakCreditDate = try c.decodeIfPresent(Date.self, forKey: .lastStreakCreditDate)
+        nudgeCompletionDates = (try? c.decode(Set<String>.self, forKey: .nudgeCompletionDates)) ?? []
+        dateOfBirth          = try c.decodeIfPresent(Date.self, forKey: .dateOfBirth)
+        biologicalSex        = (try? c.decode(BiologicalSex.self, forKey: .biologicalSex)) ?? .notSet
+        email                = try c.decodeIfPresent(String.self, forKey: .email)
+        launchFreeStartDate  = try c.decodeIfPresent(Date.self, forKey: .launchFreeStartDate)
+        // v1.7 fields — default when absent (pre-v1.7 stored profiles)
+        copyProfile          = (try? c.decode(UserCopyProfile.self, forKey: .copyProfile)) ?? .autonomous
+        trainingPhase        = (try? c.decode(TrainingPhase.self, forKey: .trainingPhase)) ?? .none
+        activityType         = (try? c.decode(ActivityType.self, forKey: .activityType)) ?? .general
+        steadyStreakDays      = (try? c.decode(Int.self, forKey: .steadyStreakDays)) ?? 0
+    }
+
     /// Computed chronological age in years from date of birth.
     public var chronologicalAge: Int? {
         guard let dob = dateOfBirth else { return nil }
