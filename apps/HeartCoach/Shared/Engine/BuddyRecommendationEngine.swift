@@ -185,6 +185,22 @@ public struct BuddyRecommendationEngine: Sendable {
             }
         }
 
+        // Fallback: always surface at least one recommendation so the
+        // dashboard is never empty. A neutral "stay consistent" nudge is
+        // appropriate when all signals are quiet (nothing alarming, nothing
+        // to celebrate — the user is simply on track).
+        if recommendations.isEmpty {
+            recommendations.append(BuddyRecommendation(
+                priority: .low,
+                category: .rest,
+                title: "Keep the rhythm going",
+                message: "Your metrics are quiet right now — no alerts, no red flags. "
+                    + "Stay consistent and check back tomorrow.",
+                icon: "checkmark.circle.fill",
+                source: .scenarioDetection
+            ))
+        }
+
         // Deduplicate by category (keep highest priority per category)
         let deduped = deduplicateByCategory(recommendations)
 

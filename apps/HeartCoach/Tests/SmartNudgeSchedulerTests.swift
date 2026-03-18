@@ -248,4 +248,144 @@ final class SmartNudgeSchedulerTests: XCTestCase {
             XCTFail("Journal should take priority over breathe")
         }
     }
+
+    // MARK: - Evening Notification: Forward-Looking
+
+    func testEveningNotification_forwardLooking_firesWhenScoreAbove44AndRising() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 60,
+            trendDirection: .rising,
+            isChronicSteady: false,
+            copyProfile: .autonomous
+        )
+        XCTAssertNotNil(notification, "Should fire forward-looking notification when score > 44 and rising")
+        XCTAssertEqual(notification?.kind, .forwardLooking)
+        XCTAssertFalse(notification?.body.isEmpty ?? true)
+    }
+
+    func testEveningNotification_forwardLooking_suppressedWhenChronicSteady() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 60,
+            trendDirection: .rising,
+            isChronicSteady: true,
+            copyProfile: .autonomous
+        )
+        // Chronic steady + autonomous → no forward-looking notification
+        // (steadyAcknowledgment only fires for .constrained + chronic steady)
+        XCTAssertNil(notification, "Forward-looking notification must be suppressed when isChronicSteady")
+    }
+
+    func testEveningNotification_forwardLooking_suppressedWhenScoreAt44() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 44,
+            trendDirection: .rising,
+            isChronicSteady: false,
+            copyProfile: .autonomous
+        )
+        XCTAssertNil(notification, "Score 44 is not > 44; forward-looking notification must not fire")
+    }
+
+    func testEveningNotification_forwardLooking_suppressedWhenNotRising() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 70,
+            trendDirection: .steady,
+            isChronicSteady: false,
+            copyProfile: .autonomous
+        )
+        XCTAssertNil(notification, "Forward-looking notification requires rising trend")
+    }
+
+    // MARK: - Evening Notification: Steady Acknowledgment
+
+    func testEveningNotification_steadyAcknowledgment_firesWhenChronicSteadyAndConstrained() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 30,
+            trendDirection: .steady,
+            isChronicSteady: true,
+            copyProfile: .constrained
+        )
+        XCTAssertNotNil(notification, "Steady acknowledgment should fire for chronic steady + constrained")
+        XCTAssertEqual(notification?.kind, .steadyAcknowledgment)
+    }
+
+    func testEveningNotification_steadyAcknowledgment_suppressedAfter3ConsecutiveDismissals() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 30,
+            trendDirection: .steady,
+            isChronicSteady: true,
+            copyProfile: .constrained,
+            consecutiveDismissals: 3
+        )
+        XCTAssertNil(notification, "Steady acknowledgment must suppress after 3 consecutive dismissals")
+    }
+
+    func testEveningNotification_steadyAcknowledgment_firesAt2ConsecutiveDismissals() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 30,
+            trendDirection: .steady,
+            isChronicSteady: true,
+            copyProfile: .constrained,
+            consecutiveDismissals: 2
+        )
+        XCTAssertNotNil(notification, "Steady acknowledgment should still fire at 2 dismissals (threshold is 3)")
+    }
+
+    func testEveningNotification_steadyAcknowledgment_notFiredForAutonomousProfile() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 30,
+            trendDirection: .steady,
+            isChronicSteady: true,
+            copyProfile: .autonomous
+        )
+        XCTAssertNil(notification, "Steady acknowledgment requires .constrained copy profile")
+    }
+
+    // MARK: - One-Per-Day Rule
+
+    func testEveningNotification_oncePerDayRule_suppressesWhenAlreadySentToday() {
+        let notification = scheduler.eveningNotification(
+            readinessScore: 60,
+            trendDirection: .rising,
+            isChronicSteady: false,
+            copyProfile: .autonomous,
+            consecutiveDismissals: 0,
+            lastNotificationDate: Date()  // already sent today
+        )
+        XCTAssertNil(notification, "Notification must be suppressed if already sent today (1/day rule)")
+    }
+
+    func testEveningNotification_oncePerDayRule_allowsWhenLastSentYesterday() {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())
+        let notification = scheduler.eveningNotification(
+            readinessScore: 60,
+            trendDirection: .rising,
+            isChronicSteady: false,
+            copyProfile: .autonomous,
+            consecutiveDismissals: 0,
+            lastNotificationDate: yesterday
+        )
+        XCTAssertNotNil(notification, "Notification should fire if last sent was yesterday")
+    }
+
+    func testCanSendNotificationToday_nilLastDate_returnsTrue() {
+        XCTAssertTrue(
+            scheduler.canSendNotificationToday(lastNotificationDate: nil),
+            "Should allow sending when no prior notification exists"
+        )
+    }
+
+    func testCanSendNotificationToday_sentToday_returnsFalse() {
+        XCTAssertFalse(
+            scheduler.canSendNotificationToday(lastNotificationDate: Date()),
+            "Should block sending when notification was already sent today"
+        )
+    }
+
+    func testCanSendNotificationToday_sentYesterday_returnsTrue() {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())
+        XCTAssertTrue(
+            scheduler.canSendNotificationToday(lastNotificationDate: yesterday),
+            "Should allow sending when last notification was yesterday"
+        )
+    }
 }
