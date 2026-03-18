@@ -43,7 +43,7 @@ struct StatusCardView: View {
         var parts = ["Wellness status: \(statusText)"]
         parts.append("pattern strength \(confidence.displayName)")
         if let score = cardioScore {
-            parts.append("cardio fitness is around \(Int(score))")
+            parts.append("aerobic fitness score is \(Int(score)) — a measure of how efficiently your body uses oxygen")
         }
         if !explanation.isEmpty {
             parts.append(explanation)
@@ -75,7 +75,7 @@ struct StatusCardView: View {
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                         .foregroundStyle(statusColor)
 
-                    Text("Your cardio fitness is around here")
+                    Text("Aerobic fitness — how efficiently your body uses oxygen")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -111,8 +111,8 @@ struct StatusCardView: View {
         status: .improving,
         confidence: .high,
         cardioScore: 78,
-        explanation: "Your resting heart rate has been easing down over the past week, "
-            + "and your HRV looks like it's heading up. Nice work!"
+        explanation: "Your resting heart rate has been trending down this week, "
+            + "and HRV (heart rate variability, a recovery signal) has been edging up. Looking good."
     )
     .padding()
 }
@@ -122,8 +122,8 @@ struct StatusCardView: View {
         status: .needsAttention,
         confidence: .medium,
         cardioScore: 42,
-        explanation: "Your resting heart rate has been a bit higher and HRV "
-            + "a bit lower the last few days. A little extra rest might feel good."
+        explanation: "Resting heart rate has been a bit above your baseline and HRV "
+            + "(heart rate variability) has dipped slightly. An easier day or two tends to help."
     )
     .padding()
 }
@@ -133,8 +133,8 @@ struct StatusCardView: View {
         status: .stable,
         confidence: .low,
         cardioScore: nil,
-        explanation: "We're still getting to know your patterns. "
-            + "Keep wearing your watch and we'll have more to share soon!"
+        explanation: "Still building your personal baseline. "
+            + "A few more days of wear and the recommendations will get sharper."
     )
     .padding()
 }

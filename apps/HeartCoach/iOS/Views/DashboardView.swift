@@ -253,34 +253,34 @@ struct DashboardView: View {
         guard let assessment = viewModel.assessment else { return nil }
 
         if assessment.stressFlag, let stress = viewModel.stressResult, stress.level == .elevated {
-            return "Stress is running high. A rest day would do you good."
+            return "Stress markers are above your baseline. Today's work is recovery."
         }
         if let readiness = viewModel.readinessResult, readiness.score < 45 {
             let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep })
             if let sleep = sleepPillar, sleep.score < 50 {
-                return "Rough night. Take it easy - your body needs to catch up."
+                return "Sleep was shorter than usual. A gentle day tends to serve you better than a hard push."
             }
-            return "Recovery is low. A light day will help you bounce back."
+            return "Recovery score is below your recent baseline. A lighter effort today pays off tomorrow."
         }
         if let readiness = viewModel.readinessResult, readiness.score < 65,
            let zones = viewModel.zoneAnalysis,
            zones.recommendation == .tooMuchIntensity {
-            return "You pushed hard recently. A mellow day helps you absorb those gains."
+            return "You've put in solid work recently. Backing off today is part of the training, not a step back."
         }
         if let readiness = viewModel.readinessResult, readiness.score >= 75 {
             if assessment.stressFlag == false,
                let stress = viewModel.stressResult, stress.level == .relaxed {
-                return "You recovered well. Ready for a solid day."
+                return "Recovery metrics are tracking above your baseline. Conditions favor a quality effort."
             }
-            return "Body is charged up. Good day to move."
+            return "Your body's signals are looking strong. A good day to move with intention."
         }
         if let readiness = viewModel.readinessResult, readiness.score >= 45 {
-            return "Decent recovery. A moderate effort works well today."
+            return "Recovery is near your norm. A moderate effort fits well here."
         }
         if assessment.status == .needsAttention {
-            return "Your body is asking for a lighter day."
+            return "Your signals are pointing toward a lighter day. Your body is doing repair work right now."
         }
-        return "Checking in on your wellness."
+        return "Today's readiness data is in."
     }
 
     // MARK: - Greeting
