@@ -76,6 +76,11 @@ struct AdviceState: Codable, Sendable, Equatable {
 
     /// Positivity anchor template ID (injected when negativity imbalance detected).
     let positivityAnchorID: String?
+
+    /// Maximum total action items allowed for the day (V-015 budget).
+    /// Counts buddy recs + smart actions + goal nudge directives + Thump Check directives.
+    /// Views use this to trim buddy recommendations to fit within the remaining budget.
+    let dailyActionBudget: Int
 }
 
 // MARK: - Supporting Enums

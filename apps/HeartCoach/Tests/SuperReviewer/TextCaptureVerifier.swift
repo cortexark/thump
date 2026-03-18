@@ -427,8 +427,16 @@ struct TextCaptureVerifier {
     }
 
     // V-015: Cognitive overload — too many concurrent action items on one screen
-    // More than 5 total actionable items (nudges + buddy recs) at once overwhelms users,
-    // especially Sarah Kovacs and Jordan Rivera personas on bad days.
+    //
+    // "Action items" definition: buddy recs + nudges (directive items only) + smart actions
+    // + Thump Check directive text + weekly report recommended actions.
+    // NOT counted: hero message, narrative text, passive goal progress displays.
+    //
+    // Budget by mode (enforced upstream in AdviceComposer.dailyGuidanceBudget):
+    //   fullRest / medicalCheck: 2  |  lightRecovery: 3  |  moderateMove: 5  |  pushDay: 7
+    //
+    // Verifier thresholds (final gate — fires if upstream budget enforcement slips):
+    //   All days: > 5 total → medium  |  Rest days (readiness < 35): > 3 → high
     static func checkCognitiveOverload(_ cap: SuperReviewerCapture) -> [VerificationResult.Violation] {
         var v: [VerificationResult.Violation] = []
 
