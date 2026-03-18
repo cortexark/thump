@@ -168,6 +168,7 @@ Return JSON only:
 }
 
 TIER_JUDGES = {
+    "tierA": ["marcus_chen", "priya_okafor"],
     "tierB": ["marcus_chen", "priya_okafor", "david_nakamura", "jordan_rivera"],
     "tierC": ["marcus_chen", "priya_okafor", "david_nakamura", "jordan_rivera",
               "aisha_thompson", "sarah_kovacs"],
@@ -190,6 +191,102 @@ JUDGE_NAMES = {
     "aisha_thompson": "Aisha Thompson",
     "sarah_kovacs": "Sarah Kovacs",
 }
+
+
+# ── Text snapshot builder ───────────────────────────────────────────────────
+
+def build_text_snapshot(capture: dict) -> str:
+    """
+    Build a human-readable snapshot containing:
+      1. Health context (formatted numbers — NOT raw floats)
+      2. Every user-facing text field, clearly labelled
+
+    Judges evaluate the copy, not the raw metric values.
+    """
+    lines: list[str] = []
+
+    persona  = capture.get("personaName", "Unknown")
+    journey  = capture.get("journeyID", "")
+    day      = capture.get("dayIndex", 0)
+    lines.append(f"Scenario: {persona} | Journey: {journey} | Day {day}")
+    lines.append("")
+
+    # ── Health context (formatted, not raw floats) ──
+    ctx: list[str] = []
+    if (r := capture.get("readinessScore")) is not None:
+        ctx.append(f"Readiness {r}/100")
+    if sl := capture.get("stressLevel"):
+        ctx.append(f"Stress: {sl}")
+    if (s := capture.get("sleepHours")) is not None:
+        ctx.append(f"Sleep: {s:.1f}h")
+    if (rhr := capture.get("rhr")) is not None:
+        ctx.append(f"RHR: {rhr:.0f} bpm")
+    if (hrv := capture.get("hrv")) is not None:
+        ctx.append(f"HRV: {hrv:.0f} ms")
+    if (st := capture.get("steps")) is not None:
+        ctx.append(f"Steps: {int(st):,}")
+    if ctx:
+        lines.append("Health context (NOT shown as raw numbers to users): " + " | ".join(ctx))
+        lines.append("")
+
+    lines.append("── User-facing copy (what the app shows) ──")
+    lines.append("")
+
+    def add(label: str, value) -> None:
+        if value:
+            lines.append(f"{label}: {value}")
+
+    add("Greeting",             capture.get("greetingText"))
+    add("Hero message",         capture.get("heroMessage"))
+    add("Friendly message",     capture.get("friendlyMessage"))
+    add("Focus insight",        capture.get("focusInsight"))
+    add("Check recommendation", capture.get("checkRecommendation"))
+    add("Recovery narrative",   capture.get("recoveryNarrative"))
+    add("Recovery action",      capture.get("recoveryAction"))
+    add("Positivity anchor",    capture.get("positivityAnchor"))
+
+    goals = capture.get("goals", [])
+    if goals:
+        lines.append("")
+        lines.append("Goals:")
+        for g in goals:
+            label  = g.get("label", "")
+            nudge  = g.get("nudgeText", "")
+            curr   = g.get("current")
+            tgt    = g.get("target")
+            if curr is not None and tgt is not None:
+                lines.append(f"  {label}: {curr:.0f} / {tgt:.0f} — \"{nudge}\"")
+            else:
+                lines.append(f"  {label}: \"{nudge}\"")
+
+    if headline := capture.get("guidanceHeadline"):
+        lines.append("")
+        add("Guidance headline", headline)
+        add("Guidance detail",   capture.get("guidanceDetail"))
+        if actions := capture.get("guidanceActions"):
+            lines.append(f"Suggested actions: {', '.join(actions)}")
+
+    if ch := capture.get("coachingHeroMessage"):
+        lines.append("")
+        add("Coaching hero", ch)
+    for i, insight in enumerate(capture.get("coachingInsights", []), 1):
+        lines.append(f"Coaching insight {i}: {insight}")
+
+    nudges = capture.get("nudges", [])
+    if nudges:
+        lines.append("")
+        lines.append("Nudges:")
+        for n in nudges:
+            lines.append(f"  \"{n.get('title', '')}\" — {n.get('description', '')}")
+
+    recs = capture.get("buddyRecs", [])
+    if recs:
+        lines.append("")
+        lines.append("Buddy recommendations:")
+        for r in recs:
+            lines.append(f"  \"{r.get('title', '')}\" — {r.get('message', '')}")
+
+    return "\n".join(lines)
 
 
 # ── JSON extraction ─────────────────────────────────────────────────────────
@@ -288,7 +385,7 @@ def build_multi_judge_result(
 
 def main():
     parser = argparse.ArgumentParser(description="Super Reviewer LLM Judge Runner")
-    parser.add_argument("--tier", default="tierB", choices=["tierB", "tierC"])
+    parser.add_argument("--tier", default="tierB", choices=["tierA", "tierB", "tierC"])
     parser.add_argument("--capture-dir", required=True, help="Dir with TierA capture JSONs")
     parser.add_argument("--results-dir", required=True, help="Output dir for JudgeResult JSONs")
     parser.add_argument("--rubric", required=True, help="Path to consolidated_rubric_v1.json")
@@ -356,12 +453,14 @@ def main():
                 continue
 
             system_prompt = SYSTEM_PROMPTS.get(judge_id, "You are a quality reviewer.")
+            text_snapshot = build_text_snapshot(capture_dict)
             user_message = (
                 "## App Text to Evaluate\n\n"
-                "The following JSON contains every piece of user-facing text shown in "
-                "Thump Heart Coach for a specific health scenario. Evaluate it as your "
-                "assigned persona.\n\n"
-                f"```json\n{capture_json}\n```\n\n"
+                "Below is every piece of user-facing copy shown in Thump Heart Coach "
+                "for a specific health scenario. The health context line shows the "
+                "underlying metrics — those numbers are NOT displayed raw to the user; "
+                "they inform the copy. Evaluate ONLY the labelled copy fields.\n\n"
+                f"{text_snapshot}\n\n"
                 "Score the criteria most relevant to your persona (CLR-001 through "
                 "CLR-010). Respond with JSON only. No prose outside the JSON object."
             )

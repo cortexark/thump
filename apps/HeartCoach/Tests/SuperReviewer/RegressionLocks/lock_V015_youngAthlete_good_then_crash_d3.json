@@ -1,0 +1,14 @@
+{
+  "captureID" : "youngAthlete_good_then_crash_d3_morning",
+  "criterionID" : "V-015",
+  "dayIndex" : 3,
+  "expectedVerdict" : "PASS",
+  "fixDescription" : "Added dailyGuidanceBudget(mode:) to AdviceComposer. fullRest/medicalCheck budget=2, lightRecovery=3. Budget trimmed at composition boundary via smartActionCap. View layer trims buddy recs using AdviceState.dailyActionBudget.",
+  "journeyID" : "good_then_crash",
+  "lockedAt" : "2026-03-17T00:00:00Z",
+  "lockedByCommit" : null,
+  "lockID" : "lock_V015_youngAthlete_good_then_crash_d3",
+  "personaName" : "youngAthlete",
+  "ruleID" : "V-015",
+  "timeStampLabel" : "morning"
+}

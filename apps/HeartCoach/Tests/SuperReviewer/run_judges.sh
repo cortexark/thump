@@ -7,8 +7,9 @@
 # own built-in auth.
 #
 # Usage:
-#   ./Tests/SuperReviewer/run_judges.sh [tierB|tierC]
+#   ./Tests/SuperReviewer/run_judges.sh [tierA|tierB|tierC]
 #
+# Tier A: 2 judges (Marcus, Priya)                — ~10 critical-day captures (every CI)
 # Tier B: 4 judges (Marcus, Priya, David, Jordan) — ~50 captures
 # Tier C: 6 judges (all personas)                 — ~200 captures
 
@@ -31,6 +32,11 @@ echo ""
 
 # ── Select config ─────────────────────────────────────────────────────────────
 case "$TIER" in
+    tierA)
+        SAMPLE=10
+        OUTPUT_SUBDIR="TierA_Primary"
+        XCODE_TEST="ThumpCoreTests/SuperReviewerTierALLMTests/testTierALLM_2judges_criticalDays"
+        ;;
     tierB)
         SAMPLE=50
         OUTPUT_SUBDIR="TierB"
@@ -42,7 +48,7 @@ case "$TIER" in
         XCODE_TEST="ThumpCoreTests/SuperReviewerTierCTests/testTierC_6judges_fullEvaluation"
         ;;
     *)
-        echo "Unknown tier: $TIER. Use 'tierB' or 'tierC'."
+        echo "Unknown tier: $TIER. Use 'tierA', 'tierB', or 'tierC'."
         exit 1
         ;;
 esac
