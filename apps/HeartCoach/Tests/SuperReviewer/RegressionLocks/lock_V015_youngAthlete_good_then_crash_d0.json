@@ -1,0 +1,14 @@
+{
+  "captureID" : "youngAthlete_good_then_crash_d0_morning",
+  "criterionID" : "V-015",
+  "dayIndex" : 0,
+  "expectedVerdict" : "PASS",
+  "fixDescription" : "Push-day parity lock: verifies budget does not over-trim action items on good-readiness days. pushDay budget=7 must not suppress valid coaching on normal days.",
+  "journeyID" : "good_then_crash",
+  "lockedAt" : "2026-03-17T00:00:00Z",
+  "lockedByCommit" : null,
+  "lockID" : "lock_V015_youngAthlete_good_then_crash_d0",
+  "personaName" : "youngAthlete",
+  "ruleID" : "V-015",
+  "timeStampLabel" : "morning"
+}
