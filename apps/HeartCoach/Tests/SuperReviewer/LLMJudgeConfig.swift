@@ -465,9 +465,20 @@ struct JudgeEvaluationResponse: Codable {
     let personaReaction: String?
 
     struct CriterionScore: Codable {
-        let score: Int
+        let score: Int          // null in partial judge responses → treated as 0
         let justification: String
         let suggestion: String?
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            // Judges sometimes return floats (e.g. 9.5) — decode as Double then round to Int
+            let raw = try c.decodeIfPresent(Double.self, forKey: .score) ?? 0
+            score         = Int(raw.rounded())
+            justification = try c.decodeIfPresent(String.self, forKey: .justification) ?? ""
+            suggestion    = try c.decodeIfPresent(String.self, forKey: .suggestion)
+        }
+
+        enum CodingKeys: String, CodingKey { case score, justification, suggestion }
     }
 
     enum CodingKeys: String, CodingKey {

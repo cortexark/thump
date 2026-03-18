@@ -56,9 +56,15 @@ struct LLMJudgeRunner {
             ).filter { $0.pathExtension == "json" }
 
             for fileURL in files {
-                if let data = try? Data(contentsOf: fileURL),
-                   let result = try? decoder.decode(MultiJudgeResult.self, from: data) {
+                guard let data = try? Data(contentsOf: fileURL) else {
+                    print("[SuperReviewer] ⚠️ Could not read file: \(fileURL.lastPathComponent)")
+                    continue
+                }
+                do {
+                    let result = try decoder.decode(MultiJudgeResult.self, from: data)
                     results.append(result)
+                } catch {
+                    print("[SuperReviewer] ⚠️ Decode failed: \(fileURL.lastPathComponent) — \(error)")
                 }
             }
         } catch {
