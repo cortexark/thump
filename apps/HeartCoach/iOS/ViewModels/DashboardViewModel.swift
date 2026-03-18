@@ -77,6 +77,10 @@ final class DashboardViewModel: ObservableObject {
     private var localStore: LocalStore
     private var notificationService: NotificationService?
 
+    /// Centralized engine coordinator (used when ConfigService.enableCoordinator is true).
+    /// Shared instance injected via bind() from the view layer.
+    private var coordinator: DailyEngineCoordinator?
+
     // MARK: - Private Properties
 
     /// Number of historical days to fetch for the trend engine.
@@ -107,11 +111,13 @@ final class DashboardViewModel: ObservableObject {
     func bind(
         healthDataProvider: any HealthDataProviding,
         localStore: LocalStore,
-        notificationService: NotificationService? = nil
+        notificationService: NotificationService? = nil,
+        coordinator: DailyEngineCoordinator? = nil
     ) {
         self.healthDataProvider = healthDataProvider
         self.localStore = localStore
         self.notificationService = notificationService
+        self.coordinator = coordinator
         bindToLocalStore(localStore)
     }
 
@@ -121,6 +127,11 @@ final class DashboardViewModel: ObservableObject {
     /// This is the primary data flow method called on appearance and
     /// pull-to-refresh. Errors are caught and surfaced via `errorMessage`.
     func refresh() async {
+        if ConfigService.enableCoordinator {
+            await refreshViaCoordinator()
+            return
+        }
+
         let refreshStart = CFAbsoluteTimeGetCurrent()
         AppLogger.engine.info("Dashboard refresh started")
         isLoading = true
@@ -323,6 +334,57 @@ final class DashboardViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             isLoading = false
         }
+    }
+
+    // MARK: - Coordinator Path
+
+    /// Refreshes the dashboard using the centralized DailyEngineCoordinator.
+    /// All engines run exactly once in DAG order through the coordinator.
+    private func refreshViaCoordinator() async {
+        let coord = coordinator ?? DailyEngineCoordinator()
+        if coordinator == nil { coordinator = coord }
+        coord.bind(healthDataProvider: healthDataProvider, localStore: localStore)
+        await coord.refresh()
+
+        guard let bundle = coord.bundle else {
+            isLoading = coord.isLoading
+            errorMessage = coord.errorMessage
+            return
+        }
+
+        // Map bundle fields to existing @Published properties
+        assessment = bundle.assessment
+        todaySnapshot = bundle.snapshot
+        stressResult = bundle.stressResult
+        readinessResult = bundle.readinessResult
+        bioAgeResult = bundle.bioAgeResult
+        coachingReport = bundle.coachingReport
+        zoneAnalysis = bundle.zoneAnalysis
+        buddyRecommendations = bundle.buddyRecommendations
+
+        // Persist snapshot + assessment
+        let stored = StoredSnapshot(snapshot: bundle.snapshot, assessment: bundle.assessment)
+        localStore.appendSnapshot(stored)
+
+        // Streak, nudge completion, check-in, weekly trend
+        updateStreak()
+        evaluateNudgeCompletion(nudge: bundle.assessment.dailyNudge, snapshot: bundle.snapshot)
+        computeWeeklyTrend(history: bundle.history)
+        loadTodayCheckIn()
+
+        // Notifications
+        scheduleNotificationsIfNeeded(assessment: bundle.assessment, history: bundle.history)
+
+        // Diagnostics
+        writeDiagnosticSnapshot(assessment: bundle.assessment, snapshot: bundle.snapshot)
+
+        // Telemetry
+        if let trace = bundle.pipelineTrace {
+            EngineTelemetryService.shared.uploadTrace(trace)
+        }
+
+        isLoading = false
+        errorMessage = nil
     }
 
     /// Marks today's nudge as completed and updates the local store.

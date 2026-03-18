@@ -1,0 +1,1177 @@
+{
+  "version": "1.0",
+  "total_criteria": 48,
+  "max_score": 240,
+  "scoring_range": [1, 5],
+  "source_agents": ["customer", "engineer", "qae", "report_quality"],
+  "hard_fail_dimensions": ["RPT-001", "RPT-003"],
+  "hard_fail_threshold": 4,
+  "audience_gate_dimensions": ["RPT-004", "RPT-005"],
+  "audience_gate_threshold": 3,
+  "weighted_pass_threshold": 4.0,
+  "groups": {
+    "customer": {
+      "perspective": "Non-expert consumer who does not know heart rate terminology",
+      "criteria_count": 13,
+      "criteria_ids": ["CLR-001", "CLR-002", "CLR-003", "CLR-004", "CLR-005", "CLR-006", "CLR-007", "CLR-008", "CLR-009", "CLR-010", "CLR-011", "CLR-012", "CLR-013"]
+    },
+    "engineer": {
+      "perspective": "Software engineer validating data-to-text correctness and deterministic behavior",
+      "criteria_count": 12,
+      "criteria_ids": ["ENG-001", "ENG-002", "ENG-003", "ENG-004", "ENG-005", "ENG-006", "ENG-007", "ENG-008", "ENG-009", "ENG-010", "ENG-011", "ENG-012"]
+    },
+    "qae": {
+      "perspective": "QA engineer validating completeness, safety, and regression behavior",
+      "criteria_count": 12,
+      "criteria_ids": ["QAE-001", "QAE-002", "QAE-003", "QAE-004", "QAE-005", "QAE-006", "QAE-007", "QAE-008", "QAE-009", "QAE-010", "QAE-011", "QAE-012"]
+    },
+    "report_quality": {
+      "perspective": "Holistic report quality: outcome correctness, safety, audience fit, and usability",
+      "criteria_count": 11,
+      "criteria_ids": ["RPT-001", "RPT-002", "RPT-003", "RPT-004", "RPT-005", "RPT-006", "RPT-007", "RPT-008", "RPT-009", "RPT-010", "RPT-011"],
+      "scoring_rules": {
+        "weighted_pass_threshold": 4.0,
+        "hard_fail": "RPT-001 or RPT-003 < 4 → sample fails regardless of other scores",
+        "audience_gate": "RPT-004 or RPT-005 < 3 → flagged as needs-revision-for-audience-fit",
+        "audience_fit_score": "min(RPT-004, RPT-005)"
+      }
+    }
+  },
+  "criteria": [
+    {
+      "id": "CLR-001",
+      "source_agent": "customer",
+      "category": "plain_language",
+      "description": "Plain language - no medical jargon (HRV, SDNN, RHR, VO2, parasympathetic, bpm in context)",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Multiple jargon terms appear with no explanation; text reads like a medical report",
+        "2": "One or two jargon terms slip through; most text is accessible",
+        "3": "No raw jargon but uses semi-technical phrasing that may confuse a layperson",
+        "4": "All language is plain; one minor phrasing could be simpler",
+        "5": "Entirely conversational, anyone could understand on first read"
+      },
+      "fail_examples": [
+        "Your HRV dropped 15ms below your 7-day baseline",
+        "SDNN variance is elevated, parasympathetic tone is low",
+        "RHR 78bpm, VO2max trending down this week"
+      ],
+      "pass_examples": [
+        "Your body's recovery signal dipped a bit overnight",
+        "Heart rhythm patterns suggest a lighter day would help",
+        "Sleep score dropping due to low hours"
+      ]
+    },
+    {
+      "id": "CLR-002",
+      "source_agent": "customer",
+      "category": "emotional_safety",
+      "description": "Emotional safety - never blame the user for their metrics or behavior",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Directly blames or shames the user for poor metrics",
+        "2": "Implies fault through phrasing like 'you only' or 'you didn't'",
+        "3": "Neutral but misses the chance to reframe objectively",
+        "4": "Mostly objective framing with one borderline phrase",
+        "5": "Entirely objective, data-driven framing with no blame or guilt"
+      },
+      "fail_examples": [
+        "You didn't sleep enough last night",
+        "You only got 4 hours of sleep last night",
+        "You should have gone to bed earlier"
+      ],
+      "pass_examples": [
+        "Sleep score dropping due to low hours",
+        "Recovery is lower today - rest is the best lever right now",
+        "Prioritize rest tonight - sleep is the biggest lever for recovery."
+      ]
+    },
+    {
+      "id": "CLR-003",
+      "source_agent": "customer",
+      "category": "actionability",
+      "description": "Actionability - every recommendation says what to DO, not just what is wrong",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "States a problem with no suggestion at all",
+        "2": "Vaguely hints at action but nothing concrete",
+        "3": "Provides a general direction but no specific action",
+        "4": "Gives a clear action with minor ambiguity",
+        "5": "Every recommendation includes a specific, doable action"
+      },
+      "fail_examples": [
+        "Your recovery is low today",
+        "Stress levels are elevated",
+        "Sleep quality has been declining"
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Try a 10-minute walk to ease into the day",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "CLR-004",
+      "source_agent": "customer",
+      "category": "greeting_appropriateness",
+      "description": "Greeting appropriateness - matches the time of day",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Greeting contradicts the time of day (Good morning at 10pm)",
+        "2": "Greeting is generic and ignores time completely",
+        "3": "Greeting is time-neutral but misses an opportunity to be warm",
+        "4": "Greeting matches time of day with minor awkwardness",
+        "5": "Greeting naturally matches the time of day and feels warm"
+      },
+      "fail_examples": [
+        "Good morning! at 9:00 PM",
+        "Rise and shine! at 11:00 PM",
+        "Time to wind down at 7:00 AM"
+      ],
+      "pass_examples": [
+        "Good morning - here's how last night went",
+        "Evening check-in: winding down looks smart tonight",
+        "Afternoon update: solid day so far"
+      ]
+    },
+    {
+      "id": "CLR-005",
+      "source_agent": "customer",
+      "category": "emoji_mood_coherence",
+      "description": "Emoji and buddy mood coherence - mood indicator matches the overall tone of the text",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Happy emoji/mood paired with alarming or negative text",
+        "2": "Mood is mismatched in a noticeable way",
+        "3": "Mood is neutral and doesn't conflict but doesn't reinforce either",
+        "4": "Mood mostly matches with one minor inconsistency",
+        "5": "Mood perfectly reinforces the text tone"
+      },
+      "fail_examples": [
+        "Cheerful buddy icon next to 'Recovery is critically low, rest immediately'",
+        "Sad mood indicator with 'Great day! You crushed your goals'",
+        "Celebratory emoji on a rest-mode warning"
+      ],
+      "pass_examples": [
+        "Calm buddy mood with 'Take it easy today, recovery is building'",
+        "Energetic mood with 'Strong recovery - push yourself today'",
+        "Neutral mood with 'Decent recovery. A moderate effort works well today.'"
+      ]
+    },
+    {
+      "id": "CLR-006",
+      "source_agent": "customer",
+      "category": "goal_motivation",
+      "description": "Goal motivation - goal text encourages progress, never guilts the user",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Goal text shames the user for not hitting targets",
+        "2": "Goal text implies disappointment or failure",
+        "3": "Goal text is factual but flat, no encouragement",
+        "4": "Goal text is encouraging with one minor guilt-adjacent phrase",
+        "5": "Goal text is motivating, forward-looking, and blame-free"
+      },
+      "fail_examples": [
+        "You failed to hit your step goal again",
+        "Only 2,000 of 10,000 steps - not enough effort",
+        "You're being lazy, get moving"
+      ],
+      "pass_examples": [
+        "3,200 steps down, 6,800 to go - a short walk gets you closer",
+        "Rest day adjusted your goal - even small movement counts",
+        "Solid start. Another 4,000 steps and you'll hit your target"
+      ]
+    },
+    {
+      "id": "CLR-007",
+      "source_agent": "customer",
+      "category": "recovery_framing",
+      "description": "Recovery framing - uses objective data framing, never subjective blame",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Recovery text directly blames user choices for poor recovery",
+        "2": "Recovery text implies user is at fault through word choice",
+        "3": "Recovery text is neutral but leans toward subjective framing",
+        "4": "Recovery text is mostly objective with one borderline phrase",
+        "5": "Recovery text is entirely data-driven and constructive"
+      },
+      "fail_examples": [
+        "You wrecked your recovery by staying up late",
+        "Bad recovery because you didn't rest enough",
+        "Your poor choices led to low recovery"
+      ],
+      "pass_examples": [
+        "Recovery is lower today - sleep duration was the main factor",
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "CLR-008",
+      "source_agent": "customer",
+      "category": "stress_sensitivity",
+      "description": "Stress sensitivity - stress-related text does not cause MORE stress",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Stress text is alarming and likely to increase user anxiety",
+        "2": "Stress text uses urgent language that could worry the user",
+        "3": "Stress text is factual but cold, misses reassurance",
+        "4": "Stress text is calming with one slightly anxious phrase",
+        "5": "Stress text is calming, normalizing, and provides a gentle next step"
+      },
+      "fail_examples": [
+        "WARNING: Your stress levels are dangerously high!",
+        "Your body is under extreme stress, this is concerning",
+        "Stress has been critically elevated for 3 days straight"
+      ],
+      "pass_examples": [
+        "Stress patterns are a bit elevated - a few deep breaths can help",
+        "Your body's been working hard. A calm evening helps reset things",
+        "Stress is higher than usual. A short walk or quiet time helps"
+      ]
+    },
+    {
+      "id": "CLR-009",
+      "source_agent": "customer",
+      "category": "cross_page_consistency",
+      "description": "Consistency across pages - dashboard message doesn't contradict stress page or insights",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Dashboard says 'great day' while stress page says 'high stress warning'",
+        "2": "Noticeable contradiction between two pages",
+        "3": "Pages don't contradict but tell very different stories",
+        "4": "Pages are consistent with one minor tone mismatch",
+        "5": "All pages tell a coherent story with consistent tone and data"
+      },
+      "fail_examples": [
+        "Dashboard: 'Excellent recovery!' / Stress: 'Your body is overwhelmed'",
+        "Insights: 'Great sleep trend' / Dashboard: 'Sleep has been poor'",
+        "Goals: 'Push hard today' / Recovery: 'Take it easy, recovery is low'"
+      ],
+      "pass_examples": [
+        "Dashboard: 'Solid recovery' / Stress: 'Manageable stress' / Goals: 'Moderate effort today'",
+        "Dashboard: 'Rest day' / Stress: 'Take it easy' / Goals: 'Adjusted goals for recovery'",
+        "All pages reflect improving trend with encouraging tone"
+      ]
+    },
+    {
+      "id": "CLR-010",
+      "source_agent": "customer",
+      "category": "first_impression",
+      "description": "First impression - would a non-expert understand what to do within 5 seconds?",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Text is confusing, dense, or requires domain knowledge to parse",
+        "2": "Text is somewhat clear but requires re-reading",
+        "3": "Main point is visible but action isn't immediately obvious",
+        "4": "Clear message and action with minor complexity",
+        "5": "Instantly clear what the situation is and what to do"
+      },
+      "fail_examples": [
+        "Based on multi-day HRV trend analysis, parasympathetic reactivation suggests modified periodization",
+        "Composite readiness index factoring sleep, strain, and recovery yields a moderate recommendation",
+        "Your 7-day rolling SDNN average is within normal variance"
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Decent recovery. A moderate effort works well today.",
+        "Strong day ahead - your body is ready for a solid workout"
+      ]
+    },
+    {
+      "id": "ENG-001",
+      "source_agent": "engineer",
+      "category": "data_text_consistency",
+      "description": "Data-text consistency - if sleep=2h, text should reflect severe sleep deprivation",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text completely contradicts the data (e.g. 'Great sleep!' when sleep=2h)",
+        "2": "Text understates or overstates the data significantly",
+        "3": "Text roughly matches data but misses severity or nuance",
+        "4": "Text accurately reflects data with one minor mismatch",
+        "5": "Text perfectly mirrors the severity and meaning of the underlying data"
+      },
+      "fail_examples": [
+        "Sleep=2h: 'Solid night of rest, you're well recovered'",
+        "Steps=500: 'Great activity day, keep it up!'",
+        "Readiness=20: 'You're primed for a big workout'"
+      ],
+      "pass_examples": [
+        "Sleep=2h: 'Very low sleep last night - prioritize rest today'",
+        "Steps=500: 'Light movement day. Even a short walk adds up'",
+        "Readiness=20: 'Recovery is low. Take it easy and let your body reset'"
+      ]
+    },
+    {
+      "id": "ENG-002",
+      "source_agent": "engineer",
+      "category": "score_mode_alignment",
+      "description": "Score-mode alignment - readiness score matches guidance mode (low score produces rest mode)",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Mode completely mismatches score (push mode at readiness=15)",
+        "2": "Mode is wrong by one level (moderate mode at readiness=15)",
+        "3": "Mode direction is correct but intensity is off",
+        "4": "Mode matches score with minor calibration issue",
+        "5": "Mode perfectly corresponds to the readiness score range"
+      },
+      "fail_examples": [
+        "Readiness=15, mode=push: 'Time to go all out today!'",
+        "Readiness=90, mode=rest: 'Take a full rest day'",
+        "Readiness=30, mode=moderate: 'A solid moderate effort is great today'"
+      ],
+      "pass_examples": [
+        "Readiness=15, mode=rest: 'Prioritize rest tonight - sleep is the biggest lever for recovery.'",
+        "Readiness=70, mode=moderate: 'Decent recovery. A moderate effort works well today.'",
+        "Readiness=90, mode=push: 'Strong recovery - your body is ready to push today'"
+      ]
+    },
+    {
+      "id": "ENG-003",
+      "source_agent": "engineer",
+      "category": "monotonic_graduation",
+      "description": "Monotonic graduation - as metrics worsen day-over-day, text severity increases",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text severity decreases while metrics worsen across days",
+        "2": "Text severity stays flat despite significant metric decline",
+        "3": "Text severity increases but not proportionally to metric decline",
+        "4": "Text severity tracks metric decline with minor lag",
+        "5": "Text severity smoothly and proportionally tracks metric changes"
+      },
+      "fail_examples": [
+        "Day1 sleep=6h: 'Rest up' then Day3 sleep=3h: 'Looking good!'",
+        "Day1 stress=high: 'Take it easy' then Day5 stress=critical: 'Manageable stress today'",
+        "Declining readiness over 5 days but text stays 'Decent recovery' every day"
+      ],
+      "pass_examples": [
+        "Day1 sleep=6h: 'A bit less sleep' then Day3 sleep=3h: 'Very low sleep - rest is essential'",
+        "Gradually escalating concern as stress stays elevated across days",
+        "Recovery text shifts from 'moderate day' to 'take it easy' to 'full rest' as readiness drops"
+      ]
+    },
+    {
+      "id": "ENG-004",
+      "source_agent": "engineer",
+      "category": "no_stale_recommendations",
+      "description": "No stale recommendations - if day 5 is improving, don't show day 3's 'rest up' text",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Recommendations clearly reference a past state that no longer applies",
+        "2": "Recommendations lag behind current data by multiple days",
+        "3": "Recommendations are slightly behind current trajectory",
+        "4": "Recommendations match current data with slight delay in tone shift",
+        "5": "Recommendations precisely reflect the current day's data and trajectory"
+      },
+      "fail_examples": [
+        "Day 5 readiness=80 but text says 'Still recovering, keep resting'",
+        "Metrics improved 3 days ago but text still warns about decline",
+        "Sleep normalized but text says 'Sleep has been poor recently'"
+      ],
+      "pass_examples": [
+        "Day 5 readiness=80: 'Recovery is bouncing back - moderate effort looks good'",
+        "Improving sleep trend: 'Sleep is trending up. Keep the momentum going'",
+        "After 3 bad days then 2 good: 'Nice rebound. Your body is responding well'"
+      ]
+    },
+    {
+      "id": "ENG-005",
+      "source_agent": "engineer",
+      "category": "number_accuracy",
+      "description": "Number accuracy - step remaining = target minus current, sleep hours match input data",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Numbers in text are clearly wrong (math errors, wrong values)",
+        "2": "One number is incorrect or inconsistent with input",
+        "3": "Numbers are approximately correct but imprecise",
+        "4": "All numbers correct with minor rounding inconsistency",
+        "5": "All numbers are exactly correct and consistent with input data"
+      },
+      "fail_examples": [
+        "Steps=3000, target=10000: 'Only 5,000 steps to go' (should be 7,000)",
+        "Sleep=5.5h displayed as 'about 7 hours of sleep'",
+        "Goal=8000 steps, current=6000: '4,000 remaining'"
+      ],
+      "pass_examples": [
+        "Steps=3000, target=10000: '7,000 steps to go - a walk gets you closer'",
+        "Sleep=5.5h: 'About 5 and a half hours of sleep last night'",
+        "Goal=8000, current=6000: '2,000 more steps to hit your goal'"
+      ]
+    },
+    {
+      "id": "ENG-006",
+      "source_agent": "engineer",
+      "category": "cross_page_data_consistency",
+      "description": "Cross-page data consistency - same metric appears the same on all pages",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Same metric shows different values on different pages",
+        "2": "Metric interpretation conflicts between pages",
+        "3": "Values match but characterization differs (e.g. 'good' vs 'poor' for same value)",
+        "4": "Consistent values and interpretation with minor tone difference",
+        "5": "Identical values and consistent interpretation across all pages"
+      },
+      "fail_examples": [
+        "Dashboard shows sleep=7h, insights page says sleep=5h",
+        "Dashboard calls recovery 'excellent', stress page calls it 'concerning'",
+        "Step count differs between goal card and activity summary"
+      ],
+      "pass_examples": [
+        "Sleep=6h shown consistently on dashboard, insights, and recovery sections",
+        "Recovery characterized as 'moderate' across all page references",
+        "Step count matches between goal progress and activity summary"
+      ]
+    },
+    {
+      "id": "ENG-007",
+      "source_agent": "engineer",
+      "category": "null_handling",
+      "description": "Null handling - nil metrics produce graceful text, not crashes or blanks",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Nil metric causes blank text, 'nil', 'N/A', or visible error",
+        "2": "Nil metric produces awkward or broken sentence",
+        "3": "Nil metric produces generic placeholder that feels out of place",
+        "4": "Nil metric produces reasonable fallback text with minor awkwardness",
+        "5": "Nil metric produces natural, context-appropriate fallback text"
+      },
+      "fail_examples": [
+        "Sleep=nil: '' (empty string)",
+        "HRV=nil: 'Your HRV is nil today'",
+        "Steps=nil: 'You took N/A steps'"
+      ],
+      "pass_examples": [
+        "Sleep=nil: 'No sleep data available yet - wear your watch tonight'",
+        "HRV=nil: 'Waiting for enough heart data to show your recovery trend'",
+        "Steps=nil: 'Step tracking starts once we get data from your watch'"
+      ]
+    },
+    {
+      "id": "ENG-008",
+      "source_agent": "engineer",
+      "category": "edge_case_text",
+      "description": "Edge case text - extreme values (0 sleep, 200 RHR) produce sensible text",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Extreme value produces nonsensical or dangerous recommendation",
+        "2": "Extreme value produces text that ignores the severity",
+        "3": "Text acknowledges the extreme but response is generic",
+        "4": "Text correctly identifies the extreme with appropriate urgency",
+        "5": "Text handles the extreme gracefully, with appropriate concern and safe guidance"
+      },
+      "fail_examples": [
+        "Sleep=0h: 'Decent night of sleep'",
+        "RHR=200: 'Heart rate is a little elevated today'",
+        "Steps=0, day 5 in a row: 'Keep up the activity!'"
+      ],
+      "pass_examples": [
+        "Sleep=0h: 'No sleep recorded. Rest is essential today - take it very easy'",
+        "RHR=200: 'Unusually high heart rate detected. If you feel unwell, consult a doctor'",
+        "Steps=0 for days: 'Activity has been very low. Even brief movement helps'"
+      ]
+    },
+    {
+      "id": "ENG-009",
+      "source_agent": "engineer",
+      "category": "mode_goal_coherence",
+      "description": "Mode-goal coherence - rest mode doesn't show ambitious step goals",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Rest mode paired with aggressive goals (10k step push)",
+        "2": "Mode and goal direction conflict noticeably",
+        "3": "Mode and goal don't conflict but aren't well aligned",
+        "4": "Mode and goal are aligned with minor inconsistency",
+        "5": "Mode and goal are perfectly coherent and mutually reinforcing"
+      },
+      "fail_examples": [
+        "Mode=rest: 'Aim for 12,000 steps today!'",
+        "Mode=push: 'Take it easy, maybe skip the workout'",
+        "Mode=rest: 'Try to beat yesterday's step count'"
+      ],
+      "pass_examples": [
+        "Mode=rest: 'Adjusted goal: gentle movement. Even 2,000 steps count'",
+        "Mode=push: 'Strong day ahead - aim for your full step target'",
+        "Mode=moderate: 'Decent recovery. A moderate effort works well today.'"
+      ]
+    },
+    {
+      "id": "ENG-010",
+      "source_agent": "engineer",
+      "category": "determinism",
+      "description": "Determinism - same input always produces same output",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Same input produces completely different text across runs",
+        "2": "Same input produces noticeably different phrasing or recommendations",
+        "3": "Same input produces similar but not identical text",
+        "4": "Same input produces identical text with minor formatting variance",
+        "5": "Same input always produces byte-identical output"
+      },
+      "fail_examples": [
+        "Run 1: 'Take it easy' / Run 2: 'Push hard today' for identical inputs",
+        "Same persona day produces different mode assignments across runs",
+        "Greeting changes between runs despite same time-of-day input"
+      ],
+      "pass_examples": [
+        "Identical inputs always produce identical greeting, mode, and recommendations",
+        "Re-running the same persona day produces byte-for-byte identical JSON",
+        "Deterministic engine with no random components"
+      ]
+    },
+    {
+      "id": "QAE-001",
+      "source_agent": "qae",
+      "category": "coverage_completeness",
+      "description": "Coverage completeness - all pages have non-empty text for every field",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Multiple pages or fields are missing text entirely",
+        "2": "One page is missing text or several fields are empty",
+        "3": "All pages have text but one or two fields are suspiciously generic",
+        "4": "All fields populated with minor placeholder-like text in one spot",
+        "5": "Every page and field has meaningful, context-specific text"
+      },
+      "fail_examples": [
+        "Dashboard greeting is empty, insights body is blank",
+        "Stress page has text but recovery section shows nothing",
+        "Goal card shows 'N/A' instead of actual goal text"
+      ],
+      "pass_examples": [
+        "All pages - dashboard, stress, insights, goals - have populated text",
+        "Every card, greeting, body, and recommendation field contains content",
+        "Even nil-data scenarios produce meaningful fallback text"
+      ]
+    },
+    {
+      "id": "QAE-002",
+      "source_agent": "qae",
+      "category": "no_judgment_language",
+      "description": "No judgment language - no 'lazy', 'failure', 'should have', 'only got', 'not enough' when referring to the user",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Multiple judgment words present directed at the user",
+        "2": "One clear judgment word or phrase directed at the user",
+        "3": "No direct judgment but tone implies user fault",
+        "4": "Entirely objective with one borderline word choice",
+        "5": "Zero judgment language; all framing is objective and data-driven"
+      },
+      "fail_examples": [
+        "You're being lazy, get moving",
+        "You only got 4 hours of sleep - that's not enough",
+        "You should have rested more yesterday, now recovery is poor"
+      ],
+      "pass_examples": [
+        "Sleep score dropping due to low hours",
+        "Recovery is lower today - rest is the best lever right now",
+        "Activity has been light. Even a short walk adds momentum"
+      ]
+    },
+    {
+      "id": "QAE-003",
+      "source_agent": "qae",
+      "category": "no_raw_metrics_leaking",
+      "description": "No raw metrics leaking - no 'HRV: 45ms', 'RHR: 78bpm' in coaching text",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Raw metric values with units appear in coaching text",
+        "2": "One raw metric value leaks into user-facing text",
+        "3": "No raw values but metric names appear without explanation",
+        "4": "All metrics are translated to plain language with one minor leak",
+        "5": "Zero raw metrics in coaching text; all data is translated to natural language"
+      },
+      "fail_examples": [
+        "Your HRV: 45ms is below your 7-day average of 52ms",
+        "RHR: 78bpm, trending up from 72bpm last week",
+        "SDNN dropped to 38ms overnight"
+      ],
+      "pass_examples": [
+        "Your body's recovery signal is a bit lower than your recent average",
+        "Resting heart patterns suggest taking it easy today",
+        "Sleep score dropping due to low hours"
+      ]
+    },
+    {
+      "id": "QAE-004",
+      "source_agent": "qae",
+      "category": "time_of_day_correctness",
+      "description": "Time-of-day correctness - greeting matches hour, nudges appropriate for time",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Greeting or nudge clearly wrong for the time (bedtime nudge at 7AM)",
+        "2": "One time-sensitive element is mismatched",
+        "3": "Time elements are generic rather than wrong",
+        "4": "All time elements correct with one slightly off timing",
+        "5": "Greeting and all nudges perfectly match the time of day"
+      },
+      "fail_examples": [
+        "8:00 AM: 'Time to wind down for bed'",
+        "11:00 PM: 'Get up and start moving!'",
+        "6:00 AM: 'Hope you had a great afternoon'"
+      ],
+      "pass_examples": [
+        "8:00 AM: 'Good morning - here's how last night went'",
+        "2:00 PM: 'Afternoon check-in: staying on track'",
+        "9:00 PM: 'Evening wind-down: tomorrow starts with tonight's rest'"
+      ]
+    },
+    {
+      "id": "QAE-005",
+      "source_agent": "qae",
+      "category": "accessibility_text_present",
+      "description": "Accessibility text present - all captured fields have non-empty content",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Multiple fields return empty strings or whitespace-only content",
+        "2": "One field is empty or whitespace-only",
+        "3": "All fields have content but some are just punctuation or fragments",
+        "4": "All fields have meaningful content with one minor gap",
+        "5": "Every field has complete, readable, accessible text"
+      },
+      "fail_examples": [
+        "Greeting field is '' (empty string)",
+        "Recovery body text is '.' (just punctuation)",
+        "Goal subtitle contains only whitespace"
+      ],
+      "pass_examples": [
+        "All fields contain at least one complete sentence",
+        "Greeting, body, subtitle, and recommendation fields all populated",
+        "Even low-data scenarios produce readable fallback content"
+      ]
+    },
+    {
+      "id": "QAE-006",
+      "source_agent": "qae",
+      "category": "text_length_bounds",
+      "description": "Text length bounds - no text > 300 chars, no text < 5 chars (except nil-allowed fields)",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Multiple fields exceed 300 chars or are under 5 chars",
+        "2": "One field is clearly out of bounds",
+        "3": "All fields within bounds but one is borderline (295+ chars)",
+        "4": "All fields comfortably within bounds with good density",
+        "5": "All fields are well-sized: concise, complete, within bounds"
+      },
+      "fail_examples": [
+        "Recovery body is 450 characters of rambling text",
+        "Greeting is 3 characters: 'Hi.'",
+        "Insight text is a 500-character paragraph"
+      ],
+      "pass_examples": [
+        "All text fields between 20 and 200 characters",
+        "Greeting is warm and brief (30-60 chars)",
+        "Body text is informative without being verbose (80-250 chars)"
+      ]
+    },
+    {
+      "id": "QAE-007",
+      "source_agent": "qae",
+      "category": "no_duplicate_text",
+      "description": "No duplicate text - adjacent sections don't repeat the same sentence",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Same sentence appears verbatim in multiple adjacent sections",
+        "2": "Near-duplicate sentences in adjacent sections",
+        "3": "Similar phrasing in adjacent sections but not identical",
+        "4": "All sections have unique text with minor thematic overlap",
+        "5": "Every section has distinctly different text with no repetition"
+      },
+      "fail_examples": [
+        "Greeting: 'Take it easy today' / Body: 'Take it easy today, recovery is low'",
+        "Goal text and recovery text contain the same sentence verbatim",
+        "Dashboard and insights show identical recommendation text"
+      ],
+      "pass_examples": [
+        "Greeting sets the tone, body explains why, recommendation says what to do",
+        "Each section adds new information without repeating previous sections",
+        "Recovery and goals reference the same theme but with different wording"
+      ]
+    },
+    {
+      "id": "QAE-008",
+      "source_agent": "qae",
+      "category": "journey_regression",
+      "description": "Journey regression - improving metrics produce improving text over days",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text gets worse or stays alarming as metrics improve over days",
+        "2": "Text fails to acknowledge improvement for multiple days",
+        "3": "Text slowly catches up but lags behind actual improvement",
+        "4": "Text tracks improvement with one day of lag",
+        "5": "Text immediately and accurately reflects metric improvement trajectory"
+      },
+      "fail_examples": [
+        "Sleep improving day 3-5 but text still says 'Sleep has been poor'",
+        "Readiness recovering but mode stays 'rest' for 3 extra days",
+        "Stress dropping but text keeps saying 'Elevated stress patterns'"
+      ],
+      "pass_examples": [
+        "Day 3 sleep improves: 'Sleep is trending up. Keep the momentum going'",
+        "Readiness climbing: text shifts from 'rest' to 'moderate effort looks good'",
+        "Stress normalizing: 'Stress patterns settling down - nice recovery'"
+      ]
+    },
+    {
+      "id": "QAE-009",
+      "source_agent": "qae",
+      "category": "persona_appropriateness",
+      "description": "Persona appropriateness - text doesn't assume fitness level user doesn't have",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Text assumes athlete-level fitness for a sedentary persona or vice versa",
+        "2": "Text makes one incorrect fitness assumption",
+        "3": "Text is generic enough to not offend but misses persona specifics",
+        "4": "Text mostly matches persona with one minor assumption",
+        "5": "Text perfectly calibrated to the persona's fitness level and context"
+      },
+      "fail_examples": [
+        "SedentarySenior: 'Time for your daily 5K run!'",
+        "TeenAthlete: 'Consider starting light, like a 5-minute walk'",
+        "ObeseSedentary: 'Push for a personal best today!'"
+      ],
+      "pass_examples": [
+        "SedentarySenior: 'A gentle walk around the block is a great start'",
+        "TeenAthlete: 'Strong recovery - your body can handle a solid session'",
+        "ObeseSedentary: 'Every bit of movement counts. Start with what feels good'"
+      ]
+    },
+    {
+      "id": "QAE-010",
+      "source_agent": "qae",
+      "category": "medical_safety",
+      "description": "Medical safety - no diagnostic claims, no treatment suggestions, includes disclaimers where appropriate",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text makes diagnostic claims or prescribes treatment",
+        "2": "Text strongly implies a diagnosis or specific medical action",
+        "3": "Text is medically neutral but misses a disclaimer where one would help",
+        "4": "Text is safe with appropriate hedging and one minor gap",
+        "5": "Zero diagnostic claims, no treatment advice, appropriate disclaimers present"
+      },
+      "fail_examples": [
+        "You may have sleep apnea based on your patterns",
+        "Take a beta-blocker if your heart rate stays this high",
+        "Your arrhythmia is getting worse"
+      ],
+      "pass_examples": [
+        "Unusually high heart rate detected. If you feel unwell, consult a doctor",
+        "Patterns suggest your body needs more rest. This is not medical advice",
+        "Prioritize rest tonight - sleep is the biggest lever for recovery."
+      ]
+    },
+    {
+      "id": "CLR-011",
+      "source_agent": "customer",
+      "category": "trend_narrative",
+      "description": "Trend narrative — when week data is available, text conveys trajectory from the past, not just a today snapshot",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text gives only today's number with zero reference to how it got there",
+        "2": "Text hints at history with a vague word like 'recently' but no direction",
+        "3": "Text references the past but trajectory direction is unclear",
+        "4": "Text clearly names the trajectory with one minor phrasing gap",
+        "5": "Text grounds today's state in a clear week-long narrative the user can feel"
+      },
+      "fail_examples": [
+        "Recovery is low today (no context of how it got there)",
+        "Sleep was 5 hours (was this the same all week?)",
+        "Stress is elevated (is it getting better or worse?)"
+      ],
+      "pass_examples": [
+        "Sleep has been building back up all week. Tonight keeps the streak going.",
+        "Recovery has been slipping over recent days. Rest is the right call today.",
+        "Stress patterns have been settling down since Wednesday. Keep the calm momentum."
+      ]
+    },
+    {
+      "id": "CLR-012",
+      "source_agent": "customer",
+      "category": "dual_audience_layering",
+      "description": "Dual-audience layering — the same sentence works for a layman (plain outcome) and an expert (can infer data depth) without jargon being visible",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "Text is either pure jargon (layman lost) or so stripped down the expert learns nothing",
+        "2": "Text serves one audience but clearly fails the other",
+        "3": "Text is safe for both but neither audience gets real value",
+        "4": "Both audiences served with one minor gap in depth or clarity",
+        "5": "Layman reads a clear human outcome; expert can sense the data story behind it"
+      },
+      "fail_examples": [
+        "Rest. (layman: ok but why? expert: what data?)",
+        "Your 7-day SDNN rolling average has dropped below the 15th percentile baseline. (layman: lost)",
+        "Body stuff is happening. (expert: useless)"
+      ],
+      "pass_examples": [
+        "Recovery has been building steadily this week. A moderate effort suits you well today.",
+        "Sleep patterns have been consistent. Your body is running on a good rhythm right now.",
+        "Heart patterns have been quieter than usual lately. A lighter day works well today."
+      ]
+    },
+    {
+      "id": "CLR-013",
+      "source_agent": "customer",
+      "category": "achievement_celebration",
+      "description": "Achievement celebration — genuine wins (best sleep week, goal streak, strong recovery run) are surfaced with warmth when the data supports it",
+      "weight": 1.5,
+      "scoring_guide": {
+        "1": "A clear personal best or strong week goes completely unacknowledged",
+        "2": "A win is present in the data but text is neutral or negative",
+        "3": "Text is positive but generic, not tied to the specific achievement",
+        "4": "Text acknowledges the win with one missed opportunity for specificity",
+        "5": "Text names the achievement specifically and makes the user feel it"
+      },
+      "fail_examples": [
+        "Best recovery week in 30 days but text says: 'Decent recovery. Moderate effort works today.'",
+        "5-day sleep streak but text says: 'Sleep was 7 hours last night.'",
+        "Hit step goal 6 days in a row but text ignores it entirely"
+      ],
+      "pass_examples": [
+        "Best recovery week in a month. Your body is responding really well to the pattern you've built.",
+        "Six days hitting your sleep target in a row. That kind of consistency is where change happens.",
+        "Strongest 5-day stretch this month. Whatever you did this week, it's working."
+      ]
+    },
+    {
+      "id": "ENG-011",
+      "source_agent": "engineer",
+      "category": "data_horizon_signaling",
+      "description": "Data horizon signaling — text correctly communicates whether implications are drawn from today's data or the past week's trend",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text makes week-level claims with only 1 day of data, or ignores week context entirely when 7 days are available",
+        "2": "Horizon is ambiguous in a way that would confuse a user reading carefully",
+        "3": "Horizon is technically correct but not communicated naturally",
+        "4": "Horizon is clear with one minor phrasing ambiguity",
+        "5": "Text precisely signals its data window: today's snapshot vs week trend vs recent pattern"
+      },
+      "fail_examples": [
+        "Day 1 only: 'Your sleep has been declining all week' (no week exists yet)",
+        "Day 6: 'Sleep was 5 hours tonight' (ignores 5 nights of trend that drove the guidance)",
+        "'Recovery is low' with no signal of whether this is today or a pattern"
+      ],
+      "pass_examples": [
+        "Day 1: 'Sleep was lighter than usual last night. One good night resets a lot.'",
+        "Day 6: 'Sleep has been building back up over the past few days. Tonight matters.'",
+        "Day 3: 'Today's recovery is lower than your recent week average. Rest is the right call.'"
+      ]
+    },
+    {
+      "id": "ENG-012",
+      "source_agent": "engineer",
+      "category": "trend_direction_accuracy",
+      "description": "Trend direction accuracy — when week data drives the message, the trending language matches the actual metric direction",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Text says 'improving' when metrics clearly declined over the week, or vice versa",
+        "2": "Trend direction is wrong for one metric but correct for another",
+        "3": "Trend direction is correct but magnitude is significantly off",
+        "4": "Trend direction and magnitude are correct with one minor overshoot",
+        "5": "Trend language precisely matches the actual slope and magnitude of the data"
+      },
+      "fail_examples": [
+        "Readiness: 70, 65, 58, 50, 42 over 5 days — text says 'You've been improving this week'",
+        "Sleep: 5h, 6h, 7h, 7.5h, 8h — text says 'Sleep has been rough lately'",
+        "HRV flat within 2ms for 6 days — text says 'Strong upward trend in recovery signals'"
+      ],
+      "pass_examples": [
+        "Readiness declining: 'Recovery has been slipping over recent days. Prioritize rest tonight.'",
+        "Sleep improving: 'Sleep has been climbing all week. Keep the momentum going.'",
+        "Flat metrics: 'Things have been holding steady this week. Consistency is its own kind of progress.'"
+      ]
+    },
+    {
+      "id": "QAE-011",
+      "source_agent": "qae",
+      "category": "no_hyphen_as_dash",
+      "description": "No hyphen as em dash — app text uses em dashes (—) or restructures sentences. A hyphen (-) surrounded by spaces is a formatting error, not a style choice.",
+      "weight": 1.0,
+      "scoring_guide": {
+        "1": "Multiple instances of ' - ' used as sentence connectors across coaching text",
+        "2": "One clear instance of hyphen-as-dash in a coaching text field",
+        "3": "No hyphen-as-dash in primary fields but one appears in a secondary field",
+        "4": "Clean formatting with one borderline case in a goal or nudge label",
+        "5": "Zero hyphen-as-dash anywhere. Em dashes (—) used correctly or sentences restructured."
+      },
+      "fail_examples": [
+        "Prioritize rest tonight - sleep is the biggest lever for recovery.",
+        "Recovery is lower today - rest is the best lever right now.",
+        "Decent recovery - a moderate effort works well today."
+      ],
+      "pass_examples": [
+        "Prioritize rest tonight. Sleep is the biggest lever for recovery.",
+        "Recovery is lower today. Rest is the best lever right now.",
+        "Decent recovery. A moderate effort works well today."
+      ]
+    },
+    {
+      "id": "QAE-012",
+      "source_agent": "qae",
+      "category": "text_freshness",
+      "description": "Text freshness — text changes meaningfully across journey days. The same phrasing must not appear on days with meaningfully different metrics.",
+      "weight": 2.0,
+      "scoring_guide": {
+        "1": "Day 1 and Day 7 produce byte-identical hero messages despite very different metrics",
+        "2": "Text changes word-for-word in minor ways but the meaning is identical across days",
+        "3": "Text changes noticeably but one frozen phrase appears regardless of day state",
+        "4": "Text is fresh across most days with one reused phrase that is tolerable",
+        "5": "Every day produces text that could only have been written for that specific day and state"
+      },
+      "fail_examples": [
+        "Day 1 readiness=72 and Day 7 readiness=28 both produce: 'Decent recovery. A moderate effort works well today.'",
+        "All 7 days start with 'Recovery is building.' regardless of whether it is",
+        "Hero message on day 2 and day 6 are identical despite one being a crash day"
+      ],
+      "pass_examples": [
+        "Day 1: 'Solid start. Your body is in a good rhythm.' / Day 7: 'Best recovery week in a month. Whatever you did, it worked.'",
+        "Crash day: 'Recovery took a hit today. Rest is the one lever that actually works right now.' / Recovery day: 'Bouncing back. Your body responded fast.'",
+        "Each day's text reflects the specific intersection of that day's metrics and the week's trajectory"
+      ]
+    },
+    {
+      "id": "RPT-001",
+      "source_agent": "report_quality",
+      "category": "data_correctness_consistency",
+      "description": "Data correctness & internal consistency — all text and visuals accurately reflect the underlying data; no contradictions between sections",
+      "weight_pct": 0.20,
+      "hard_fail": true,
+      "scoring_guide": {
+        "1": "Clear contradictions or incorrect claims — text says 'improving' when data is declining",
+        "2": "Significant mismatches in one section; loose phrasing that misleads about data state",
+        "3": "Mostly accurate with minor mismatches that don't truly mislead",
+        "4": "All claims accurate; only cosmetic inconsistencies in tone or word choice",
+        "5": "All text and visuals consistently match the data and each other; zero contradictions"
+      },
+      "fail_examples": [
+        "Hero says 'strong recovery week' but readiness declined from 75 to 40 over 7 days",
+        "Graph shows RHR trending down but text says 'your RHR has been rising'"
+      ],
+      "pass_examples": [
+        "Readiness dropped 30 points and hero correctly reads 'Recovery has taken a hit — rest is the call today'",
+        "All sections — hero, banner, goals, nudges — reflect the same story from the same data"
+      ]
+    },
+    {
+      "id": "RPT-002",
+      "source_agent": "report_quality",
+      "category": "goal_alignment_appropriateness",
+      "description": "Goal alignment & appropriateness — recommended goals and daily moves match the user's situation, constraints, fitness level, and current risk",
+      "weight_pct": 0.15,
+      "scoring_guide": {
+        "1": "Goals are inappropriate or unsafe — intense running goal for injured or overtrained user",
+        "2": "Goals are generic and partially misaligned with persona constraints or current data",
+        "3": "Goals are generic but not harmful or obviously unrealistic",
+        "4": "Goals are mostly tailored and realistic with one minor misalignment",
+        "5": "Goals are tailored, realistic, and clearly linked to the user's current state and constraints"
+      },
+      "fail_examples": [
+        "Goal suggests 10,000 steps for a user with readiness=18 and 3h sleep",
+        "Sleep goal targets 9h for a new parent who structurally cannot sleep more than 5h"
+      ],
+      "pass_examples": [
+        "Overtrained user: 'Today's goal: gentle movement only. Even 1,500 steps counts.'",
+        "Sleep-deprived user: step goal auto-reduced, primary goal reframed as 'rest before 10pm'"
+      ]
+    },
+    {
+      "id": "RPT-003",
+      "source_agent": "report_quality",
+      "category": "risk_handling_safety",
+      "description": "Risk handling & safety — report never encourages unsafe behavior; appropriately escalates when risk is high; medical framing is cautious and non-diagnostic",
+      "weight_pct": 0.20,
+      "hard_fail": true,
+      "safety_critical": true,
+      "scoring_guide": {
+        "1": "Encourages high-intensity activity when risk signals are severe; dangerous recommendation",
+        "2": "Under-emphasizes risk in a way that could lead to harm; missing escalation when warranted",
+        "3": "Some risk under-emphasized but no clearly dangerous recommendation",
+        "4": "All risk states correctly reflected; no unsafe nudges; escalation present when needed",
+        "5": "Risk correctly identified; no unsafe encouragement; calm escalation where appropriate; no diagnostic claims"
+      },
+      "fail_examples": [
+        "Readiness=12, sleep=2h, stress=critical: 'Push yourself today — your body can handle it!'",
+        "RHR 40% above baseline for 3 days: 'heart rate looks a bit high, no action needed'"
+      ],
+      "pass_examples": [
+        "Readiness=12: 'Very low recovery. Rest is the only right call today.'",
+        "Sustained RHR elevation: 'Patterns like this are worth mentioning to your doctor if you feel unwell.'"
+      ]
+    },
+    {
+      "id": "RPT-004",
+      "source_agent": "report_quality",
+      "category": "audience_fit_layperson",
+      "description": "Audience fit — layperson clarity: non-technical user can read the report, understand their status, and know what to do",
+      "weight_pct": 0.10,
+      "audience_gate": true,
+      "scoring_guide": {
+        "1": "Relies heavily on jargon; a typical user cannot interpret or act on the report",
+        "2": "Some accessible language but key sections use unexplained terms or abstract advice",
+        "3": "Generally understandable; some jargon or dense text may confuse a non-expert",
+        "4": "Mostly plain language; 1-3 clear actions; one minor phrasing could be simpler",
+        "5": "A layperson instantly grasps status, why it matters, and next steps without technical knowledge"
+      },
+      "fail_examples": [
+        "'Your HRV RMSSD dropped 18ms below your 28-day baseline, indicating parasympathetic suppression'",
+        "Three paragraphs of data before any clear action or human outcome"
+      ],
+      "pass_examples": [
+        "'Your heart had a tough night. A calm, easy day helps it reset.' + 'Try: short walk after dinner'",
+        "Main screen: status in one sentence, why in one sentence, do-this in one sentence"
+      ]
+    },
+    {
+      "id": "RPT-005",
+      "source_agent": "report_quality",
+      "category": "audience_fit_professional",
+      "description": "Audience fit — professional transparency: a health or technical professional can see how conclusions were reached and verify they are reasonable",
+      "weight_pct": 0.10,
+      "audience_gate": true,
+      "scoring_guide": {
+        "1": "Conclusions are opaque; no data visible; appear to overstate what the inputs support",
+        "2": "Some data visible but traceability from data to recommendations is only partially clear",
+        "3": "Key inputs are named; professional can broadly verify but not fully audit",
+        "4": "Data signals visible and reasoning clearly stated; narrative doesn't overclaim",
+        "5": "Professional can inspect the rationale and verify narrative-data alignment"
+      },
+      "fail_examples": [
+        "Report says 'recovery is low' with no indication of which signals drove it",
+        "Trend claim made with no supporting data visible anywhere"
+      ],
+      "pass_examples": [
+        "'Recovery signal lower than usual — mainly driven by shorter sleep (5h vs typical 7h) and slightly elevated resting heart rate'",
+        "Detail view shows 7-day RHR trend, sleep hours, and HRV range"
+      ]
+    },
+    {
+      "id": "RPT-006",
+      "source_agent": "report_quality",
+      "category": "progressive_detail_explainability",
+      "description": "Progressive detail & explainability — users can drill into any element for a plain explanation; layered from summary to details without forcing complexity on casual users",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "No drill-down; user is stuck at surface or dumped into raw graphs with no explanation",
+        "2": "Some detail available but navigation unclear or explanations skip plain-language step",
+        "3": "Detail path exists but uneven — some cards explain well, others don't",
+        "4": "Interactive elements discoverable; first expansion clear; second step leads to graphs",
+        "5": "Three clear layers: summary → plain 'why' → data graphs. Lay users stop at 1-2; professionals go to 3"
+      },
+      "fail_examples": [
+        "Tapping 'Heart Mode: Caution' opens a raw HRV chart with no explanation",
+        "No tap targets — report is static with no drill-down available"
+      ],
+      "pass_examples": [
+        "Tap 'Caution' → plain one-sentence why → 'View your 7-day trend'",
+        "Every card has a chevron; first tap: plain sentence; second tap: graph"
+      ]
+    },
+    {
+      "id": "RPT-007",
+      "source_agent": "report_quality",
+      "category": "graph_clarity_text_alignment",
+      "description": "Graph clarity & text-graph alignment — visuals are interpretable by non-experts and consistent with the text narrative",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "Graphs confusing, unlabeled, or clearly contradict the text",
+        "2": "Graphs correct but under-explained; text and graph tell different stories",
+        "3": "Graphs correct and labeled but require domain knowledge to interpret",
+        "4": "Graphs clear and mostly reinforce text; one minor mismatch",
+        "5": "Graphs simple, labeled in plain language, and clearly reinforce the written story"
+      },
+      "fail_examples": [
+        "Text says 'RHR has been trending up' but graph shows a flat or declining line",
+        "Graph has no axis labels; values shown with no units or reference bands"
+      ],
+      "pass_examples": [
+        "Banded bar chart shows sleep hours with a green 'target' band; caption explains gap in plain English",
+        "RHR line with 'your typical range' shaded; text reads 'this week ran a little above your usual range'"
+      ]
+    },
+    {
+      "id": "RPT-008",
+      "source_agent": "report_quality",
+      "category": "focus_prioritization",
+      "description": "Focus & prioritization — report surfaces the 1-2 most important issues immediately; secondary details stay in supporting roles",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "Important issues buried or equal in visual weight to minor metrics",
+        "2": "Main issue present but shares too much space with secondary points",
+        "3": "Main issue visible but takes work to identify; too many equally-weighted items",
+        "4": "Clear primary issue highlighted with secondary context subordinated",
+        "5": "User immediately sees the top 1-2 issues; everything else is clearly secondary"
+      },
+      "fail_examples": [
+        "Sleep debt of 3h listed 5th after step count, active calories, HRV, and zone breakdown",
+        "Bad day with readiness=15 shows 8 different cards at equal visual weight"
+      ],
+      "pass_examples": [
+        "Sleep debt leads the report on a bad night; steps and other metrics clearly secondary",
+        "Crash day: one large card 'Rest is the call today'; everything else collapses"
+      ]
+    },
+    {
+      "id": "RPT-009",
+      "source_agent": "report_quality",
+      "category": "tone_empathy_motivation",
+      "description": "Tone, empathy & motivation — message is emotionally appropriate, supportive, and motivating; avoids blame; supports autonomy",
+      "weight_pct": 0.05,
+      "scoring_guide": {
+        "1": "Critical, shaming, or dismissive tone; likely to make users feel worse or defensive",
+        "2": "Neutral but cold; tone doesn't match the user's situation",
+        "3": "Neutral, not harmful, but generic and impersonal",
+        "4": "Warm and respectful; one missed opportunity for empathy",
+        "5": "Warm, respectful, motivating; acknowledges effort; hopeful and realistic; invites rather than commands"
+      },
+      "fail_examples": [
+        "Crashed day: 'You have not met your goals this week. Try harder tomorrow.'",
+        "Commands: 'You must sleep 8 hours. You must reduce stress.'"
+      ],
+      "pass_examples": [
+        "Crashed day: 'Rough week — your body worked hard. Rest today is doing real work, even if it doesn't feel like it.'",
+        "'A short walk could help, even just around the block.' not 'You need to walk.'"
+      ]
+    },
+    {
+      "id": "RPT-010",
+      "source_agent": "report_quality",
+      "category": "brevity_cognitive_load",
+      "description": "Brevity & cognitive load — report is concise enough to be usable when tired or stressed; on bad days doesn't pile on",
+      "weight_pct": 0.03,
+      "scoring_guide": {
+        "1": "Overly long, dense, or cluttered; likely to overwhelm or be skipped",
+        "2": "Noticeably wordy; bad-day reports list too many negatives",
+        "3": "A bit wordy but digestible with effort",
+        "4": "Concise with one section that could be trimmed",
+        "5": "Concise and focused; 1-3 main points; bad days get shorter not longer reports"
+      },
+      "fail_examples": [
+        "Bad day: 8 separate issues at equal weight over 4 scrollable cards",
+        "Same insight repeated in hero, banner, and goals without adding new information"
+      ],
+      "pass_examples": [
+        "Bad day: one card, one action, one sentence of context",
+        "Guidance text: 2 sentences max; action item: 1 concrete thing"
+      ]
+    },
+    {
+      "id": "RPT-011",
+      "source_agent": "report_quality",
+      "category": "breathing_coherence",
+      "description": "Breathing feature coherence — breathing usage reflected correctly; no praise for habits that don't exist; no overclaiming",
+      "weight_pct": 0.02,
+      "scoring_guide": {
+        "1": "Praises breathing habit for a user who hasn't used it; claims breathing always fixes stress",
+        "2": "Some mismatch or overclaiming about breathing benefits",
+        "3": "Technically correct but messaging doesn't match usage patterns",
+        "4": "Messages align with actual behavior; correlation claims appropriately hedged",
+        "5": "Usage, messaging, and correlation claims coherent and cautious; goals sized for actual habit"
+      },
+      "fail_examples": [
+        "User has never used breathing: 'Great job keeping up your breathing practice this week!'",
+        "'Breathing always reduces your stress — it's the single best tool you have'"
+      ],
+      "pass_examples": [
+        "New user: 'Breathing exercises can help — even 2 minutes makes a difference for some people'",
+        "Regular user: 'On days you've used breathing, your calm signal tends to recover faster'"
+      ]
+    }
+  ]
+}

@@ -2,13 +2,13 @@
   "anomalyScore" : 0.84083288309739856,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "walk",
+    "moderate",
     "intensity",
     "hydrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "walk",
-  "nudgeTitle" : "A Walk Could Feel Great",
+  "nudgeCategory" : "moderate",
+  "nudgeTitle" : "Try Something Different Today",
   "readinessLevel" : "primed",
   "readinessScore" : 82,
   "regressionFlag" : false,

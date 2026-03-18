@@ -30,22 +30,26 @@ public struct SmartNudgeScheduler: Sendable {
 
     // MARK: - Configuration
 
+    private let config: HealthPolicyConfig.StressOvertraining
+
     /// Minutes before bedtime to send the wind-down nudge.
-    private let bedtimeNudgeLeadMinutes: Int = 30
+    private var bedtimeNudgeLeadMinutes: Int { config.bedtimeNudgeLeadMinutes }
 
     /// How many hours past typical wake time counts as "late".
-    private let lateWakeThresholdHours: Double = 1.5
+    private var lateWakeThresholdHours: Double { config.lateWakeThresholdHours }
 
     /// Stress score threshold for triggering journal prompt.
-    private let journalStressThreshold: Double = 65.0
+    private var journalStressThreshold: Double { config.journalStressThreshold }
 
     /// Stress score threshold for triggering breath prompt on watch.
-    private let breathPromptThreshold: Double = 60.0
+    private var breathPromptThreshold: Double { config.breathPromptThreshold }
 
     /// Minimum observations before trusting a pattern.
-    private let minObservations: Int = 3
+    private var minObservations: Int { config.minPatternObservations }
 
-    public init() {}
+    public init(config: HealthPolicyConfig.StressOvertraining = ConfigService.activePolicy.stressOvertraining) {
+        self.config = config
+    }
 
     // MARK: - Sleep Pattern Learning
 

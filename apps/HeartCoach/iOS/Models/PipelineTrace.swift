@@ -40,6 +40,13 @@ struct PipelineTrace {
     var zoneAnalysis: ZoneAnalysisTrace?
     var buddy: BuddyTrace?
 
+    // MARK: - Orchestrator Traces (Phase 4)
+
+    var advice: AdviceTrace?
+    var coherence: CoherenceTrace?
+    var correlation: CorrelationTrace?
+    var nudgeScheduler: NudgeSchedulerTrace?
+
     // MARK: - Input Summary (statistical, not raw)
 
     /// Aggregated health input stats for remote debugging.
@@ -70,6 +77,10 @@ struct PipelineTrace {
         if let coaching { data["coaching"] = coaching.toDict() }
         if let zoneAnalysis { data["zoneAnalysis"] = zoneAnalysis.toDict() }
         if let buddy { data["buddy"] = buddy.toDict() }
+        if let advice { data["advice"] = advice.toDict() }
+        if let coherence { data["coherence"] = coherence.toDict() }
+        if let correlation { data["correlation"] = correlation.toDict() }
+        if let nudgeScheduler { data["nudgeScheduler"] = nudgeScheduler.toDict() }
         if let inputSummary { data["inputSummary"] = inputSummary.toDict() }
 
         return data
@@ -420,5 +431,208 @@ struct InputSummaryTrace {
             "hasRecoveryHR": hasRecoveryHR,
             "hasBodyMass": hasBodyMass
         ]
+    }
+}
+
+// MARK: - Advice Trace
+
+/// Telemetry data from the AdviceComposer.
+/// Contains only categorical data (mode strings, band names, integer targets).
+struct AdviceTrace {
+    let mode: String
+    let riskBand: String
+    let overtrainingState: String
+    let heroCategory: String
+    let allowedIntensity: String
+    let goalStepTarget: Int
+    let positivityAnchorInjected: Bool
+    let durationMs: Double
+
+    init(from state: AdviceState, durationMs: Double) {
+        self.mode = state.mode.rawValue
+        self.riskBand = state.riskBand.rawValue
+        self.overtrainingState = state.overtrainingState.rawValue
+        self.heroCategory = state.heroCategory.rawValue
+        self.allowedIntensity = state.allowedIntensity.rawValue
+        self.goalStepTarget = Int(state.goals.first { $0.category == .steps }?.target ?? 0)
+        self.positivityAnchorInjected = state.positivityAnchorID != nil
+        self.durationMs = durationMs
+    }
+
+    func toDict() -> [String: Any] {
+        [
+            "mode": mode,
+            "riskBand": riskBand,
+            "overtrainingState": overtrainingState,
+            "heroCategory": heroCategory,
+            "allowedIntensity": allowedIntensity,
+            "goalStepTarget": goalStepTarget,
+            "positivityAnchorInjected": positivityAnchorInjected,
+            "durationMs": durationMs
+        ]
+    }
+}
+
+// MARK: - Coherence Trace
+
+/// Records coherence invariant checks from the pipeline run.
+/// Hard violations indicate bugs. Soft anomalies are logged for analysis.
+struct CoherenceTrace {
+    let hardInvariantsChecked: Int
+    let hardViolationsFound: Int
+    let hardViolations: [String]
+    let softAnomaliesFound: Int
+    let softAnomalies: [String]
+
+    func toDict() -> [String: Any] {
+        [
+            "hardInvariantsChecked": hardInvariantsChecked,
+            "hardViolationsFound": hardViolationsFound,
+            "hardViolations": hardViolations,
+            "softAnomaliesFound": softAnomaliesFound,
+            "softAnomalies": softAnomalies
+        ]
+    }
+}
+
+// MARK: - Correlation Trace
+
+/// Telemetry data from the CorrelationEngine.
+struct CorrelationTrace {
+    let pairsAnalyzed: Int
+    let significantPairs: Int
+    let topFactorName: String?
+    let durationMs: Double
+
+    init(from correlations: [CorrelationResult], durationMs: Double) {
+        self.pairsAnalyzed = correlations.count
+        self.significantPairs = correlations.filter { abs($0.correlationStrength) >= 0.5 }.count
+        self.topFactorName = correlations.max(by: { abs($0.correlationStrength) < abs($1.correlationStrength) })?.factorName
+        self.durationMs = durationMs
+    }
+
+    func toDict() -> [String: Any] {
+        var d: [String: Any] = [
+            "pairsAnalyzed": pairsAnalyzed,
+            "significantPairs": significantPairs,
+            "durationMs": durationMs
+        ]
+        if let topFactorName { d["topFactorName"] = topFactorName }
+        return d
+    }
+}
+
+// MARK: - Nudge Scheduler Trace
+
+/// Telemetry data from the SmartNudgeScheduler.
+struct NudgeSchedulerTrace {
+    let patternsLearned: Int
+    let bedtimeNudgeHour: Int?
+    let durationMs: Double
+
+    init(from patterns: [SleepPattern], durationMs: Double) {
+        self.patternsLearned = patterns.count
+        self.bedtimeNudgeHour = patterns.first?.typicalBedtimeHour
+        self.durationMs = durationMs
+    }
+
+    func toDict() -> [String: Any] {
+        var d: [String: Any] = [
+            "patternsLearned": patternsLearned,
+            "durationMs": durationMs
+        ]
+        if let bedtimeNudgeHour { d["bedtimeNudgeHour"] = bedtimeNudgeHour }
+        return d
+    }
+}
+
+// MARK: - Coherence Checker
+
+/// Validates hard invariants and detects soft anomalies in AdviceState.
+///
+/// Hard invariants are rules that should never be violated — violations
+/// indicate bugs. Soft anomalies are unusual but plausible states that
+/// are logged for analysis.
+struct CoherenceChecker {
+
+    /// Runs all coherence checks and returns a trace.
+    static func check(
+        adviceState: AdviceState,
+        readinessResult: ReadinessResult?,
+        config: HealthPolicyConfig
+    ) -> CoherenceTrace {
+        var hardViolations: [String] = []
+        var softAnomalies: [String] = []
+
+        // ── Hard Invariants ──
+
+        // INV-001: No pushDay when sleep-deprived
+        if adviceState.sleepDeprivationFlag && adviceState.mode == .pushDay {
+            hardViolations.append("INV-001: pushDay with sleepDeprivation")
+        }
+
+        // INV-002: No celebrating buddy when recovering
+        if (adviceState.mode == .lightRecovery || adviceState.mode == .fullRest)
+            && adviceState.buddyMoodCategory == .celebrating {
+            hardViolations.append("INV-002: celebrating buddy in recovery mode")
+        }
+
+        // INV-003: Medical escalation shown when medicalEscalationFlag is set
+        if adviceState.medicalEscalationFlag && adviceState.mode != .medicalCheck {
+            hardViolations.append("INV-003: medicalEscalation without medicalCheck mode")
+        }
+
+        // INV-004: Goals match mode — fullRest/medicalCheck step target <= recovering target
+        if adviceState.mode == .fullRest || adviceState.mode == .medicalCheck {
+            if let stepGoal = adviceState.goals.first(where: { $0.category == .steps }) {
+                if stepGoal.target > Double(config.goals.stepsRecovering) {
+                    hardViolations.append("INV-004: step target \(Int(stepGoal.target)) exceeds recovering limit \(config.goals.stepsRecovering)")
+                }
+            }
+        }
+
+        // INV-005: No high intensity when overtraining >= caution
+        if adviceState.overtrainingState >= .caution && adviceState.allowedIntensity > .light {
+            hardViolations.append("INV-005: intensity \(adviceState.allowedIntensity.rawValue) with overtraining \(adviceState.overtrainingState.rawValue)")
+        }
+
+        // ── Soft Anomalies ──
+
+        // ANO-001: High stress + high readiness
+        if adviceState.stressGuidanceLevel == .elevated,
+           let score = readinessResult?.score, score >= 80 {
+            softAnomalies.append("ANO-001: elevated stress with primed readiness (\(score))")
+        }
+
+        // ANO-002: Positivity imbalance (3+ negative signals, no anchor)
+        let negativeCount = [
+            adviceState.sleepDeprivationFlag,
+            adviceState.stressGuidanceLevel == .elevated,
+            (readinessResult?.score ?? 100) < 45,
+            adviceState.overtrainingState >= .watch,
+            adviceState.medicalEscalationFlag
+        ].filter { $0 }.count
+        if negativeCount >= 3 && adviceState.positivityAnchorID == nil {
+            softAnomalies.append("ANO-002: \(negativeCount) negative signals without positivity anchor")
+        }
+
+        // ANO-003: Age gating gap (future — logged when advanced guidance is off)
+        // Deferred until age is available in AdviceComposer context
+
+        // Log hard violations as errors
+        for violation in hardViolations {
+            AppLogger.engine.error("[Coherence] HARD VIOLATION: \(violation)")
+        }
+        for anomaly in softAnomalies {
+            AppLogger.engine.warning("[Coherence] Soft anomaly: \(anomaly)")
+        }
+
+        return CoherenceTrace(
+            hardInvariantsChecked: 5,
+            hardViolationsFound: hardViolations.count,
+            hardViolations: hardViolations,
+            softAnomaliesFound: softAnomalies.count,
+            softAnomalies: softAnomalies
+        )
     }
 }

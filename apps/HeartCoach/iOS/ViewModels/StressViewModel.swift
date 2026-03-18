@@ -95,6 +95,9 @@ final class StressViewModel: ObservableObject {
     /// Set via `bind(connectivityService:)` from the view layer.
     private var connectivityService: ConnectivityService?
 
+    /// Shared engine coordinator for reading pre-computed results (Phase 2).
+    private var coordinator: DailyEngineCoordinator?
+
     /// Readiness level from the latest assessment (set by app coordinator).
     /// Used as a conflict guard so SmartNudgeScheduler doesn't suggest
     /// activity when NudgeGenerator says rest.
@@ -137,6 +140,11 @@ final class StressViewModel: ObservableObject {
         self.connectivityService = connectivityService
     }
 
+    /// Binds the shared engine coordinator (Phase 2).
+    func bind(coordinator: DailyEngineCoordinator) {
+        self.coordinator = coordinator
+    }
+
     // MARK: - Public API
 
     /// Loads historical data and computes all stress metrics.
@@ -175,8 +183,22 @@ final class StressViewModel: ObservableObject {
             #endif
 
             history = snapshots
-            computeStressMetrics()
-            learnPatterns()
+
+            // When coordinator is available, read pre-computed values
+            // instead of recomputing stress, sleep patterns, and readiness.
+            if ConfigService.enableCoordinator, let bundle = coordinator?.bundle {
+                currentStress = bundle.stressResult
+                sleepPatterns = bundle.sleepPatterns
+                if let readiness = bundle.readinessResult {
+                    assessmentReadinessLevel = readiness.level
+                }
+            } else {
+                computeStressMetrics()
+                learnPatterns()
+            }
+
+            // Range-dependent computations always run locally (different history window)
+            computeTrendAndHourly()
             computeSmartAction()
             isLoading = false
         } catch {
@@ -221,9 +243,10 @@ final class StressViewModel: ObservableObject {
             smartAction = .standardNudge
 
         case .bedtimeWindDown:
-            // Acknowledge and dismiss the card from both primary action and list
+            // Dismiss the card, then start a breathing session for wind-down
             smartActions.removeAll { if case .bedtimeWindDown = $0 { return true } else { return false } }
             smartAction = .standardNudge
+            startBreathingSession()
 
         case .restSuggestion:
             startBreathingSession()
@@ -429,6 +452,20 @@ final class StressViewModel: ObservableObject {
             currentStress = nil
         }
 
+        computeTrendAndHourly()
+    }
+
+    /// Computes trend points and hourly estimates from local history.
+    /// Called separately from computeStressMetrics() when the coordinator
+    /// provides currentStress but range-dependent data needs local computation.
+    private func computeTrendAndHourly() {
+        guard !history.isEmpty else {
+            trendPoints = []
+            hourlyPoints = []
+            trendDirection = .steady
+            return
+        }
+
         // Compute trend
         trendPoints = engine.stressTrend(
             snapshots: history,
@@ -488,14 +525,22 @@ final class StressViewModel: ObservableObject {
     private func injectRecoveryActionIfNeeded() {
         guard let today = history.last else { return }
 
-        let stressScore: Double? = currentStress?.score
-        let stressConfidence: StressConfidence? = currentStress?.confidence
-        guard let readiness = ReadinessEngine().compute(
-            snapshot: today,
-            stressScore: stressScore,
-            stressConfidence: stressConfidence,
-            recentHistory: Array(history.dropLast())
-        ) else { return }
+        // Use coordinator's pre-computed readiness when available (Phase 2),
+        // avoiding a duplicate ReadinessEngine instantiation.
+        let readiness: ReadinessResult?
+        if ConfigService.enableCoordinator, let bundleReadiness = coordinator?.bundle?.readinessResult {
+            readiness = bundleReadiness
+        } else {
+            let stressScore: Double? = currentStress?.score
+            let stressConfidence: StressConfidence? = currentStress?.confidence
+            readiness = ReadinessEngine().compute(
+                snapshot: today,
+                stressScore: stressScore,
+                stressConfidence: stressConfidence,
+                recentHistory: Array(history.dropLast())
+            )
+        }
+        guard let readiness else { return }
 
         guard readiness.level == .recovering || readiness.level == .moderate else { return }
 

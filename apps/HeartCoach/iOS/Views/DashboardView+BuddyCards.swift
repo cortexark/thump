@@ -35,8 +35,14 @@ extension DashboardView {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                let nudgesToShow: [DailyNudge] = {
+                    if ConfigService.enableCoordinator, let state = coordinator.bundle?.adviceState {
+                        return Array(assessment.dailyNudges.prefix(state.dailyActionBudget))
+                    }
+                    return assessment.dailyNudges
+                }()
                 ForEach(
-                    Array(assessment.dailyNudges.enumerated()),
+                    Array(nudgesToShow.enumerated()),
                     id: \.offset
                 ) { index, nudge in
                     Button {
@@ -153,7 +159,17 @@ extension DashboardView {
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                ForEach(Array(recs.prefix(3).enumerated()), id: \.offset) { index, rec in
+                // V-015: trim buddy recs to fit within the daily guidance budget.
+                // Budget = dailyActionBudget - smartActions already allocated.
+                // Falls back to 3 on the legacy path (pre-coordinator).
+                let buddyRecCap: Int = {
+                    if ConfigService.enableCoordinator,
+                       let state = coordinator.bundle?.adviceState {
+                        return max(0, state.dailyActionBudget - state.smartActions.count)
+                    }
+                    return 3
+                }()
+                ForEach(Array(recs.prefix(buddyRecCap).enumerated()), id: \.offset) { index, rec in
                     Button {
                         InteractionLog.log(.cardTap, element: "buddy_recommendation_\(index)", page: "Dashboard", details: rec.category.rawValue)
                         withAnimation { selectedTab = 1 }
@@ -246,14 +262,14 @@ extension DashboardView {
     /// Maps a recommendation category to the metric it improves.
     func metricImpactLabel(_ category: NudgeCategory) -> String {
         switch category {
-        case .walk:         return "Improves VO2 max & recovery"
+        case .walk:         return "Builds endurance & recovery"
         case .rest:         return "Lowers resting heart rate"
-        case .hydrate:      return "Supports HRV & recovery"
-        case .breathe:      return "Reduces stress score"
-        case .moderate:     return "Boosts cardio fitness"
+        case .hydrate:      return "Supports heart rate variability & recovery"
+        case .breathe:      return "Helps lower stress"
+        case .moderate:     return "Strengthens your heart"
         case .celebrate:    return "Keep it up!"
         case .seekGuidance: return "Protect your heart health"
-        case .sunlight:     return "Improves sleep & circadian rhythm"
+        case .sunlight:     return "Improves sleep quality"
         case .intensity:    return "Builds cardiovascular fitness"
         }
     }

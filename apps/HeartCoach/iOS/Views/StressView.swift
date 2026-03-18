@@ -32,6 +32,7 @@ struct StressView: View {
     @StateObject var viewModel = StressViewModel()
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
+    @EnvironmentObject private var coordinator: DailyEngineCoordinator
 
     // MARK: - Body
 
@@ -57,6 +58,7 @@ struct StressView: View {
             .task {
                 viewModel.bind(healthKitService: healthKitService)
                 viewModel.bind(connectivityService: connectivityService)
+                viewModel.bind(coordinator: coordinator)
                 await viewModel.loadData()
             }
             .sheet(isPresented: $viewModel.isJournalSheetPresented) {

@@ -23,6 +23,7 @@ struct InsightsView: View {
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
     @EnvironmentObject private var localStore: LocalStore
+    @EnvironmentObject private var coordinator: DailyEngineCoordinator
 
     // MARK: - State
 
@@ -40,6 +41,7 @@ struct InsightsView: View {
                 .onAppear { InteractionLog.pageView("Insights") }
                 .task {
                     viewModel.bind(healthKitService: healthKitService, localStore: localStore)
+                    viewModel.bind(coordinator: coordinator)
                     viewModel.connectivityService = connectivityService
                     await viewModel.loadInsights()
                 }
@@ -422,10 +424,11 @@ struct InsightsView: View {
             }
         }
 
+        let policy = ConfigService.activePolicy
         let completionPct = Int(report.nudgeCompletionRate * 100)
-        if completionPct >= 70 {
+        if completionPct >= policy.view.nudgeCompletionSolid {
             parts.append("You engaged with \(completionPct)% of daily suggestions — solid commitment.")
-        } else if completionPct >= 40 {
+        } else if completionPct >= policy.view.nudgeCompletionMinimum {
             parts.append("You completed \(completionPct)% of your nudges. Aim for one extra nudge this week.")
         } else {
             parts.append("Try following more daily nudges this week to see progress.")

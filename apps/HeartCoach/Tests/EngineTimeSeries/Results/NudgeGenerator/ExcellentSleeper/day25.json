@@ -2,13 +2,13 @@
   "anomalyScore" : 0.23766319368004768,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "rest",
+    "hydrate",
     "intensity",
-    "hydrate"
+    "celebrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "rest",
-  "nudgeTitle" : "A Cozy Bedtime Routine",
+  "nudgeCategory" : "hydrate",
+  "nudgeTitle" : "Keep That Water Bottle Handy",
   "readinessLevel" : "primed",
   "readinessScore" : 83,
   "regressionFlag" : true,
