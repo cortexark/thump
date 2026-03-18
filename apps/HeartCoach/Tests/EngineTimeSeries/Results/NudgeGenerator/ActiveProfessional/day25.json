@@ -2,12 +2,13 @@
   "anomalyScore" : 0.75685901307115167,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "hydrate",
-    "intensity"
+    "walk",
+    "intensity",
+    "hydrate"
   ],
-  "multiNudgeCount" : 2,
-  "nudgeCategory" : "hydrate",
-  "nudgeTitle" : "Keep That Water Bottle Handy",
+  "multiNudgeCount" : 3,
+  "nudgeCategory" : "walk",
+  "nudgeTitle" : "You Might Enjoy a Post-Meal Walk",
   "readinessLevel" : "ready",
   "readinessScore" : 72,
   "regressionFlag" : true,
