@@ -262,14 +262,14 @@ extension DashboardView {
     /// Maps a recommendation category to the metric it improves.
     func metricImpactLabel(_ category: NudgeCategory) -> String {
         switch category {
-        case .walk:         return "Improves VO2 max & recovery"
+        case .walk:         return "Builds endurance & recovery"
         case .rest:         return "Lowers resting heart rate"
-        case .hydrate:      return "Supports HRV & recovery"
-        case .breathe:      return "Reduces stress score"
-        case .moderate:     return "Boosts cardio fitness"
+        case .hydrate:      return "Supports heart rate variability & recovery"
+        case .breathe:      return "Helps lower stress"
+        case .moderate:     return "Strengthens your heart"
         case .celebrate:    return "Keep it up!"
         case .seekGuidance: return "Protect your heart health"
-        case .sunlight:     return "Improves sleep & circadian rhythm"
+        case .sunlight:     return "Improves sleep quality"
         case .intensity:    return "Builds cardiovascular fitness"
         }
     }
