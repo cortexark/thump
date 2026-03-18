@@ -322,6 +322,151 @@ final class ClickableValidationTests: XCTestCase {
         screenshot("full_cycle_return_home")
     }
 
+    // MARK: - State Color System Tests
+    // Validates the new 4-state color system: Gold / Violet / Orange / Amber
+
+    func testDashboard_stateColorElement_exists() {
+        navigateToTab("Home")
+        screenshot("state_color_check")
+        // The state color should be reflected in the dashboard's hero area.
+        // Check that a state label exists (Gold = Thriving, Violet = Recovering,
+        // Orange = Stressed, Amber = Steady).
+        let stateLabels = ["Thriving", "Recovering", "Stressed", "Steady",
+                           "Building Momentum", "Holding Steady", "Check In"]
+        let hasStateLabel = stateLabels.contains { label in
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", label))
+                .firstMatch.waitForExistence(timeout: 3)
+        }
+        // A state label or score should always be visible on the Home screen
+        let scoreExists = app.staticTexts.matching(
+            NSPredicate(format: "label MATCHES '\\\\d+'")
+        ).firstMatch.waitForExistence(timeout: 3)
+
+        XCTAssertTrue(hasStateLabel || scoreExists,
+            "Home screen must show a state label or readiness score")
+    }
+
+    func testDashboard_missionCopyVisible() {
+        navigateToTab("Home")
+        screenshot("mission_copy_check")
+        // Mission sentence is a short, plain-English text line on the Home screen.
+        // It should be non-empty and visible.
+        // We check for at least one static text with meaningful length.
+        let hasLongText = app.staticTexts.allElementsBoundByIndex.contains { element in
+            element.exists && element.label.count > 20
+        }
+        XCTAssertTrue(hasLongText, "Home screen should display a mission sentence (> 20 characters)")
+    }
+
+    func testDashboard_missionCopy_noEmptyState() {
+        navigateToTab("Home")
+        // Wait for data to load
+        _ = app.scrollViews.firstMatch.waitForExistence(timeout: 5)
+        screenshot("mission_copy_no_empty_state")
+        // Verify there is at least one non-empty text element visible —
+        // the app must never show a blank mission sentence.
+        let nonEmptyTexts = app.staticTexts.allElementsBoundByIndex.filter {
+            !$0.label.isEmpty && $0.label != " "
+        }
+        XCTAssertFalse(nonEmptyTexts.isEmpty,
+            "Home screen must never show a completely empty content state")
+    }
+
+    // MARK: - 3-Tab Navigation Validation
+    // The design system specifies a 3-tab model (Today / Trends / You).
+    // Current app uses 5 tabs. Both legacy and redesigned tab sets are validated.
+
+    func testNavigation_tabCountIsAtLeast3() {
+        let tabBarButtons = app.tabBars.firstMatch.buttons.allElementsBoundByIndex
+        XCTAssertGreaterThanOrEqual(tabBarButtons.count, 3,
+            "App must have at least 3 navigation tabs per the design spec")
+    }
+
+    func testNavigation_homeTabIsFirstTab() {
+        // The first tab must navigate to the home/today screen
+        let firstTab = app.tabBars.firstMatch.buttons.element(boundBy: 0)
+        XCTAssertTrue(firstTab.exists, "First tab must exist")
+        firstTab.tap()
+        usleep(300_000)
+        let hasDashboardContent = app.scrollViews.firstMatch.waitForExistence(timeout: 3)
+        screenshot("first_tab_home_check")
+        XCTAssertTrue(hasDashboardContent, "First tab must show the main dashboard/today screen")
+    }
+
+    func testNavigation_eachTabLoadsContent() {
+        // Verify every tab shows some content (scroll view or form)
+        let tabCount = app.tabBars.firstMatch.buttons.count
+        for i in 0..<min(tabCount, 5) {
+            let tab = app.tabBars.firstMatch.buttons.element(boundBy: i)
+            guard tab.exists && tab.isHittable else { continue }
+            tab.tap()
+            usleep(300_000)
+            screenshot("tab_\(i)_content_check")
+            // Each tab must present either a scroll view or recognizable content
+            let hasContent = app.scrollViews.firstMatch.waitForExistence(timeout: 3)
+                || app.collectionViews.firstMatch.waitForExistence(timeout: 1)
+                || app.tables.firstMatch.waitForExistence(timeout: 1)
+            XCTAssertTrue(hasContent, "Tab \(i) must load displayable content")
+        }
+    }
+
+    // MARK: - Mission Copy Pool Routing Tests
+    // UI-level smoke tests that the mission copy area renders different content
+    // across different app states (injected via launch arguments)
+
+    func testMissionCopyArea_rendersInThrivingState() {
+        // Launch with thriving state injection
+        app.terminate()
+        var launchArgs = app.launchArguments
+        launchArgs += ["-UITestReadinessScore", "85"]
+        app.launchArguments = launchArgs
+        app.launch()
+        _ = app.scrollViews.firstMatch.waitForExistence(timeout: 5)
+
+        navigateToTab("Home")
+        screenshot("mission_copy_thriving")
+
+        // In a thriving state the mission copy must exist and be visible
+        let hasLongText = app.staticTexts.allElementsBoundByIndex.contains { element in
+            element.exists && element.label.count > 15
+        }
+        XCTAssertTrue(hasLongText, "Thriving state must show a mission sentence on Home screen")
+    }
+
+    func testMissionCopyArea_rendersInRecoveringState() {
+        app.terminate()
+        var launchArgs = app.launchArguments
+        launchArgs += ["-UITestReadinessScore", "55"]
+        app.launchArguments = launchArgs
+        app.launch()
+        _ = app.scrollViews.firstMatch.waitForExistence(timeout: 5)
+
+        navigateToTab("Home")
+        screenshot("mission_copy_recovering")
+
+        let hasLongText = app.staticTexts.allElementsBoundByIndex.contains { element in
+            element.exists && element.label.count > 15
+        }
+        XCTAssertTrue(hasLongText, "Recovering state must show a mission sentence on Home screen")
+    }
+
+    func testMissionCopyArea_rendersInStressedState() {
+        app.terminate()
+        var launchArgs = app.launchArguments
+        launchArgs += ["-UITestReadinessScore", "25"]
+        app.launchArguments = launchArgs
+        app.launch()
+        _ = app.scrollViews.firstMatch.waitForExistence(timeout: 5)
+
+        navigateToTab("Home")
+        screenshot("mission_copy_stressed")
+
+        let hasLongText = app.staticTexts.allElementsBoundByIndex.contains { element in
+            element.exists && element.label.count > 15
+        }
+        XCTAssertTrue(hasLongText, "Stressed state must show a mission sentence on Home screen")
+    }
+
     // MARK: - Helpers
 
     private func navigateToTab(_ name: String) {

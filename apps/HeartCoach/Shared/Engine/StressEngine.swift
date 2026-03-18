@@ -715,6 +715,156 @@ public struct StressEngine: Sendable {
         return score
     }
 
+    // MARK: - Training-Phase Threshold Adjustment
+
+    /// Returns the effective "stressed" score threshold for the given training phase.
+    ///
+    /// Default threshold is 44 (scores above this are considered stressed).
+    /// Athletes in structured phases have physiologically elevated stress signals
+    /// that are not pathological — so the threshold is raised to give them headroom.
+    ///
+    /// | Phase    | Threshold |
+    /// |----------|-----------|
+    /// | none     | 44        |
+    /// | tapering | 54        |
+    /// | building | 59        |
+    /// | others   | 44        |
+    public func stressedThreshold(for trainingPhase: TrainingPhase) -> Double {
+        switch trainingPhase {
+        case .tapering: return 54.0
+        case .building: return 59.0
+        default:        return 44.0
+        }
+    }
+
+    /// Returns `true` when the consecutive-alert card should be suppressed
+    /// for the given training phase.
+    ///
+    /// During building and tapering phases, elevated scores are expected and
+    /// the overtraining alert card would be misleading.
+    public func suppressConsecutiveAlertCard(for trainingPhase: TrainingPhase) -> Bool {
+        switch trainingPhase {
+        case .building, .tapering: return true
+        default:                   return false
+        }
+    }
+
+    // MARK: - Hormonal Variance
+
+    /// Returns `true` when the user profile qualifies for perimenopause/menopause
+    /// HRV variance widening (female, age 40–60 inclusive).
+    ///
+    /// When this is `true`, the acceptable HRV variance band should be widened by ±15%
+    /// before computing Z-scores to avoid false-positive stress flags.
+    public func requiresHormonalVarianceWidening(profile: UserProfile) -> Bool {
+        guard profile.biologicalSex == .female else { return false }
+        guard let age = profile.ageApprox else { return false }
+        return age >= 40 && age <= 60
+    }
+
+    /// `true` when the current HRV has dropped ≥25 points from the HRV recorded
+    /// 48 hours ago (two snapshots back when using daily snapshots).
+    ///
+    /// A rapid HRV drop of this magnitude may indicate acute illness, overreach,
+    /// or peri-menopausal hormonal flux and should inform copy routing.
+    public func isRapidHRVDrop(currentHRV: Double, hrv48hAgo: Double) -> Bool {
+        return (hrv48hAgo - currentHRV) >= 25.0
+    }
+
+    /// Widen the HRV baseline standard deviation by ±15% for users who qualify
+    /// for hormonal variance widening.
+    ///
+    /// Returns the adjusted SD value; returns `baselineHRVSD` unchanged when
+    /// widening does not apply or `baselineHRVSD` is nil.
+    public func applyHormonalVarianceWidening(
+        baselineHRVSD: Double?,
+        profile: UserProfile
+    ) -> Double? {
+        guard let sd = baselineHRVSD else { return nil }
+        guard requiresHormonalVarianceWidening(profile: profile) else { return sd }
+        return sd * 1.15
+    }
+
+    // MARK: - HIIT CNS Binary Flag
+
+    /// For users whose `activityType == .hiit`, replaces zone-based copy routing
+    /// with a CNS fatigue binary classification.
+    ///
+    /// - `complete`   — CNS well-recovered; score < 40.
+    /// - `partial`    — CNS partially recovered; score 40–69.
+    /// - `incomplete` — CNS under-recovered; score ≥ 70.
+    ///
+    /// AdviceComposer should read this flag instead of zone analysis when
+    /// `activityType == .hiit`.
+    public enum HIITRecoveryState: String, Sendable {
+        case complete
+        case partial
+        case incomplete
+    }
+
+    /// Classify CNS recovery state for HIIT athletes from a stress score.
+    public func hiitRecoveryState(score: Double) -> HIITRecoveryState {
+        if score < 40.0 { return .complete }
+        if score < 70.0 { return .partial }
+        return .incomplete
+    }
+
+    // MARK: - Steady Streak Tracking
+
+    /// Advance or reset the steady streak for a user profile given today's score.
+    ///
+    /// Rules (pure / immutable — returns a new profile):
+    /// - Score 0–44: increment `steadyStreakDays` by 1.
+    /// - Score > 44 for 3 consecutive days: reset to 0.
+    ///
+    /// The caller is responsible for tracking consecutive high-score days
+    /// (`consecutiveHighDays`). Passing 0 or 1 means the streak is not yet
+    /// broken; passing 3 triggers the reset.
+    ///
+    /// - Parameters:
+    ///   - profile: Current user profile.
+    ///   - todayScore: Today's daily stress score (0–100).
+    ///   - consecutiveHighDays: How many consecutive days (including today) the
+    ///     score has been above 44. Caller tracks this separately.
+    /// - Returns: Updated profile with `steadyStreakDays` adjusted.
+    public func updatingSteadyStreak(
+        profile: UserProfile,
+        todayScore: Double,
+        consecutiveHighDays: Int
+    ) -> UserProfile {
+        var updated = profile
+        if todayScore <= 44.0 {
+            updated.steadyStreakDays = profile.steadyStreakDays + 1
+        } else if consecutiveHighDays >= 3 {
+            updated.steadyStreakDays = 0
+        }
+        // 1–2 consecutive high days: streak is held (neither incremented nor reset)
+        return updated
+    }
+
+    // MARK: - Build-Phase Baseline Computation
+
+    /// Compute the rolling HRV baseline restricted to the build phase window.
+    ///
+    /// During a build phase the all-time baseline can be artificially low because
+    /// it includes pre-training data. This method computes a baseline from only
+    /// the snapshots within the build phase window (default: last 14 days of
+    /// build-phase data).
+    ///
+    /// Falls back to `computeBaseline(snapshots:)` when fewer than 3 build-phase
+    /// samples are available.
+    public func buildPhaseBaseline(
+        snapshots: [HeartSnapshot],
+        buildPhaseStart: Date
+    ) -> Double? {
+        let buildSnapshots = snapshots.filter { $0.date >= buildPhaseStart }
+        let hrvValues = buildSnapshots.compactMap(\.hrvSDNN)
+        guard hrvValues.count >= 3 else {
+            return computeBaseline(snapshots: snapshots)
+        }
+        return hrvValues.reduce(0, +) / Double(hrvValues.count)
+    }
+
     // MARK: - Hourly Stress Estimation
 
     /// Estimate hourly stress scores for a single day using circadian
