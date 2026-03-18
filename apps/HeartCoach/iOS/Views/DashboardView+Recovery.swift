@@ -250,64 +250,77 @@ extension DashboardView {
     @ViewBuilder
     var consecutiveAlertCard: some View {
         if let alert = viewModel.assessment?.consecutiveAlert {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(Color(hex: 0xF59E0B))
+            Button {
+                InteractionLog.log(.cardTap, element: "consecutive_alert", page: "Dashboard", details: "\(alert.consecutiveDays) days elevated")
+                withAnimation { selectedTab = 3 }
+            } label: {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(Color(hex: 0xF59E0B))
 
-                    Text("Elevated Resting Heart Rate")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                        Text("Elevated Resting Heart Rate")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
 
-                    Spacer()
+                        Spacer()
 
-                    Text("\(alert.consecutiveDays) days")
+                        Text("\(alert.consecutiveDays) days")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color(hex: 0xF59E0B))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: 0xF59E0B).opacity(0.1), in: Capsule())
+                    }
+
+                    Text("Your resting heart rate has been above your personal average for \(alert.consecutiveDays) consecutive days. This sometimes happens during busy weeks, travel, or when your routine changes. Extra rest often helps.")
                         .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color(hex: 0xF59E0B))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color(hex: 0xF59E0B).opacity(0.1), in: Capsule())
-                }
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text("Your resting heart rate has been above your personal average for \(alert.consecutiveDays) consecutive days. This sometimes happens during busy weeks, travel, or when your routine changes. Extra rest often helps.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Recent Avg")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(String(format: "%.0f bpm", alert.elevatedMean))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Color(hex: 0xEF4444))
+                        }
 
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Recent Avg")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(String(format: "%.0f bpm", alert.elevatedMean))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Your Normal")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(String(format: "%.0f bpm", alert.personalMean))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
                             .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color(hex: 0xEF4444))
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Your Normal")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(String(format: "%.0f bpm", alert.personalMean))
-                            .font(.caption)
-                            .fontWeight(.semibold)
+                            .foregroundStyle(.tertiary)
                     }
                 }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color(hex: 0xF59E0B).opacity(0.3), lineWidth: 1)
+                )
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color(hex: 0xF59E0B).opacity(0.3), lineWidth: 1)
-            )
+            .buttonStyle(CardButtonStyle())
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Alert: resting heart rate elevated for \(alert.consecutiveDays) consecutive days")
+            .accessibilityHint("Double tap to view trends")
         }
     }
 }

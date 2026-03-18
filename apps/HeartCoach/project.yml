@@ -8,8 +8,8 @@ options:
   bundleIdPrefix: com.health.thump
   deploymentTarget:
     iOS: "17.0"
-    watchOS: "10.0"
-  xcodeVersion: "16.0"
+    watchOS: "11.0"
+  xcodeVersion: "16.3"
   generateEmptyDirectories: true
   groupSortPosition: top
 
@@ -82,7 +82,7 @@ targets:
   ThumpWatch:
     type: application
     platform: watchOS
-    deploymentTarget: "10.0"
+    deploymentTarget: "11.0"
     sources:
       - path: Watch/
       - path: Shared/
@@ -95,7 +95,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.health.thump.ios.watchkitapp
         DEVELOPMENT_TEAM: RSF2UZJ4Y3
         TARGETED_DEVICE_FAMILY: "4"
-        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+        WATCHOS_DEPLOYMENT_TARGET: "11.0"
     dependencies:
       - sdk: HealthKit.framework
       - sdk: WatchConnectivity.framework

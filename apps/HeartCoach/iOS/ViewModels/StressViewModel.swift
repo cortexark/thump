@@ -238,7 +238,7 @@ final class StressViewModel: ObservableObject {
             showWalkSuggestion()
 
         case .morningCheckIn:
-            // Dismiss the card from both primary action and list
+            // Dismiss the card and remove from list
             smartActions.removeAll { if case .morningCheckIn = $0 { return true } else { return false } }
             smartAction = .standardNudge
 

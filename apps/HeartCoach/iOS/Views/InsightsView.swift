@@ -30,6 +30,7 @@ struct InsightsView: View {
     @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
     @State var showingReportDetail = false
     @State private var selectedCorrelation: CorrelationResult?
+    @State private var expandedEducationalCard: String?
 
     // MARK: - Body
 
@@ -449,48 +450,59 @@ struct InsightsView: View {
                     .accessibilityIdentifier("focus_card_section")
 
                 let targets = InsightsHelpers.weeklyFocusTargets(from: plan)
-                ForEach(Array(targets.enumerated()), id: \.offset) { _, target in
-                    HStack(spacing: 12) {
-                        Image(systemName: target.icon)
-                            .font(.subheadline)
-                            .foregroundStyle(target.color)
-                            .frame(width: 28)
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(target.title)
+                ForEach(Array(targets.enumerated()), id: \.offset) { index, target in
+                    Button {
+                        InteractionLog.log(.cardTap, element: "focus_target_\(index)", page: "Insights", details: target.title)
+                        showingReportDetail = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: target.icon)
                                 .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.primary)
-                            Text(target.reason)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        Spacer()
-
-                        if let value = target.targetValue {
-                            Text(value)
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .fontDesign(.rounded)
                                 .foregroundStyle(target.color)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(
-                                    Capsule().fill(target.color.opacity(0.12))
-                                )
+                                .frame(width: 28)
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(target.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.primary)
+                                Text(target.reason)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer()
+
+                            if let value = target.targetValue {
+                                Text(value)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .fontDesign(.rounded)
+                                    .foregroundStyle(target.color)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(
+                                        Capsule().fill(target.color.opacity(0.12))
+                                    )
+                            }
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
                         }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(target.color.opacity(0.04))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .strokeBorder(target.color.opacity(0.1), lineWidth: 1)
+                        )
                     }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(target.color.opacity(0.04))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(target.color.opacity(0.1), lineWidth: 1)
-                    )
+                    .buttonStyle(CardButtonStyle())
+                    .accessibilityHint("Double tap to view your weekly action plan")
                 }
             }
         }
@@ -537,29 +549,47 @@ struct InsightsView: View {
     }
 
     private func educationalCard(icon: String, iconColor: Color, title: String, explanation: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.subheadline)
-                .foregroundStyle(iconColor)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-                Text(explanation)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        let isExpanded = expandedEducationalCard == title
+        return Button {
+            InteractionLog.log(.cardTap, element: "educational_card", page: "Insights", details: title)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                expandedEducationalCard = isExpanded ? nil : title
             }
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(iconColor)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                    Text(explanation)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(isExpanded ? nil : 2)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 2)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .buttonStyle(CardButtonStyle())
+        .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand") details")
     }
 
     // MARK: - Loading View
