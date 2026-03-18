@@ -2,9 +2,9 @@
 // Thump Tests
 //
 // 6 LLM judges, each playing a distinct customer persona.
-// All run on Claude (single API key). Diversity comes from the persona system
-// prompt, not from different model vendors. Each persona catches different
-// failure modes because they read the same text with completely different eyes.
+// All run via the Claude Code CLI (claude --print) — no separate ANTHROPIC_API_KEY
+// needed.  Any machine with Claude Code installed can run Tier B and C.
+// Diversity comes from the persona system prompt, not different model vendors.
 //
 // Personas sourced from PM research:
 //   Marcus Chen  — stressed professional, panic attack history
@@ -24,18 +24,13 @@ struct ClaudePersonaJudge: Sendable {
     let personaName: String
     let personaTitle: String
     let systemPrompt: String
-    let modelID: String
+    /// Claude model alias passed to `claude --model`.  Uses "haiku" for cost efficiency.
+    let modelAlias: String
     let maxTokens: Int
     let temperature: Double
 
-    static let apiKeyEnvVar = "ANTHROPIC_API_KEY"
-
-    var apiKey: String? {
-        ProcessInfo.processInfo.environment[Self.apiKeyEnvVar]
-    }
-
     var isAvailable: Bool {
-        apiKey != nil && !apiKey!.isEmpty
+        (try? LLMJudgeRegistry.claudeCLIPath()) != nil
     }
 }
 
@@ -52,13 +47,30 @@ struct LLMJudgeRegistry {
         judge6_sarah,
     ]
 
+    /// True when the `claude` CLI is installed and reachable.
+    /// No API key required — Claude Code handles auth internally.
     static var isAvailable: Bool {
-        ProcessInfo.processInfo.environment[ClaudePersonaJudge.apiKeyEnvVar] != nil
+        (try? claudeCLIPath()) != nil
+    }
+
+    /// Returns the absolute path to the `claude` CLI, or throws if not found.
+    static func claudeCLIPath() throws -> String {
+        let candidates = [
+            "/Users/t/.local/bin/claude",
+            "/usr/local/bin/claude",
+            "/opt/homebrew/bin/claude",
+        ]
+        for path in candidates {
+            if FileManager.default.isExecutableFile(atPath: path) { return path }
+        }
+        // Process (NSTask) is macOS-only; on iOS/simulator we can't shell out.
+        // The CLI path check above covers the most common installations.
+        throw JudgeError.claudeCLINotFound
     }
 
     static func availableJudges(for tier: JudgeTier) -> [ClaudePersonaJudge] {
         guard isAvailable else { return [] }
-        return judgesForTier(tier)
+        return judgesForTier(tier).filter { $0.isAvailable }
     }
 
     static func judgesForTier(_ tier: JudgeTier) -> [ClaudePersonaJudge] {
@@ -126,7 +138,7 @@ struct LLMJudgeRegistry {
           "marcus_reaction": "2-3 sentences: what would Marcus actually do after reading this?"
         }
         """,
-        modelID: "claude-sonnet-4-20250514",
+        modelAlias: "haiku",
         maxTokens: 2048,
         temperature: 0.3
     )
@@ -176,7 +188,7 @@ struct LLMJudgeRegistry {
           "priya_reaction": "2-3 sentences: would Priya keep the app or delete it based on this?"
         }
         """,
-        modelID: "claude-sonnet-4-20250514",
+        modelAlias: "haiku",
         maxTokens: 2048,
         temperature: 0.3
     )
@@ -227,7 +239,7 @@ struct LLMJudgeRegistry {
           "david_reaction": "2-3 sentences: what would David do after reading this — rest or exercise?"
         }
         """,
-        modelID: "claude-sonnet-4-20250514",
+        modelAlias: "haiku",
         maxTokens: 2048,
         temperature: 0.3
     )
@@ -279,7 +291,7 @@ struct LLMJudgeRegistry {
           "jordan_reaction": "2-3 sentences: how does Jordan feel after reading this — more or less anxious?"
         }
         """,
-        modelID: "claude-sonnet-4-20250514",
+        modelAlias: "haiku",
         maxTokens: 2048,
         temperature: 0.3
     )
@@ -331,7 +343,7 @@ struct LLMJudgeRegistry {
           "aisha_reaction": "2-3 sentences: does this compete with WHOOP or fall short? Would she switch?"
         }
         """,
-        modelID: "claude-sonnet-4-20250514",
+        modelAlias: "haiku",
         maxTokens: 2048,
         temperature: 0.3
     )
@@ -384,7 +396,7 @@ struct LLMJudgeRegistry {
           "sarah_reaction": "2-3 sentences: does Sarah feel seen, or does she feel like this app wasn't made for her?"
         }
         """,
-        modelID: "claude-sonnet-4-20250514",
+        modelAlias: "haiku",
         maxTokens: 2048,
         temperature: 0.3
     )

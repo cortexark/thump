@@ -136,53 +136,65 @@ public struct NudgeGenerator: Sendable {
         // what to do TONIGHT to fix tomorrow's metrics". This closes the loop:
         // poor sleep → HRV down → readiness low → primary backs off → secondary
         // explains WHY and gives a concrete tonight action.
+        //
+        // Exception: when stress=true AND recovering, skip the secondary rest nudge.
+        // The medical escalation (seekGuidance) + positivity anchor (celebrate) are
+        // higher priority than a third recovery-rest nudge in that specific scenario.
         if let r = readiness, (r.level == .recovering || r.level == .moderate) {
+            let skipRestNudge = stress && r.level == .recovering
             let hrvPillar = r.pillars.first { $0.type == .hrvTrend }
             let sleepPillar = r.pillars.first { $0.type == .sleep }
 
-            // Build a specific "tonight" recovery nudge based on which pillar is weakest
-            let weakestPillar = [hrvPillar, sleepPillar]
-                .compactMap { $0 }
-                .min { $0.score < $1.score }
+            // Build a specific "tonight" recovery nudge based on which pillar is weakest.
+            // Skipped when stress+recovering: medical escalation + celebrate fill the 2 free slots.
+            if !skipRestNudge {
+                let weakestPillar = [hrvPillar, sleepPillar]
+                    .compactMap { $0 }
+                    .min { $0.score < $1.score }
 
-            if weakestPillar?.type == .hrvTrend {
-                // HRV is the bottleneck — sleep is the main lever for HRV recovery
-                addIfNew(DailyNudge(
-                    category: .rest,
-                    title: "Sleep Is Your Recovery Tonight",
-                    description: "Your HRV is below your recent baseline — a sign your body "
-                        + "could use extra rest. The best thing you can do right now: "
-                        + "aim for 8 hours tonight. Good sleep supports better HRV.",
-                    durationMinutes: nil,
-                    icon: "bed.double.fill"
-                ))
-            } else {
-                // Sleep pillar is weak — direct sleep advice with the causal chain.
-                // Severity-graduated: <4h acknowledges user may have had no choice,
-                // 4-6h gives actionable bedtime advice.
-                let hours = current.sleepHours ?? 0
-                let hoursStr = String(format: "%.1f", hours)
-                if hours > 0 && hours < 4.0 {
+                if weakestPillar?.type == .hrvTrend {
+                    // HRV is the bottleneck — sleep is the main lever for HRV recovery
+                    let hour = Calendar.current.component(.hour, from: current.date)
+                    let isEvening = hour >= 17  // 5pm or later
                     addIfNew(DailyNudge(
                         category: .rest,
-                        title: "Rest When You Can Today",
-                        description: "You got \(hoursStr) hours last night — sometimes life doesn't "
-                            + "let you sleep. A short nap or even just sitting quietly helps. "
-                            + "Tonight, protect your sleep window however you can.",
+                        title: isEvening ? "Sleep Is Your Recovery Tonight" : "Rest Is Your Recovery Today",
+                        description: "Your HRV is below your recent baseline — a sign your body "
+                            + "could use extra rest. The best thing you can do right now: "
+                            + "aim for 8 hours \(isEvening ? "tonight" : "today"). Good sleep supports better HRV.",
                         durationMinutes: nil,
                         icon: "bed.double.fill"
                     ))
                 } else {
-                    addIfNew(DailyNudge(
-                        category: .rest,
-                        title: "Earlier Bedtime = Better Tomorrow",
-                        description: "You got \(hoursStr) hours last night. Less sleep can show up as "
-                            + "a higher resting heart rate and lower HRV the next morning — which is "
-                            + "what your metrics are showing. Whenever your next sleep window comes, "
-                            + "try to protect it — even an extra 30 minutes makes a difference.",
-                        durationMinutes: nil,
-                        icon: "bed.double.fill"
-                    ))
+                    // Sleep pillar is weak — direct sleep advice with the causal chain.
+                    // Severity-graduated: <4h acknowledges user may have had no choice,
+                    // 4-6h gives actionable bedtime advice.
+                    let hours = current.sleepHours ?? 0
+                    let hoursStr = String(format: "%.1f", hours)
+                    if hours > 0 && hours < 4.0 {
+                        addIfNew(DailyNudge(
+                            category: .rest,
+                            title: "Rest When You Can Today",
+                            description: "You got \(hoursStr) hours last night — sometimes life doesn't "
+                                + "let you sleep. A short nap or even just sitting quietly helps. "
+                                + "Tonight, protect your sleep window however you can.",
+                            durationMinutes: nil,
+                            icon: "bed.double.fill"
+                        ))
+                    } else {
+                        let hour = Calendar.current.component(.hour, from: current.date)
+                        let isEvening = hour >= 17  // 5pm or later
+                        addIfNew(DailyNudge(
+                            category: .rest,
+                            title: isEvening ? "Earlier Bedtime = Better Tomorrow" : "Rest More, Recover Faster",
+                            description: "You got \(hoursStr) hours last night. Less sleep can show up as "
+                                + "a higher resting heart rate and lower HRV the next morning — which is "
+                                + "what your metrics are showing. Whenever your next sleep window comes, "
+                                + "try to protect it — even an extra 30 minutes makes a difference.",
+                            durationMinutes: nil,
+                            icon: "bed.double.fill"
+                        ))
+                    }
                 }
             }
 
@@ -202,9 +214,10 @@ public struct NudgeGenerator: Sendable {
                 ))
             }
 
-            // Fix 6B: Positive anchor — when recovering, add an affirming nudge
-            // (prioritized over breathing nudge per BCTTv1 positive-framing requirement)
-            if r.level == .recovering && nudges.count < 3 {
+            // Fix 6B: Positive anchor — when recovering, always add an affirming nudge.
+            // No count guard: celebrate is a required positivity anchor for recovering state
+            // and must not be crowded out by rest/medical nudges (BCTTv1 positive-framing).
+            if r.level == .recovering {
                 addIfNew(DailyNudge(
                     category: .celebrate,
                     title: "One Thing That Helps",
@@ -217,12 +230,14 @@ public struct NudgeGenerator: Sendable {
 
             // If recovering (severe), also add a breathing nudge to actively help HRV
             if r.level == .recovering && nudges.count < 3 {
+                let hour = Calendar.current.component(.hour, from: current.date)
+                let isEvening = hour >= 17  // 5pm or later
                 addIfNew(DailyNudge(
                     category: .breathe,
-                    title: "4-7-8 Breathing Before Bed",
-                    description: "Slow breathing before sleep helps you relax and "
+                    title: isEvening ? "4-7-8 Breathing Before Bed" : "4-7-8 Breathing Reset",
+                    description: "Slow breathing helps you relax and "
                         + "may support better HRV overnight. "
-                        + "Inhale 4 counts, hold 7, exhale 8. Do 4 rounds tonight.",
+                        + "Inhale 4 counts, hold 7, exhale 8. Do 4 rounds \(isEvening ? "tonight" : "today").",
                     durationMinutes: 5,
                     icon: "wind"
                 ))

@@ -509,9 +509,14 @@ final class AlgorithmComparisonTests: XCTestCase {
         print("Cardio:    \(assessment.cardioScore.map { String(format: "%.1f", $0) } ?? "nil")")
         print("Status:    \(assessment.status)")
 
-        // Athlete should have: low stress, young bio age, high readiness, high cardio
+        // Athlete should have: low stress, young bio age, high readiness, high cardio.
+        // Threshold is 50 — derived from ground truth stressRange 5...40 (max=40) plus
+        // a 10-point physiological buffer. An elite athlete's RHR 46-54, HRV 55-95 and
+        // strong sleep profile should never score above 40 under any reasonable stress
+        // model. MockData uses a stable DJB2 persona seed (not Swift's randomized
+        // String.hashValue) so this expectation holds deterministically across test runs.
         if let stress = stressScore {
-            XCTAssertLessThan(stress, 50, "Athlete stress should be <50")
+            XCTAssertLessThan(stress, 50, "Athlete stress should be < 50 (ground truth max 40 + 10pt buffer)")
         }
         if let ba = bioAge {
             XCTAssertLessThanOrEqual(ba.difference, 0, "Athlete bio age should be ≤ chrono age")

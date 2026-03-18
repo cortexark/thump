@@ -31,13 +31,18 @@ struct NudgeCardView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header: icon + title + optional duration
             HStack(alignment: .top, spacing: 12) {
-                // Category icon
-                Image(systemName: nudge.icon)
-                    .font(.title2)
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(categoryColor.gradient, in: RoundedRectangle(cornerRadius: 10))
-                    .accessibilityHidden(true)
+                // Category icon — rest uses ThumpBuddy (.tired) instead of a generic bed icon
+                if nudge.category == .rest {
+                    ThumpBuddy(mood: .tired, size: 44, showAura: false)
+                        .accessibilityHidden(true)
+                } else {
+                    Image(systemName: nudge.icon)
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(categoryColor.gradient, in: RoundedRectangle(cornerRadius: 10))
+                        .accessibilityHidden(true)
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(nudge.title)

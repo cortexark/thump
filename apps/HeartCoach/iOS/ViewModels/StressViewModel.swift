@@ -243,9 +243,10 @@ final class StressViewModel: ObservableObject {
             smartAction = .standardNudge
 
         case .bedtimeWindDown:
-            // Acknowledge and dismiss the card from both primary action and list
+            // Dismiss the card, then start a breathing session for wind-down
             smartActions.removeAll { if case .bedtimeWindDown = $0 { return true } else { return false } }
             smartAction = .standardNudge
+            startBreathingSession()
 
         case .restSuggestion:
             startBreathingSession()

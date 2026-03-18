@@ -196,6 +196,7 @@ extension DashboardView {
         var isComplete: Bool { current >= target }
 
         var currentFormatted: String {
+            if current == 0 { return "–" }  // no data yet — show dash instead of "0.0k"
             if target >= 1000 {
                 return String(format: "%.1fk", current / 1000)
             }

@@ -174,11 +174,32 @@ private struct HeroScoreScreen: View {
                 Spacer(minLength: 10)
 
                 // ── Hero Score: the product IS this number ──
+                // Arc ring shows score as a 270° fill behind the number.
+                // 135° gap at bottom so the ring reads like a gauge (min ← → max).
                 VStack(spacing: 2) {
-                    Text("\(score)")
-                        .font(.system(size: 48, weight: .heavy, design: .rounded))
-                        .foregroundStyle(scoreColor)
-                        .scaleEffect(scoreScale)
+                    ZStack {
+                        // Track arc (dim background)
+                        Circle()
+                            .trim(from: 0, to: 0.75)
+                            .stroke(Color.white.opacity(0.12),
+                                    style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                            .rotationEffect(.degrees(135))
+
+                        // Fill arc (score color, animates in from 0)
+                        Circle()
+                            .trim(from: 0, to: appeared ? 0.75 * Double(score) / 100.0 : 0)
+                            .stroke(scoreColor,
+                                    style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                            .rotationEffect(.degrees(135))
+                            .animation(.spring(duration: 0.9, bounce: 0.1).delay(0.5),
+                                       value: appeared)
+
+                        Text("\(score)")
+                            .font(.system(size: 48, weight: .heavy, design: .rounded))
+                            .foregroundStyle(scoreColor)
+                            .scaleEffect(scoreScale)
+                    }
+                    .frame(width: 76, height: 76)
 
                     Text(scoreContext)
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -514,6 +535,12 @@ private struct ReadinessBreakdownScreen: View {
                 }
             }
             .frame(height: 6)
+
+            // Percentage value — gives the number behind the bar
+            Text("\(Int(pillar.value * 100))%")
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundStyle(pillar.color.opacity(0.9))
+                .frame(width: 26, alignment: .trailing)
         }
     }
 
@@ -586,10 +613,33 @@ private struct WalkSuggestionScreen: View {
         VStack(spacing: 0) {
             Spacer(minLength: 8)
 
-            // ThumpBuddy in nudging mood — pushing you to move
-            ThumpBuddy(mood: .nudging, size: 50, showAura: false)
-                .opacity(appeared ? 1 : 0)
-                .scaleEffect(appeared ? 1 : 0.6)
+            // ThumpBuddy in nudging mood — step goal ring overlaid.
+            // Ring shows today's steps as a proportion of the 8 000-step target.
+            ZStack {
+                ThumpBuddy(mood: .nudging, size: 50, showAura: false)
+
+                // Goal ring track
+                Circle()
+                    .trim(from: 0, to: 0.75)
+                    .stroke(Color.white.opacity(0.10),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(135))
+                    .frame(width: 64, height: 64)
+
+                // Goal ring fill (green, clockwise from top)
+                Circle()
+                    .trim(from: 0, to: appeared
+                          ? 0.75 * min(1.0, Double(stepCount ?? 0) / 8_000.0)
+                          : 0)
+                    .stroke(Color(hex: 0x22C55E),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(135))
+                    .frame(width: 64, height: 64)
+                    .animation(.spring(duration: 0.8, bounce: 0.15).delay(0.4),
+                               value: appeared)
+            }
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(appeared ? 1 : 0.6)
 
             Spacer(minLength: 8)
 

@@ -31,7 +31,8 @@ final class PipelineTraceExtensionTests: XCTestCase {
             smartActions: [.walkSuggestion],
             allowedIntensity: .moderate,
             nudgePriorities: [.walk],
-            positivityAnchorID: nil
+            positivityAnchorID: nil,
+            dailyActionBudget: 5
         )
 
         let trace = AdviceTrace(from: state, durationMs: 2.5)
@@ -63,7 +64,8 @@ final class PipelineTraceExtensionTests: XCTestCase {
             smartActions: [],
             allowedIntensity: .full,
             nudgePriorities: [],
-            positivityAnchorID: nil
+            positivityAnchorID: nil,
+            dailyActionBudget: 7
         )
 
         let dict = AdviceTrace(from: state, durationMs: 1.0).toDict()
@@ -96,7 +98,8 @@ final class PipelineTraceExtensionTests: XCTestCase {
             smartActions: [],
             allowedIntensity: .light,
             nudgePriorities: [.rest],
-            positivityAnchorID: "positivity_recovery_progress"
+            positivityAnchorID: "positivity_recovery_progress",
+            dailyActionBudget: 3
         )
 
         let trace = AdviceTrace(from: state, durationMs: 1.0)
@@ -208,7 +211,8 @@ final class PipelineTraceExtensionTests: XCTestCase {
             smartActions: [.restSuggestion],
             allowedIntensity: .light,
             nudgePriorities: [.rest],
-            positivityAnchorID: "positivity_recovery_progress"
+            positivityAnchorID: "positivity_recovery_progress",
+            dailyActionBudget: 3
         )
 
         let dict = AdviceTrace(from: state, durationMs: 1.0).toDict()

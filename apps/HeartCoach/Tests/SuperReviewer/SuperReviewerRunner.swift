@@ -278,6 +278,14 @@ struct SuperReviewerRunner {
             )
         }
 
+        // Apply daily guidance budget (V-015): trim combined nudges+buddyRecs to fit budget.
+        // Nudges are higher priority (more specific to today's metrics) so they get first slots.
+        let budget = adviceState.dailyActionBudget
+        let nudgeCap = min(capturedNudges.count, budget)
+        let recCap = max(0, budget - nudgeCap)
+        let capturedNudgesTrimmed = Array(capturedNudges.prefix(nudgeCap))
+        let capturedBuddyRecsTrimmed = Array(capturedBuddyRecs.prefix(recCap))
+
         // Recovery trend label from week-over-week data
         let recoveryTrendLabel: String? = {
             guard let wow = assessment.weekOverWeekTrend else { return nil }
@@ -336,10 +344,10 @@ struct SuperReviewerRunner {
             guidanceActions: stressGuidance?.actions,
 
             // Nudges
-            nudges: capturedNudges,
+            nudges: capturedNudgesTrimmed,
 
             // Buddy recommendations
-            buddyRecs: capturedBuddyRecs,
+            buddyRecs: capturedBuddyRecsTrimmed,
 
             // Coaching
             coachingHeroMessage: coachingReport?.heroMessage,
@@ -389,7 +397,10 @@ struct SuperReviewerRunner {
 
     static func writeCapturesToDisk(captures: [SuperReviewerCapture], directory: String) {
         let fm = FileManager.default
-        let baseURL = fm.temporaryDirectory.appendingPathComponent(directory)
+        // Write to Tests/SuperReviewer/CaptureOutput/ so outputs live in the project,
+        // not the volatile simulator tmp dir. The CaptureOutput/ folder is .gitignored.
+        let sourceDir = URL(fileURLWithPath: #file).deletingLastPathComponent()
+        let baseURL = sourceDir.appendingPathComponent("CaptureOutput").appendingPathComponent(directory)
         try? fm.createDirectory(at: baseURL, withIntermediateDirectories: true)
 
         let encoder = JSONEncoder()

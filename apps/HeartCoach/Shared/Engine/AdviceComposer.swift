@@ -122,12 +122,17 @@ struct AdviceComposer: Sendable {
             ?? stressAssessment.recoveryDriver
             ?? (overtrainingState >= .watch ? .overtraining : nil)
 
-        // 9. Smart actions
-        let smartActions = resolveSmartActions(
+        // 9. Smart actions (trimmed to fit within daily guidance budget)
+        let budget = dailyGuidanceBudget(mode: mode)
+        let rawSmartActions = resolveSmartActions(
             stressAssessment: stressAssessment,
             sleepAssessment: sleepAssessment,
             mode: mode
         )
+        // Reserve budget space for buddy recs (typically 1-2 on restrictive days).
+        // Smart actions take the remaining slots after reserving 1 slot for buddy recs.
+        let smartActionCap = max(0, budget - 1)
+        let smartActions = Array(rawSmartActions.prefix(smartActionCap))
 
         // 10. Allowed intensity
         let allowedIntensity = resolveIntensity(
@@ -185,7 +190,8 @@ struct AdviceComposer: Sendable {
             smartActions: smartActions,
             allowedIntensity: allowedIntensity,
             nudgePriorities: nudgePriorities,
-            positivityAnchorID: positivity.anchorID
+            positivityAnchorID: positivity.anchorID,
+            dailyActionBudget: budget
         )
     }
 
@@ -432,6 +438,26 @@ struct AdviceComposer: Sendable {
         case .lightRecovery:           return .light
         case .moderateMove:            return .moderate
         case .pushDay:                 return .full
+        }
+    }
+
+    // MARK: - Daily Guidance Budget (V-015)
+
+    /// Maximum total action items for the day.
+    ///
+    /// "Action items" = buddy recs + smart actions + goal nudge directives
+    /// + Thump Check directive text + weekly report recommended actions.
+    /// Hero message, narrative text, and passive goal displays do NOT count.
+    ///
+    /// Views use `AdviceState.dailyActionBudget` to trim buddy recommendations
+    /// to `max(0, dailyActionBudget - smartActions.count)`.
+    private func dailyGuidanceBudget(mode: GuidanceMode) -> Int {
+        switch mode {
+        case .fullRest:       return 2
+        case .medicalCheck:   return 2
+        case .lightRecovery:  return 3
+        case .moderateMove:   return 5
+        case .pushDay:        return 5  // V-015 caps any day at 5 to prevent cognitive overload
         }
     }
 

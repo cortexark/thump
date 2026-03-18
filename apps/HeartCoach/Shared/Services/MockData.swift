@@ -475,7 +475,12 @@ public enum MockData {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let ranges = persona.ranges
-        let personaSeed = persona.hashValue & 0xFFFF
+        // Use a stable DJB2-style hash of the rawValue bytes — Swift's String.hashValue
+        // is randomized per process (hash flooding protection), making it unsuitable
+        // as a deterministic seed for reproducible test data.
+        let personaSeed = persona.rawValue.unicodeScalars.reduce(5381) { acc, c in
+            (acc &* 33) &+ Int(c.value)
+        } & 0xFFFF
 
         return (0..<days).map { offset in
             let dayDate = calendar.date(
