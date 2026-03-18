@@ -36,6 +36,9 @@ struct DashboardView: View {
     /// A/B design variant toggle.
     @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
 
+    /// Design B: whether the driving signals row is expanded.
+    @AppStorage("thump_driving_signals_expanded") var isDrivingSignalsExpanded: Bool = false
+
     // MARK: - Sheet State
 
     /// Controls the Bio Age detail sheet presentation.
@@ -239,7 +242,7 @@ struct DashboardView: View {
 
     /// Synthesizes ALL engine outputs into one human-readable sentence.
     /// When coordinator is active, delegates to AdvicePresenter.
-    private var buddyFocusInsight: String? {
+    var buddyFocusInsight: String? {
         // Coordinator path: use AdvicePresenter
         if ConfigService.enableCoordinator,
            let adviceState = coordinator.bundle?.adviceState {
