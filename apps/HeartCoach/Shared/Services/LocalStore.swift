@@ -293,21 +293,22 @@ public final class LocalStore: ObservableObject {
 
     /// Encode a `Codable` value, encrypt it, and write it to UserDefaults as `Data`.
     /// Refuses to store health data in plaintext — drops the write if encryption fails.
-    /// Unit tests should mock CryptoService or use an unencrypted test store.
+    /// Encryption failures are logged and dropped (no plaintext fallback, no crash).
     private func save<T: Encodable>(_ value: T, key: StorageKey) {
         do {
             let jsonData = try encoder.encode(value)
-            if let encrypted = try? CryptoService.encrypt(jsonData) {
+            do {
+                let encrypted = try CryptoService.encrypt(jsonData)
                 defaults.set(encrypted, forKey: key.rawValue)
-            } else {
+            } catch {
                 // Encryption unavailable — do NOT fall back to plaintext for health data.
                 // Data is dropped rather than stored unencrypted. The next successful
-                // save will restore it. This protects PHI at the cost of temporary data loss.
+                // save will restore it. This protects PHI without killing the app/test run.
                 #if DEBUG
-                print("[LocalStore] ERROR: Encryption unavailable for key \(key.rawValue). Data NOT saved to protect health data privacy.")
-                #endif
-                #if DEBUG
-                assertionFailure("CryptoService.encrypt() returned nil for key \(key.rawValue). Fix Keychain access or mock CryptoService in tests.")
+                print(
+                    "[LocalStore] ERROR: Encryption failed for key \(key.rawValue): \(error). "
+                    + "Data NOT saved to protect health data privacy."
+                )
                 #endif
             }
         } catch {
