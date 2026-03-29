@@ -22,6 +22,9 @@
 // Platforms: iOS 17+, watchOS 10+
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Buddy Mood
 
@@ -42,6 +45,7 @@ enum BuddyMood: String, Equatable, Sendable {
 
     static func from(
         assessment: HeartAssessment,
+        readinessScore: Int? = nil,
         nudgeCompleted: Bool = false,
         feedbackType: DailyFeedback? = nil,
         activityInProgress: Bool = false
@@ -49,8 +53,30 @@ enum BuddyMood: String, Equatable, Sendable {
         if nudgeCompleted { return .conquering }
         if feedbackType == .positive { return .conquering }
         if activityInProgress { return .active }
+
+        // Use readiness score as primary signal (coherent with Thump Check card).
+        // Only show .tired when BOTH anomaly status AND readiness agree the user
+        // should rest — prevents "Rest Up" contradicting "Good to go" (BUG-1).
+        if let score = readinessScore {
+            if score >= 80 { return .thriving }
+            if score >= 60 {
+                // Moderate-to-good readiness: show content unless stress is high
+                return assessment.stressFlag ? .stressed : .content
+            }
+            if score >= 40 {
+                // Below average: nudging toward recovery
+                return assessment.stressFlag ? .stressed : .nudging
+            }
+            // Low readiness (< 40): genuinely tired — BUT only show sleeping
+            // mood in evening hours. During daytime, show nudging instead.
+            let hour = Calendar.current.component(.hour, from: Date())
+            let isEvening = hour >= 20 || hour < 6
+            return isEvening ? .tired : .nudging
+        }
+
+        // Fallback for nil readiness (first run, no data)
         if assessment.stressFlag { return .stressed }
-        if assessment.status == .needsAttention { return .tired }
+        if assessment.status == .needsAttention { return .nudging }
         if assessment.status == .improving {
             if let cardio = assessment.cardioScore, cardio >= 70 { return .thriving }
             return .content
@@ -300,7 +326,7 @@ struct ThumpBuddy: View {
         // Haptic
         #if os(watchOS)
         WKInterfaceDevice.current().play(.click)
-        #else
+        #elseif canImport(UIKit)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif
 
@@ -345,7 +371,7 @@ struct ThumpBuddy: View {
         // Haptic — soft
         #if os(watchOS)
         WKInterfaceDevice.current().play(.success)
-        #else
+        #elseif canImport(UIKit)
         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         #endif
 
