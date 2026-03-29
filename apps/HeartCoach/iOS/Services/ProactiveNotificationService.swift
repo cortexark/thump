@@ -170,10 +170,10 @@ final class ProactiveNotificationService: ObservableObject {
 
         let levelWord: String
         switch readinessLevel {
-        case .thriving: levelWord = "strong"
-        case .ready:    levelWord = "solid"
-        case .recovering: levelWord = "below your baseline"
-        case .low:      levelWord = "low"
+        case .primed:     levelWord = "strong"
+        case .ready:      levelWord = "solid"
+        case .moderate:   levelWord = "below your baseline"
+        case .recovering: levelWord = "low"
         }
 
         let content = buildContent(
