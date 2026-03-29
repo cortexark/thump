@@ -165,7 +165,8 @@ final class DiagnosticExportService {
             appVersion: (payload["meta"] as? [String: Any])?["appVersion"] as? String ?? "unknown",
             deviceModel: UIDevice.current.model,
             iosVersion: UIDevice.current.systemVersion,
-            healthMetrics: firestoreData
+            healthMetrics: firestoreData,
+            includeHealthData: true
         )
     }
 

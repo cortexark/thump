@@ -29,14 +29,19 @@ final class FeedbackService {
 
     // MARK: - Bug Reports
 
-    /// Uploads a bug report document to Firestore including all current health
-    /// metrics and engine outputs so the team can reproduce the exact UI state.
+    /// Uploads a bug report document to Firestore.
+    ///
+    /// Health metrics are only included when the user explicitly opts in
+    /// via the `includeHealthData` parameter (Apple Guideline 5.1.3(i)).
+    /// Age and biological sex are never sent — they constitute PHI when
+    /// combined with the hashed user ID.
     func submitBugReport(
         description: String,
         appVersion: String,
         deviceModel: String,
         iosVersion: String,
         healthMetrics: [String: Any],
+        includeHealthData: Bool,
         completion: ((Error?) -> Void)? = nil
     ) {
         let userId = EngineTelemetryService.shared.hashedUserId ?? "anonymous"
@@ -47,17 +52,19 @@ final class FeedbackService {
             "deviceModel": deviceModel,
             "iosVersion": iosVersion,
             "timestamp": FieldValue.serverTimestamp(),
-            "status": "new",
-            "healthMetrics": healthMetrics
+            "status": "new"
         ]
 
-        // Add user profile context (age, sex) for metric interpretation
-        let profile = LocalStore().profile
-        if let dob = profile.dateOfBirth {
-            let ageYears = Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 0
-            data["userAge"] = ageYears
+        // Only attach health metrics when the user gave explicit consent
+        if includeHealthData {
+            // Strip any PHI fields that may have been included by the caller
+            var sanitized = healthMetrics
+            sanitized.removeValue(forKey: "userAge")
+            sanitized.removeValue(forKey: "userSex")
+            sanitized.removeValue(forKey: "screenshotBase64")
+            data["healthMetrics"] = sanitized
+            data["healthDataConsentGiven"] = true
         }
-        data["userSex"] = profile.biologicalSex.rawValue
 
         db.collection("users")
             .document(userId)
