@@ -44,6 +44,9 @@ struct DashboardView: View {
     /// Controls the Readiness detail sheet presentation.
     @State var showReadinessDetail = false
 
+    /// The pillar "Why?" explanation currently shown (nil = no sheet).
+    @State var pillarWhyText: PillarWhyContent?
+
     /// Prevents redundant initial refresh work when the tab view re-renders.
     @State private var didInitialLoad = false
 
