@@ -29,7 +29,9 @@ struct InsightsView: View {
 
     @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
     @State var showingReportDetail = false
+    @State private var showingHeroDetail = false
     @State private var selectedCorrelation: CorrelationResult?
+    @State private var didInitialLoad = false
 
     // MARK: - Body
 
@@ -37,9 +39,11 @@ struct InsightsView: View {
         NavigationStack {
             contentView
                 .navigationTitle("Insights")
-                .navigationBarTitleDisplayMode(.large)
+                .navigationBarTitleDisplayMode(.inline)
                 .onAppear { InteractionLog.pageView("Insights") }
                 .task {
+                    guard !didInitialLoad else { return }
+                    didInitialLoad = true
                     viewModel.bind(healthKitService: healthKitService, localStore: localStore)
                     viewModel.bind(coordinator: coordinator)
                     viewModel.connectivityService = connectivityService
@@ -96,12 +100,13 @@ struct InsightsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Image(systemName: "sparkles")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(.white)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Your Focus This Week")
-                        .font(.headline)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundStyle(.white)
                     Text(heroSubtitle)
                         .font(.caption)
@@ -117,6 +122,20 @@ struct InsightsView: View {
                 .foregroundStyle(.white.opacity(0.95))
                 .fixedSize(horizontal: false, vertical: true)
 
+            if let rhrSignal = rhrCorrelationSignal() {
+                HStack(spacing: 8) {
+                    Image(systemName: rhrSignal.isRisk ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill")
+                        .font(.caption)
+                    Text(rhrSignal.text)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(.white.opacity(0.2)))
+            }
+
             if let actionText = heroActionText {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.right.circle.fill")
@@ -131,7 +150,7 @@ struct InsightsView: View {
                 .background(Capsule().fill(.white.opacity(0.2)))
             }
         }
-        .padding(18)
+        .padding(14)
         .background(
             LinearGradient(
                 colors: [Color(hex: 0x7C3AED), Color(hex: 0x6D28D9), Color(hex: 0x4C1D95)],
@@ -140,7 +159,19 @@ struct InsightsView: View {
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            InteractionLog.log(.cardTap, element: "insights_hero_card", page: "Insights")
+            showingReportDetail = true
+        }
+        .sheet(isPresented: $showingHeroDetail) {
+            if let report = viewModel.weeklyReport,
+               let plan = viewModel.actionPlan {
+                WeeklyReportDetailView(report: report, plan: plan)
+            }
+        }
         .accessibilityIdentifier("insights_hero_card")
+        .accessibilityHint("Tap to see this week's focus details")
     }
 
     var heroSubtitle: String {
@@ -294,6 +325,11 @@ struct InsightsView: View {
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Text(weeklyScoreExplanation(report: report))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             // Nudge completion rate
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -427,7 +463,7 @@ struct InsightsView: View {
         let policy = ConfigService.activePolicy
         let completionPct = Int(report.nudgeCompletionRate * 100)
         if completionPct >= policy.view.nudgeCompletionSolid {
-            parts.append("You engaged with \(completionPct)% of daily suggestions — solid commitment.")
+            parts.append("You engaged with \(completionPct)% of daily suggestions. Solid commitment.")
         } else if completionPct >= policy.view.nudgeCompletionMinimum {
             parts.append("You completed \(completionPct)% of your nudges. Aim for one extra nudge this week.")
         } else {
@@ -435,6 +471,56 @@ struct InsightsView: View {
         }
 
         return parts.joined(separator: " ")
+    }
+
+    /// Adds plain-language reasons for why the weekly score is low or stuck.
+    private func weeklyScoreExplanation(report: WeeklyReport) -> String {
+        guard let score = report.avgCardioScore else {
+            return "Why this score is limited: not enough complete daily data yet."
+        }
+
+        var reasons: [String] = []
+        let completionPct = Int(report.nudgeCompletionRate * 100)
+
+        if score < 60 {
+            reasons.append("average score is \(Int(score))/100")
+        } else if score < 70 {
+            reasons.append("average score is \(Int(score))/100 and still below your strong range")
+        }
+
+        if completionPct < 60 {
+            reasons.append("nudge completion is \(completionPct)%")
+        }
+
+        switch report.trendDirection {
+        case .down:
+            reasons.append("trend is down versus last week")
+        case .flat where score < 70:
+            reasons.append("trend is flat, so gains did not compound")
+        default:
+            break
+        }
+
+        if reasons.isEmpty {
+            return "Why this score sits here: consistency is good. Next gains usually come from better sleep timing and steady activity volume."
+        }
+        return "Why this score is low: \(reasons.joined(separator: ", "))."
+    }
+
+    /// Surfaces a direct RHR direction cue using the strongest RHR-linked correlation.
+    private func rhrCorrelationSignal() -> (text: String, isRisk: Bool)? {
+        guard let corr = viewModel.correlations.first(where: {
+            $0.factorName.localizedCaseInsensitiveContains("RHR")
+                || $0.interpretation.localizedCaseInsensitiveContains("resting heart rate")
+        }) else {
+            return nil
+        }
+
+        let factor = corr.factorName.replacingOccurrences(of: " vs RHR", with: "")
+        if corr.isBeneficial {
+            return ("More \(factor.lowercased()) is linked to lower RHR this week ↓", false)
+        }
+        return ("Current \(factor.lowercased()) pattern may push RHR up this week ↑", true)
     }
 
     // MARK: - Focus for the Week (Engine-Driven Targets)
@@ -509,28 +595,28 @@ struct InsightsView: View {
                     icon: "figure.walk",
                     iconColor: Color(hex: 0x22C55E),
                     title: "Activity → VO2 Max",
-                    explanation: "Regular moderate activity (brisk walking, cycling) strengthens your heart's pumping efficiency. Over weeks, your VO2 max score improves — meaning your heart delivers more oxygen with less effort."
+                    explanation: "Regular moderate activity (brisk walking, cycling) strengthens your heart's pumping efficiency. Over weeks, your VO2 max score improves, meaning your heart delivers more oxygen with less effort."
                 )
 
                 educationalCard(
                     icon: "heart.circle",
                     iconColor: Color(hex: 0x3B82F6),
                     title: "Zone Training → Recovery Speed",
-                    explanation: "Spending time in heart rate zones 2-3 (fat burn and cardio) trains your heart to recover faster after exertion. A lower recovery heart rate means a more efficient cardiovascular system."
+                    explanation: "Spending time in heart rate zones 2 and 3 (fat burn and cardio) trains your heart to recover faster after exertion. A lower recovery heart rate means a more efficient cardiovascular system."
                 )
 
                 educationalCard(
                     icon: "moon.fill",
                     iconColor: Color(hex: 0x8B5CF6),
                     title: "Sleep → HRV",
-                    explanation: "Quality sleep is when your nervous system rebalances. Consistent 7-8 hour nights typically show as rising HRV over 2-4 weeks — a sign your body is recovering well between efforts."
+                    explanation: "Quality sleep is when your body rebalances. Consistent 7 to 8 hour nights typically show as rising HRV over 2 to 4 weeks, a sign your body is recovering well between efforts."
                 )
 
                 educationalCard(
                     icon: "brain.head.profile",
                     iconColor: Color(hex: 0xF59E0B),
                     title: "Stress → Resting Heart Rate",
-                    explanation: "Chronic stress keeps your fight-or-flight system active, raising resting heart rate. Breathing exercises and regular movement help lower it by activating your body's relaxation response."
+                    explanation: "Chronic stress keeps your fight or flight system active, raising resting heart rate. Breathing exercises and regular movement help lower it by activating your body's relaxation response."
                 )
             }
         }

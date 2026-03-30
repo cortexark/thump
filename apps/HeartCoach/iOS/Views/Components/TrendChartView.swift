@@ -44,6 +44,9 @@ struct TrendChartView: View {
     let style: ChartStyle
     private let calendar = Calendar.current
 
+    /// The currently selected data point (tap-to-inspect).
+    @State private var selectedDate: Date?
+
     // MARK: - Computed
 
     /// The average value across all data points.
@@ -149,9 +152,46 @@ struct TrendChartView: View {
                         .padding(.vertical, 2)
                         .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
                 }
+            // Selected point highlight (tap-to-inspect)
+            if let selected = selectedDate,
+               let point = closestPoint(to: selected) {
+                RuleMark(x: .value("Selected", point.date))
+                    .foregroundStyle(color.opacity(0.4))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .annotation(position: .top, spacing: 4) {
+                        VStack(spacing: 2) {
+                            Text(point.date, format: .dateTime.month(.abbreviated).day())
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                            Text(String(format: "%.1f", point.value))
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .fontDesign(.rounded)
+                                .foregroundStyle(color)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(color.opacity(0.3), lineWidth: 0.5)
+                        )
+                    }
+
+                PointMark(
+                    x: .value("Date", point.date),
+                    y: .value(metricLabel, point.value)
+                )
+                .foregroundStyle(color)
+                .symbolSize(80)
+            }
         }
         .chartYScale(domain: yMin...yMax)
         .chartXScale(range: .plotDimension(startPadding: 8, endPadding: 16))
+        .chartXSelection(value: $selectedDate)
         .chartXAxis {
             AxisMarks(values: axisMarkDates) { _ in
                 AxisGridLine()
@@ -174,6 +214,13 @@ struct TrendChartView: View {
                 .clipped()
         }
         .clipped()
+    }
+
+    /// Finds the data point closest to the given date.
+    private func closestPoint(to date: Date) -> (date: Date, value: Double)? {
+        dataPoints.min(by: {
+            abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date))
+        })
     }
 
     private var barChart: some View {
