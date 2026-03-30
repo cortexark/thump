@@ -168,6 +168,13 @@ struct TrendChartView: View {
                                 .fontWeight(.bold)
                                 .fontDesign(.rounded)
                                 .foregroundStyle(color)
+
+                            // Baseline comparison
+                            let diff = point.value - averageValue
+                            let sign = diff >= 0 ? "+" : ""
+                            Text("\(sign)\(String(format: "%.1f", diff)) vs avg")
+                                .font(.system(size: 8))
+                                .foregroundStyle(diff >= 0 ? .green : .orange)
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)

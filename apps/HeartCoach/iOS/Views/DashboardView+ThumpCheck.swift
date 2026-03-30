@@ -61,9 +61,19 @@ extension DashboardView {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(readinessColor(for: result.level))
+                    Spacer()
+                    Text("Why?")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(readinessColor(for: result.level).opacity(0.7))
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    InteractionLog.log(.cardTap, element: "readiness_score_tap", page: "Dashboard")
+                    showReadinessDetail = true
+                }
+                .accessibilityHint("Tap to see what's driving your score")
                 .background(
                     RoundedRectangle(cornerRadius: 10)
                         .fill(readinessColor(for: result.level).opacity(0.08))
