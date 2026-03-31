@@ -178,15 +178,15 @@ struct AdvicePresenter {
 
         switch driver {
         case .lowSleep:
-            return "Sleep is below your norm. Prioritize tonight to lift tomorrow's readiness."
+            return "Sleep is below your recent baseline. Prioritizing tonight often helps tomorrow's readiness move closer to baseline."
         case .lowHRV:
-            return "HRV is below your recent range. Your nervous system is still recovering, so keep today easy."
+            return "A recovery-related signal is below your recent range. Your system may still be recovering, so a lighter day likely fits."
         case .highStress:
-            return "Stress is elevated. A short easy walk and earlier bedtime can help recovery tonight."
+            return "Stress is above your recent baseline. A 20-minute easy walk and an earlier bedtime often help recovery tonight."
         case .overtraining:
-            return "Recent training load is high. Rest today is where your body adapts."
+            return "Recent training load is above your usual range. Today's rest is where adaptation happens."
         case .highRHR:
-            return "Resting heart rate is above baseline. Keep effort easy while your nervous system settles."
+            return "One recovery signal is above your recent baseline. Keep effort easy while your system settles."
         }
     }
 

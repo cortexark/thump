@@ -179,7 +179,7 @@ final class ProactiveNotificationService: ObservableObject {
         let content = buildContent(
             type: type,
             title: "Your Morning Check-In",
-            subtitle: "Recovery is \(levelWord) today",
+            subtitle: "Recovery is \(levelWord) vs recent baseline",
             body: "\(topReason) Open Thump to see today's plan.",
             interruptionLevel: .passive
         )
@@ -199,15 +199,15 @@ final class ProactiveNotificationService: ObservableObject {
 
         let body: String
         if sleepDebtHours > 1.5 {
-            body = "You've been carrying some sleep debt. A 20-minute wind-down routine tends to help your body recover tonight."
+            body = "You've likely built some sleep debt. A 20-minute wind-down routine often helps recovery trend closer to your baseline tonight."
         } else {
-            body = "Getting ready for bed soon supports a solid baseline tomorrow. Dimming lights and putting screens away often helps."
+            body = "Tomorrow's recovery often starts with tonight's routine. Dimming lights and putting screens away 20 minutes before bed can help."
         }
 
         let content = buildContent(
             type: type,
             title: "Start Winding Down",
-            subtitle: "Tonight's sleep starts now",
+            subtitle: "Tomorrow's recovery starts tonight",
             body: body,
             interruptionLevel: .passive
         )
@@ -243,13 +243,13 @@ final class ProactiveNotificationService: ObservableObject {
         guard await canSchedule(type: type) else { return }
 
         let body = wasHighIntensity
-            ? "That was a solid effort. Rehydrating and eating within the hour tends to improve tomorrow's recovery."
-            : "Nice work staying active. A short cooldown and some water often help your body absorb the session."
+            ? "That session placed real load on your system. Rehydrating and eating within 60 minutes often supports tomorrow's recovery."
+            : "That session added useful work. A 10-minute cooldown and some water often help your body absorb it well."
 
         let content = buildContent(
             type: type,
-            title: "Recover It Well",
-            subtitle: "The next hour matters",
+            title: "Recover From That Session",
+            subtitle: "The next hour tends to matter",
             body: body,
             interruptionLevel: .passive
         )
@@ -287,9 +287,9 @@ final class ProactiveNotificationService: ObservableObject {
 
         let content = buildContent(
             type: type,
-            title: "Today Looks Like a Push Day",
-            subtitle: "Your body is ready for more",
-            body: "Recovery is tracking well above your baseline and stress is manageable. If you've planned a harder session, this is likely a good day for it.",
+            title: "Today May Fit Harder Training",
+            subtitle: "Readiness looks above recent baseline",
+            body: "Recovery is trending above your 7-day average and stress looks manageable. If you planned a harder session, today is likely a good fit.",
             interruptionLevel: .passive
         )
 
@@ -316,9 +316,9 @@ final class ProactiveNotificationService: ObservableObject {
 
         let content = buildContent(
             type: type,
-            title: "Your Body May Be Fighting Something",
-            subtitle: "Recovery signals look unusually off",
-            body: "Several signals have moved outside your normal range for multiple days. Keep today light, monitor symptoms, and consult your doctor if you feel unwell.",
+            title: "Your Signals Look Unusually Off",
+            subtitle: "Several trends shifted from baseline",
+            body: "Several signals have moved outside your usual range for multiple days. Keep today light, monitor symptoms, and consult your doctor if needed.",
             interruptionLevel: .active
         )
 
@@ -345,8 +345,8 @@ final class ProactiveNotificationService: ObservableObject {
         let content = buildContent(
             type: type,
             title: "Set Up Tomorrow Now",
-            subtitle: "Tonight matters",
-            body: "Today put some load on your system. A calm evening and an earlier bedtime tend to help recovery rebound.",
+            subtitle: "Today's rest is where adaptation happens",
+            body: "Today added load to your system. A calm evening and getting to bed 30 minutes earlier often help recovery move toward baseline.",
             interruptionLevel: .passive
         )
 
@@ -379,9 +379,9 @@ final class ProactiveNotificationService: ObservableObject {
 
         let content = buildContent(
             type: type,
-            title: "That Recovery Choice Helped",
-            subtitle: "Your signals bounced back",
-            body: "Recovery improved after yesterday's lighter day. Following rest advice tends to produce this kind of rebound. Worth repeating when needed.",
+            title: "Yesterday's Recovery Choice Helped",
+            subtitle: "Your signals moved toward baseline",
+            body: "Recovery improved after yesterday's lighter day. Today's rest is where adaptation happens, and a similar choice may help again when needed.",
             interruptionLevel: .passive
         )
 

@@ -55,7 +55,7 @@ final class NotificationService: ObservableObject {
 
     // MARK: - Initialization
 
-    nonisolated init(
+    init(
         localStore: LocalStore = LocalStore(),
         alertPolicy: AlertPolicy = ConfigService.defaultAlertPolicy
     ) {
@@ -107,20 +107,23 @@ final class NotificationService: ObservableObject {
         }
 
         let content = UNMutableNotificationContent()
-        content.title = alertTitle(for: assessment)
-        // BUG-034: Do not include health metric values (PHI) in notification payloads.
-        // Notification content is visible on the lock screen and in Notification Center.
-        // Use a generic body instead of assessment.explanation which contains metric values.
-        content.body = "Check your Thump insights for an update on your heart health."
+        let copy = anomalyCopy(for: assessment)
+        content.title = copy.title
+        content.subtitle = copy.subtitle
+        content.body = copy.body
         content.sound = .default
         content.categoryIdentifier = Identifiers.categoryAnomaly
+        content.threadIdentifier = "com.thump.alerts.anomaly"
+        content.relevanceScore = 0.85
+        content.interruptionLevel = .active
 
         // BUG-034: Only include non-PHI routing metadata in userInfo.
         // Removed anomalyScore which exposes health metric values in the notification payload.
         content.userInfo = [
             "status": assessment.status.rawValue,
             "regressionFlag": assessment.regressionFlag,
-            "stressFlag": assessment.stressFlag
+            "stressFlag": assessment.stressFlag,
+            "route": "dashboard"
         ]
 
         // Fire immediately with a time interval trigger
@@ -162,19 +165,27 @@ final class NotificationService: ObservableObject {
         )
 
         let content = UNMutableNotificationContent()
-        content.title = nudge.title
-        content.body = nudge.description
+        let copy = nudgeReminderCopy(for: nudge, hour: hour)
+        content.title = copy.title
+        content.subtitle = copy.subtitle
+        content.body = copy.body
         content.sound = .default
         content.categoryIdentifier = Identifiers.categoryNudge
+        content.threadIdentifier = "com.thump.alerts.nudge.\(nudge.category.rawValue)"
+        content.relevanceScore = 0.65
+        content.interruptionLevel = .passive
+        content.targetContentIdentifier = nudge.category.rawValue
 
         if let duration = nudge.durationMinutes {
             content.userInfo = [
                 "category": nudge.category.rawValue,
-                "durationMinutes": duration
+                "durationMinutes": duration,
+                "route": "dashboard"
             ]
         } else {
             content.userInfo = [
-                "category": nudge.category.rawValue
+                "category": nudge.category.rawValue,
+                "route": "dashboard"
             ]
         }
 
@@ -342,6 +353,82 @@ final class NotificationService: ObservableObject {
             return "Heart Metric Anomaly Detected"
         }
         return "Thump Alert"
+    }
+
+    /// Human-friendly, action-forward anomaly messaging for lock screen + watch mirroring.
+    /// Copy stays privacy-safe and avoids raw metric values.
+    private func anomalyCopy(for assessment: HeartAssessment) -> (title: String, subtitle: String, body: String) {
+        if assessment.stressFlag {
+            return (
+                title: "Stress Trend Is Up",
+                subtitle: "Try a 2-minute reset now",
+                body: "Stress is above your recent baseline. Open Thump for a calm reset and today’s next step."
+            )
+        }
+        if assessment.regressionFlag {
+            return (
+                title: "Recovery Trend Slipped",
+                subtitle: "A lighter day likely fits",
+                body: "Recovery is below your recent baseline. Open Thump to follow the next best action for today."
+            )
+        }
+        if assessment.anomalyScore >= alertPolicy.anomalyHigh {
+            return (
+                title: "Pattern Shift Detected",
+                subtitle: "See what changed",
+                body: "One or more trends moved away from your usual pattern. Open Thump to review the shift and likely next step."
+            )
+        }
+        return (
+            title: "Daily Recovery Update",
+            subtitle: "One clear next step",
+            body: "Today’s signals are in. Open Thump to see the action that best fits your current baseline."
+        )
+    }
+
+    /// Category-aware reminder messaging that emphasizes one clear action.
+    private func nudgeReminderCopy(for nudge: DailyNudge, hour: Int) -> (title: String, subtitle: String, body: String) {
+        let timeHint = hour < 12 ? "for this morning" : (hour < 17 ? "for today" : "for tonight")
+        let duration = nudge.durationMinutes.map { "\($0) min" } ?? "short"
+
+        switch nudge.category {
+        case .walk:
+            return (
+                title: "Today’s Move",
+                subtitle: "Take a \(duration) walk",
+                body: "Your signals may benefit from a \(duration.lowercased()) walk \(timeHint). It often helps stress settle and recovery move toward baseline."
+            )
+        case .moderate:
+            return (
+                title: "Training Check-In",
+                subtitle: "Moderate effort for \(duration)",
+                body: "Today’s readiness suggests controlled work may fit \(timeHint). Open Thump to start at the right intensity."
+            )
+        case .breathe:
+            return (
+                title: "Reset Moment",
+                subtitle: "Breathe for \(duration)",
+                body: "Stress appears above your recent baseline. A calm \(duration.lowercased()) breathing reset now often helps your body settle."
+            )
+        case .rest:
+            return (
+                title: "Recovery First",
+                subtitle: "Protect tonight’s sleep",
+                body: "Today’s signals suggest keeping effort light \(timeHint). Today’s rest is where adaptation happens for tomorrow."
+            )
+        case .hydrate:
+            return (
+                title: "Hydration Check",
+                subtitle: "Take a quick water break",
+                body: "Your body may benefit from water \(timeHint). A short break often helps energy and focus stay steadier."
+            )
+        default:
+            return (
+                title: "Thump Focus",
+                subtitle: "One clear action",
+                body: "\(nudge.title) \(timeHint). Open Thump to follow the step that fits today’s signals."
+            )
+        }
     }
 
     /// Returns identifiers for all pending nudge notifications.
