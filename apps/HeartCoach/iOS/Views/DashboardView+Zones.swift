@@ -23,7 +23,6 @@ extension DashboardView {
         if let zoneAnalysis = viewModel.zoneAnalysis,
            let snapshot = viewModel.todaySnapshot {
             let pillars = zoneAnalysis.pillars
-            let totalMin = snapshot.zoneMinutes.reduce(0, +)
             let metCount = pillars.filter { $0.completion >= 1.0 }.count
 
             VStack(alignment: .leading, spacing: 14) {
@@ -137,6 +136,17 @@ extension DashboardView {
                         RoundedRectangle(cornerRadius: 10)
                             .fill((rec == .perfectBalance ? Color(hex: 0x22C55E) : Color(hex: 0x3B82F6)).opacity(0.06))
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        InteractionLog.log(.cardTap, element: "zone_coaching_nudge", page: "Dashboard")
+                        // Navigate to Trends tab
+                        NotificationCenter.default.post(
+                            name: .init("ThumpNavigateToTab"),
+                            object: nil,
+                            userInfo: ["tab": 3]
+                        )
+                    }
+                    .accessibilityHint("Tap to see zone details in Trends")
                 }
 
                 // Weekly activity target (AHA 150 min guideline)

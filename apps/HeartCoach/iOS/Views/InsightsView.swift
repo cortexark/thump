@@ -577,6 +577,12 @@ struct InsightsView: View {
                         RoundedRectangle(cornerRadius: 14)
                             .strokeBorder(target.color.opacity(0.1), lineWidth: 1)
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        InteractionLog.log(.cardTap, element: "focus_target", page: "Insights", details: target.title)
+                        showingReportDetail = true
+                    }
+                    .accessibilityHint("Tap to see details for \(target.title)")
                 }
             }
         }
@@ -622,22 +628,34 @@ struct InsightsView: View {
         }
     }
 
+    @State private var expandedCard: String?
+
     private func educationalCard(icon: String, iconColor: Color, title: String, explanation: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        let isExpanded = expandedCard == title
+        return HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.subheadline)
                 .foregroundStyle(iconColor)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-                Text(explanation)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                if isExpanded {
+                    Text(explanation)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
         }
         .padding(14)
@@ -646,6 +664,14 @@ struct InsightsView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            InteractionLog.log(.cardTap, element: "edu_card", page: "Insights", details: title)
+            withAnimation(.easeInOut(duration: 0.25)) {
+                expandedCard = isExpanded ? nil : title
+            }
+        }
+        .accessibilityHint("Tap to \(isExpanded ? "collapse" : "expand") this explanation")
     }
 
     // MARK: - Loading View

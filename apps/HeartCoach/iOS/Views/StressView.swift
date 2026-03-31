@@ -33,6 +33,10 @@ struct StressView: View {
     @EnvironmentObject private var connectivityService: ConnectivityService
     @EnvironmentObject private var healthKitService: HealthKitService
     @EnvironmentObject private var coordinator: DailyEngineCoordinator
+    @EnvironmentObject private var notificationService: NotificationService
+    @State private var showOpenAppError = false
+    @State private var openAppErrorMessage = ""
+    @State private var didInitialLoad = false
 
     // MARK: - Body
 
@@ -56,9 +60,12 @@ struct StressView: View {
             .navigationBarTitleDisplayMode(.large)
             .onAppear { InteractionLog.pageView("Stress") }
             .task {
+                guard !didInitialLoad else { return }
+                didInitialLoad = true
                 viewModel.bind(healthKitService: healthKitService)
                 viewModel.bind(connectivityService: connectivityService)
                 viewModel.bind(coordinator: coordinator)
+                viewModel.bind(notificationService: notificationService)
                 await viewModel.loadData()
             }
             .sheet(isPresented: $viewModel.isJournalSheetPresented) {
@@ -67,21 +74,29 @@ struct StressView: View {
             .sheet(isPresented: $viewModel.isBreathingSessionActive) {
                 breathingSessionSheet
             }
-            .alert("Time to Get Moving",
-                   isPresented: $viewModel.walkSuggestionShown) {
+            .confirmationDialog(
+                "Time to Get Moving",
+                isPresented: $viewModel.walkSuggestionShown,
+                titleVisibility: .visible
+            ) {
                 Button("Open Fitness") {
                     InteractionLog.log(.buttonTap, element: "walk_open_fitness", page: "Stress")
-                    viewModel.walkSuggestionShown = false
-                    if let url = URL(string: "fitness://") {
-                        UIApplication.shared.open(url)
-                    }
+                    openFitnessApp()
+                }
+                Button("Open Health") {
+                    InteractionLog.log(.buttonTap, element: "walk_open_health", page: "Stress")
+                    openHealthApp()
                 }
                 Button("Not Now", role: .cancel) {
                     InteractionLog.log(.buttonTap, element: "walk_suggestion_dismiss", page: "Stress")
-                    viewModel.walkSuggestionShown = false
                 }
             } message: {
-                Text("A 10-minute walk can lower stress and boost your mood. Open Fitness to start a walking workout.")
+                Text("A 10 minute walk can lower stress and boost your mood. Choose where to start.")
+            }
+            .alert("Unable to Open Apple Apps", isPresented: $showOpenAppError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(openAppErrorMessage)
             }
         }
     }
@@ -93,7 +108,7 @@ struct StressView: View {
             if let stress = viewModel.currentStress {
                 // Color indicator dot
                 Circle()
-                    .fill(stressColor(for: stress.level))
+                    .fill(stressColor(for: stress))
                     .frame(width: 12, height: 12)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -102,7 +117,7 @@ struct StressView: View {
                         .foregroundStyle(.primary)
 
                     HStack(spacing: 6) {
-                        Text(stress.level.displayName)
+                        Text(stressBandLabel(for: stress.level))
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
@@ -128,7 +143,7 @@ struct StressView: View {
 
                 Image(systemName: stress.level.icon)
                     .font(.title2)
-                    .foregroundStyle(stressColor(for: stress.level))
+                    .foregroundStyle(stressColor(for: stress))
             } else {
                 Image(systemName: "heart.text.square")
                     .font(.title2)
@@ -146,7 +161,14 @@ struct StressView: View {
             RoundedRectangle(cornerRadius: ThumpRadius.md)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard let stress = viewModel.currentStress else { return }
+            InteractionLog.log(.cardTap, element: "stress_banner", page: "Stress", details: "score=\(Int(stress.score))")
+            viewModel.showStressExplainer = true
+        }
         .accessibilityElement(children: .combine)
+        .accessibilityHint("Tap to learn more about your current stress level")
         .accessibilityIdentifier("stress_banner")
     }
 
@@ -172,14 +194,24 @@ struct StressView: View {
                 HStack(spacing: 6) {
                     Image(systemName: stressActionIcon(for: stress.level))
                         .font(.caption)
-                        .foregroundStyle(stressColor(for: stress.level))
+                        .foregroundStyle(stressColor(for: stress))
 
-                    Text(stressActionTip(for: stress.level))
+                    Text(stressActionTip(
+                        for: stress.level,
+                        readiness: viewModel.assessmentReadinessLevel
+                    ))
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundStyle(stressColor(for: stress.level))
+                        .foregroundStyle(stressColor(for: stress))
                 }
                 .padding(.top, 2)
+
+                if let summary = viewModel.last24HourMixSummary {
+                    Text(summary)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 // Signal quality warnings
                 if !stress.warnings.isEmpty {
@@ -212,9 +244,31 @@ struct StressView: View {
         }
     }
 
-    private func stressActionTip(for level: StressLevel) -> String {
+    private func stressBandLabel(for level: StressLevel) -> String {
+        switch level {
+        case .relaxed: return "Low right now"
+        case .balanced: return "Moderate right now"
+        case .elevated: return "High right now"
+        }
+    }
+
+    private func stressBandSummaryLabel(for level: StressLevel) -> String {
+        switch level {
+        case .relaxed: return "Low"
+        case .balanced: return "Moderate"
+        case .elevated: return "High"
+        }
+    }
+
+    private func stressActionTip(
+        for level: StressLevel,
+        readiness: ReadinessLevel?
+    ) -> String {
         switch level {
         case .relaxed:
+            if readiness == nil || readiness == .recovering || readiness == .moderate {
+                return "Stress is low, but recovery is still building. Favor easy movement and focused work"
+            }
             return "Great time for a workout or focused work"
         case .balanced:
             return "Stay the course. A walk or stretch can help maintain this"
@@ -281,36 +335,79 @@ struct StressView: View {
     // MARK: - Summary Stats Card
 
     private var summaryStatsCard: some View {
-        VStack(alignment: .leading, spacing: ThumpSpacing.sm) {
-            Text("Summary")
-                .font(.headline)
-                .foregroundStyle(.primary)
+        let pointCount = viewModel.trendPoints.count
+        let expectedCount = expectedTrendPointCount
+        return VStack(alignment: .leading, spacing: ThumpSpacing.sm) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Summary")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+
+                Text(summaryWindowLabel)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill(Color(.tertiarySystemGroupedBackground))
+                    )
+
+                Spacer()
+            }
+
+            if pointCount > 0 {
+                Text(summaryCoverageText(pointCount: pointCount, expectedCount: expectedCount))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else if viewModel.currentStress != nil {
+                Text("Using today only. Keep wearing your watch to unlock full \(summaryWindowLabel) stats.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Label(summaryTargetHint, systemImage: "target")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
 
             if let avg = viewModel.averageStress {
                 HStack(spacing: 0) {
                     statItem(
                         label: "Average",
-                        value: "\(Int(avg))",
-                        sublabel: StressLevel.from(score: avg).displayName
+                        value: formatStressStat(avg),
+                        sublabel: stressBandSummaryLabel(for: StressLevel.from(score: avg))
                     )
 
                     Divider().frame(height: 50)
 
-                    if let relaxed = viewModel.mostRelaxedDay {
+                    if pointCount >= 2, let relaxed = viewModel.mostRelaxedDay {
                         statItem(
                             label: "Most Relaxed",
-                            value: "\(Int(relaxed.score))",
+                            value: formatStressStat(relaxed.score),
                             sublabel: formatDate(relaxed.date)
+                        )
+                    } else {
+                        statItem(
+                            label: "Most Relaxed",
+                            value: "—",
+                            sublabel: "Need 2+ days"
                         )
                     }
 
                     Divider().frame(height: 50)
 
-                    if let elevated = viewModel.mostElevatedDay {
+                    if pointCount >= 2, let elevated = viewModel.mostElevatedDay {
                         statItem(
                             label: "Highest",
-                            value: "\(Int(elevated.score))",
+                            value: formatStressStat(elevated.score),
                             sublabel: formatDate(elevated.date)
+                        )
+                    } else {
+                        statItem(
+                            label: "Highest",
+                            value: "—",
+                            sublabel: "Need 2+ days"
                         )
                     }
                 }
@@ -328,6 +425,45 @@ struct StressView: View {
             RoundedRectangle(cornerRadius: ThumpRadius.md)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
+    }
+
+    private var expectedTrendPointCount: Int {
+        switch viewModel.selectedRange {
+        case .day:
+            return 1
+        case .week:
+            return 7
+        case .month:
+            return 30
+        }
+    }
+
+    private var summaryWindowLabel: String {
+        switch viewModel.selectedRange {
+        case .day: return "1D"
+        case .week: return "7D"
+        case .month: return "30D"
+        }
+    }
+
+    private var summaryTargetHint: String {
+        switch viewModel.selectedRange {
+        case .day:
+            return "Target: keep more hours in Low or Moderate than High."
+        case .week, .month:
+            return "Target: average below 50 and trend steady or down."
+        }
+    }
+
+    private func summaryCoverageText(pointCount: Int, expectedCount: Int) -> String {
+        if pointCount >= expectedCount {
+            return "Computed from \(pointCount) day\(pointCount == 1 ? "" : "s") of stress data."
+        }
+        return "Computed from \(pointCount) of last \(expectedCount) day\(expectedCount == 1 ? "" : "s") with stress data."
+    }
+
+    private func formatStressStat(_ value: Double) -> String {
+        String(format: "%.1f", value)
     }
 
     // MARK: - Supporting Views
@@ -461,6 +597,11 @@ struct StressView: View {
         }
     }
 
+    func stressColor(for stress: StressResult) -> Color {
+        guard stress.score > 0 else { return .secondary }
+        return stressColor(for: stress.level)
+    }
+
     func formatHour(_ hour: Int) -> String {
         let period = hour >= 12 ? "p" : "a"
         let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
@@ -477,6 +618,59 @@ struct StressView: View {
 
     func formatDate(_ date: Date) -> String {
         ThumpFormatters.shortDate.string(from: date)
+    }
+
+    /// Opens Apple Fitness, falling back to Apple Health when needed.
+    func openFitnessApp() {
+        viewModel.walkSuggestionShown = false
+        openApp(
+            candidates: [
+                "x-apple-fitness://",
+                "x-apple-fitness://summary"
+            ]
+        ) { success in
+            if !success {
+                openHealthApp()
+            }
+        }
+    }
+
+    /// Opens Apple Health directly.
+    func openHealthApp() {
+        viewModel.walkSuggestionShown = false
+        openApp(
+            candidates: [
+                "x-apple-health://",
+                "x-apple-health://workouts"
+            ]
+        ) { success in
+            if !success {
+                openAppErrorMessage = "Could not open Apple Fitness or Apple Health on this device. Please open Health manually and start a walk."
+                showOpenAppError = true
+            }
+        }
+    }
+
+    /// Attempts URLs in order and reports whether any destination opened.
+    func openApp(candidates: [String], completion: @escaping (Bool) -> Void) {
+        func attempt(_ index: Int) {
+            guard index < candidates.count else {
+                completion(false)
+                return
+            }
+            guard let url = URL(string: candidates[index]) else {
+                attempt(index + 1)
+                return
+            }
+            UIApplication.shared.open(url, options: [:]) { success in
+                if success {
+                    completion(true)
+                } else {
+                    attempt(index + 1)
+                }
+            }
+        }
+        attempt(0)
     }
 }
 

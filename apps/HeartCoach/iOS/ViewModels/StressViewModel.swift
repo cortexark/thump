@@ -48,6 +48,12 @@ final class StressViewModel: ObservableObject {
     /// Hourly points for the selected day in week view.
     @Published var selectedDayHourlyPoints: [HourlyStressPoint] = []
 
+    /// Selected hourly data point for detail drill-down (day view tap).
+    @Published var selectedHourDetail: HourlyStressPoint?
+
+    /// Controls presentation of the stress explainer sheet.
+    @Published var showStressExplainer: Bool = false
+
     /// Computed trend direction.
     @Published var trendDirection: StressTrendDirection = .steady
 
