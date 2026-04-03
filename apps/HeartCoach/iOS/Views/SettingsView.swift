@@ -251,32 +251,22 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                // Free year expired or not enrolled — show regular subscription UI
+                // Phase 2: Paywall paused — show beta messaging
                 HStack {
-                    Label("Current Plan", systemImage: "creditcard.fill")
+                    Label("Current Plan", systemImage: "gift.fill")
                     Spacer()
-                    Text(currentTierDisplayName)
+                    Text("All Features (Beta)")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundStyle(.pink)
+                        .foregroundStyle(.green)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.pink.opacity(0.12), in: Capsule())
+                        .background(Color.green.opacity(0.12), in: Capsule())
                 }
 
-                Button {
-                    InteractionLog.log(.buttonTap, element: "upgrade_button", page: "Settings")
-                    showPaywall = true
-                } label: {
-                    HStack {
-                        Label("Upgrade Plan", systemImage: "arrow.up.circle.fill")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .accessibilityIdentifier("settings_upgrade_button")
+                Text("All features are currently free during the beta period. Subscription plans will be available in a future update.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         } header: {
             Text("Subscription")
@@ -293,6 +283,13 @@ struct SettingsView: View {
             .tint(.pink)
             .onChange(of: anomalyAlertsEnabled) { _, newValue in
                 InteractionLog.log(.toggleChange, element: "anomaly_alerts_toggle", page: "Settings", details: "enabled=\(newValue)")
+                if !newValue {
+                    // Cancel all pending anomaly notifications immediately
+                    UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+                        let anomalyIDs = requests.map(\.identifier).filter { $0.hasPrefix("com.thump.anomaly.") }
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: anomalyIDs)
+                    }
+                }
             }
 
             Toggle(isOn: $nudgeRemindersEnabled) {
@@ -301,6 +298,13 @@ struct SettingsView: View {
             .tint(.pink)
             .onChange(of: nudgeRemindersEnabled) { _, newValue in
                 InteractionLog.log(.toggleChange, element: "nudge_reminders_toggle", page: "Settings", details: "enabled=\(newValue)")
+                if !newValue {
+                    // Cancel all pending nudge notifications immediately
+                    UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+                        let nudgeIDs = requests.map(\.identifier).filter { $0.hasPrefix("com.thump.nudge.") }
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: nudgeIDs)
+                    }
+                }
             }
         } header: {
             Text("Notifications")

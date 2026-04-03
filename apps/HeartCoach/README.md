@@ -11,14 +11,33 @@ This folder contains a cross-target scaffold for iPhone and Apple Watch:
 - For production, add Xcode targets and wire HealthKit/WatchConnectivity entitlements.
 - `project.yml` is included for `xcodegen`-based project generation.
 
-## Run Core Tests
+## Run Tests
+
+### Core unit tests (no Xcode required)
 ```bash
-cd /Users/t/workspace/Apple-watch/apps/Thump
+cd apps/HeartCoach
 swift test
 ```
 
-## Generate Xcode Project (optional)
+### Engine time-series validation (280 checkpoints)
 ```bash
-cd /Users/t/workspace/Apple-watch/apps/Thump
-xcodegen generate
+swift test --filter ThumpTimeSeriesTests
+```
+
+### Full integration tests (requires Xcode + Simulator)
+```bash
+xcodebuild test -project Thump.xcodeproj -scheme Thump \
+  -destination "platform=iOS Simulator,name=iPhone 17 Pro"
+```
+
+### UI tests with granular gate control
+```bash
+# Full bypass (legacy)
+xcodebuild test ... -- -UITestMode
+
+# Granular: test onboarding flow only
+xcodebuild test ... -- -UITest_SignedIn -UITest_LegalAccepted
+
+# Granular: test legal gate only
+xcodebuild test ... -- -UITest_SignedIn
 ```

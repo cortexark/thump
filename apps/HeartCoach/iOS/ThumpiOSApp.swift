@@ -89,8 +89,22 @@ struct ThumpiOSApp: App {
 
     /// Routes through: Sign In → Legal Gate → Onboarding → Main Tab View.
     /// Whether the app is running in UI test mode (launched with `-UITestMode`).
+    /// Phase 3: Granular UI test flags replace the binary -UITestMode bypass.
+    /// Tests can now selectively control each gate for proper funnel testing.
     private var isUITestMode: Bool {
         CommandLine.arguments.contains("-UITestMode")
+    }
+
+    private var uiTestSignedIn: Bool {
+        CommandLine.arguments.contains("-UITest_SignedIn")
+    }
+
+    private var uiTestLegalAccepted: Bool {
+        CommandLine.arguments.contains("-UITest_LegalAccepted")
+    }
+
+    private var uiTestOnboardingComplete: Bool {
+        CommandLine.arguments.contains("-UITest_OnboardingComplete")
     }
 
     /// Whether the app is running under XCTest host execution.
@@ -101,8 +115,17 @@ struct ThumpiOSApp: App {
     @ViewBuilder
     private var rootView: some View {
         if isUITestMode {
-            // Skip all gates for UI tests
+            // Legacy full bypass — use granular flags for new tests
             MainTabView()
+        } else if uiTestSignedIn && uiTestLegalAccepted && uiTestOnboardingComplete {
+            // Granular: all gates passed
+            MainTabView()
+        } else if uiTestSignedIn && uiTestLegalAccepted && !uiTestOnboardingComplete {
+            // Granular: test onboarding flow
+            OnboardingView()
+        } else if uiTestSignedIn && !uiTestLegalAccepted {
+            // Granular: test legal gate flow
+            LegalGateView { legalAccepted = true }
         } else if !isSignedIn {
             AppleSignInView {
                 // Record launch free year start date on first sign-in
@@ -140,22 +163,24 @@ struct ThumpiOSApp: App {
 
         connectivityService.bind(localStore: localStore)
 
-        // Request notification authorization (CR-001)
-        do {
-            try await notificationService.requestAuthorization()
-        } catch {
-            AppLogger.info("Notification authorization request failed: \(error.localizedDescription)")
-        }
-
-        // Verify Apple Sign-In credential is still valid
-        #if !DEBUG
-        if isSignedIn {
-            let credentialValid = await AppleSignInService.isCredentialValid()
-            if !credentialValid {
-                await MainActor.run { isSignedIn = false }
-                AppLogger.info("Apple Sign-In credential revoked — returning to sign-in")
+        // P1 fix: Only request notification permission after onboarding completes.
+        // Requesting at cold start before user context is a P2 UX issue —
+        // users should understand the app's value before granting permissions.
+        if localStore.profile.onboardingComplete {
+            Task(priority: .utility) {
+                do {
+                    try await notificationService.requestAuthorization()
+                } catch {
+                    AppLogger.info("Notification authorization request failed: \(error.localizedDescription)")
+                }
             }
         }
+
+        #if !DEBUG
+        // PERF: Run credential validity check in parallel with subscription sync.
+        let credentialTask: Task<Bool, Never>? = isSignedIn
+            ? Task(priority: .utility) { await AppleSignInService.isCredentialValid() }
+            : nil
         #endif
 
         // Configure engine telemetry for quality baselining
@@ -168,6 +193,14 @@ struct ThumpiOSApp: App {
         // PERF-2: Product catalog loading deferred to PaywallView.
         // Only entitlement status is needed at launch to gate features.
         await subscriptionService.updateSubscriptionStatus()
+
+        // Verify Apple Sign-In credential is still valid.
+        #if !DEBUG
+        if let credentialTask, await !credentialTask.value {
+            await MainActor.run { isSignedIn = false }
+            AppLogger.info("Apple Sign-In credential revoked — returning to sign-in")
+        }
+        #endif
 
         // Sync subscription tier to local store
         await MainActor.run {

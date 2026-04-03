@@ -85,8 +85,8 @@ extension StressView {
                 title: nudge.title,
                 message: nudge.description,
                 detail: nil,
-                buttonLabel: "Got It",
-                buttonIcon: "checkmark",
+                buttonLabel: "Start Wind-Down",
+                buttonIcon: "wind",
                 action: action
             )
 
@@ -187,7 +187,10 @@ extension StressView {
     var stressGuidanceCard: some View {
         let stress = viewModel.currentStress
         let level = stress?.level ?? .balanced
-        let guidance = stressGuidance(for: level)
+        let guidance = stressGuidance(
+            for: level,
+            readiness: viewModel.assessmentReadinessLevel
+        )
 
         return VStack(alignment: .leading, spacing: ThumpSpacing.sm) {
             HStack(spacing: ThumpSpacing.xs) {
@@ -255,9 +258,24 @@ extension StressView {
         let icon: String
     }
 
-    func stressGuidance(for level: StressLevel) -> StressGuidance {
+    func stressGuidance(
+        for level: StressLevel,
+        readiness: ReadinessLevel?
+    ) -> StressGuidance {
         switch level {
         case .relaxed:
+            if readiness == nil || readiness == .recovering || readiness == .moderate {
+                return StressGuidance(
+                    headline: "Calm Stress, Build Recovery",
+                    detail: "Your stress is low, but recovery is still catching up. Keep it easy with light movement and focused work instead of high intensity.",
+                    icon: "leaf.fill",
+                    color: ThumpColors.relaxed,
+                    actions: [
+                        QuickAction(label: "Easy Walk", icon: "figure.walk"),
+                        QuickAction(label: "Focus Time", icon: "brain.head.profile")
+                    ]
+                )
+            }
             return StressGuidance(
                 headline: "You're in a Great Spot",
                 detail: "Your body is recovered and ready. This is a good time for a challenging workout, creative work, or anything that takes focus.",
@@ -301,7 +319,7 @@ extension StressView {
         switch action.label {
         case "Breathe", "Rest":
             viewModel.startBreathingSession()
-        case "Take a Walk", "Step Outside", "Workout":
+        case "Take a Walk", "Step Outside", "Workout", "Easy Walk":
             viewModel.showWalkSuggestion()
         case "Focus Time":
             // Gentle breathing session for focused calm

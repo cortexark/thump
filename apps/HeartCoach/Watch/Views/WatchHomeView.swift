@@ -197,15 +197,20 @@ struct WatchHomeView: View {
     /// Single compact nudge chip — category icon + title + START tap.
     private func nudgePill(_ nudge: DailyNudge) -> some View {
         Button {
+            // Phase 4: START now begins the activity — does NOT auto-complete or
+            // auto-send positive feedback. User must explicitly complete via
+            // the WatchInsightFlowView feedback screen.
             withAnimation(.spring(duration: 0.35, bounce: 0.3)) {
                 activityInProgress = true
             }
-            // After a moment, treat it as done (real app would track workout)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                withAnimation(.spring(duration: 0.4)) {
-                    viewModel.markNudgeComplete()
-                    viewModel.submitFeedback(.positive)
-                    activityInProgress = false
+            // Launch the appropriate workout or breathing session
+            if nudge.category == .breathe {
+                connectivityService.breathPrompt = nudge
+            }
+            // For walk/moderate nudges, open the Workout app via URL scheme
+            if nudge.category == .walk || nudge.category == .moderate {
+                if let url = URL(string: "workout://startWorkout?activityType=52") {
+                    WKExtension.shared().openSystemURL(url)
                 }
             }
         } label: {

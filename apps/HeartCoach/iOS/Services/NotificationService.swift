@@ -94,7 +94,9 @@ final class NotificationService: ObservableObject {
     ///
     /// - Parameter assessment: The `HeartAssessment` that triggered the alert.
     func scheduleAnomalyAlert(assessment: HeartAssessment) {
+        // P1 fix: respect user's notification toggle (was only checking ConfigService)
         guard ConfigService.enableAnomalyAlerts,
+              UserDefaults.standard.bool(forKey: "thump_anomaly_alerts_enabled"),
               assessment.status == .needsAttention else {
             return
         }
@@ -159,6 +161,15 @@ final class NotificationService: ObservableObject {
     ///   - nudge: The `DailyNudge` to remind the user about.
     ///   - hour: The hour of day (0-23) to deliver the reminder.
     func scheduleNudgeReminder(nudge: DailyNudge, at hour: Int) async {
+        // P1 fix: respect user's nudge toggle
+        guard UserDefaults.standard.bool(forKey: "thump_nudge_reminders_enabled") else {
+            // Cancel any existing nudge reminders if toggle was just turned off
+            center.removePendingNotificationRequests(
+                withIdentifiers: await pendingNudgeIdentifiers()
+            )
+            return
+        }
+
         // Cancel existing nudge reminders
         center.removePendingNotificationRequests(
             withIdentifiers: await pendingNudgeIdentifiers()
