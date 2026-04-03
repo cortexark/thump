@@ -460,7 +460,7 @@ struct PrivacyPolicyContent: View {
             legalSection(number: "3", title: "Purposes and Legal Bases for Processing") {
                 paragraphs([
                     "The Company processes the data described in Section 2 for the following specific, explicit, and legitimate purposes:",
-                    "• Provision of Core Services: To compute and render wellness scores, trend analyses, stress indicators, cardiovascular recovery assessments, and motivational nudges within the Application — processed entirely on-device without transmission to Company servers.\n• Algorithm Improvement: To evaluate, validate, refine, and improve the accuracy and reliability of the Application's wellness algorithms, scoring models, and data processing pipelines, using anonymized and aggregated telemetry only.\n• Application Performance and Stability: To identify, diagnose, and remediate software defects, performance degradations, and compatibility issues.\n• Subscription Management: To validate and enforce Subscription entitlements and gate access to premium features.\n• Legal Compliance: To fulfill obligations imposed by applicable law, regulation, court order, or governmental authority.\n• Fraud Prevention and Security: To detect, investigate, and prevent fraudulent activity, security incidents, and violations of our Terms of Service.",
+                    "• Provision of Core Services: To compute and render wellness scores, trend analyses, stress indicators, cardiovascular recovery assessments, and motivational nudges within the Application — processed entirely on-device without transmission to Company servers.\n• Algorithm Improvement: To evaluate, validate, refine, and improve the accuracy and reliability of the Application's wellness algorithms, scoring models, and data processing pipelines, using pseudonymized telemetry data only (as described in Section 2.2).\n• Application Performance and Stability: To identify, diagnose, and remediate software defects, performance degradations, and compatibility issues.\n• Subscription Management: To validate and enforce Subscription entitlements and gate access to premium features.\n• Legal Compliance: To fulfill obligations imposed by applicable law, regulation, court order, or governmental authority.\n• Fraud Prevention and Security: To detect, investigate, and prevent fraudulent activity, security incidents, and violations of our Terms of Service.",
                     "The Company does not process Health Data for: advertising, behavioral profiling, sale to data brokers, marketing purposes, or any purpose other than those enumerated above."
                 ])
             }
@@ -504,7 +504,7 @@ struct PrivacyPolicyContent: View {
 
                 legalSubheading("7.2 Analytics Opt-Out")
                 paragraphs([
-                    "You may opt out of all anonymized analytics and telemetry collection by toggling the analytics opt-out control within the Application's Settings screen. Upon opt-out, no further telemetry data will be generated or transmitted. Opting out will not affect the Application's core wellness monitoring functionality, which operates entirely on-device."
+                    "You may opt out of all pseudonymized analytics and telemetry collection by toggling the \"Share Engine Insights\" control within the Application's Settings screen. Upon opt-out, no further telemetry data will be generated or transmitted to the Company's servers. Opting out will not affect the Application's core wellness monitoring functionality, which operates entirely on-device."
                 ])
 
                 legalSubheading("7.3 Data Deletion and Account Deletion")
@@ -539,7 +539,7 @@ struct PrivacyPolicyContent: View {
 
             legalSection(number: "9", title: "International Data Transfers") {
                 paragraphs([
-                    "9.1 The Company is based in the United States. If you are accessing the Application from outside the United States, please be aware that any anonymized telemetry data transmitted to the Company may be transferred to, processed in, and stored in the United States, where data protection laws may differ from those in your jurisdiction.",
+                    "9.1 The Company is based in the United States. If you are accessing the Application from outside the United States, please be aware that any pseudonymized telemetry data transmitted to the Company may be transferred to, processed in, and stored in the United States (in Google Firebase Firestore), where data protection laws may differ from those in your jurisdiction.",
                     "9.2 By using the Application, you consent to the transfer of any applicable data to the United States as described in this Policy. Where required by applicable law (e.g., GDPR), the Company will implement appropriate safeguards for international data transfers, including standard contractual clauses approved by the relevant supervisory authority."
                 ])
             }

@@ -41,7 +41,12 @@ extension StressView {
 
     var heatmapTitle: String {
         switch viewModel.selectedRange {
-        case .day: return "Today: Hourly Stress"
+        case .day:
+            if Calendar.current.isDateInToday(viewModel.hourlyReferenceDate) {
+                return "Today: Hourly Stress"
+            }
+            let dateLabel = viewModel.hourlyReferenceDate.formatted(.dateTime.month(.abbreviated).day())
+            return "Latest Day (\(dateLabel)): Hourly Stress"
         case .week: return "This Week"
         case .month: return "This Month"
         }
@@ -91,24 +96,31 @@ extension StressView {
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard point != nil else { return }
+            InteractionLog.log(.cardTap, element: "stress_hour_\(hour)", page: "Stress", details: "score=\(score)")
+            viewModel.selectedHourDetail = point
+        }
         .accessibilityLabel(
             "\(hourLabel): "
             + (point != nil
                ? "stress \(score), \(point!.level.displayName)"
                : "no data")
         )
+        .accessibilityHint(point != nil ? "Tap to see details for this hour" : "")
     }
 
     // MARK: - Week Heatmap (7 daily boxes)
 
     var weekHeatmap: some View {
         VStack(alignment: .leading, spacing: ThumpSpacing.xs) {
-            if viewModel.trendPoints.isEmpty {
+            if viewModel.weekDaySlots.isEmpty {
                 emptyHeatmapState
             } else {
                 HStack(spacing: ThumpSpacing.xxs) {
-                    ForEach(viewModel.weekDayPoints, id: \.date) { point in
-                        dailyCell(point: point)
+                    ForEach(Array(viewModel.weekDaySlots.enumerated()), id: \.offset) { _, slot in
+                        dailyCell(date: slot.date, point: slot.point)
                     }
                 }
 
@@ -144,27 +156,29 @@ extension StressView {
         .accessibilityLabel("Weekly stress heatmap")
     }
 
-    func dailyCell(point: StressDataPoint) -> some View {
+    func dailyCell(date: Date, point: StressDataPoint?) -> some View {
         let isSelected = viewModel.selectedDayForDetail != nil
             && Calendar.current.isDate(
-                point.date,
+                date,
                 inSameDayAs: viewModel.selectedDayForDetail!
             )
 
         return VStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 6)
-                .fill(stressColor(for: point.level).opacity(0.8))
+                .fill((point.map { stressColor(for: $0.level) } ?? Color(.systemGray5)).opacity(point == nil ? 0.35 : 0.8))
                 .frame(height: 50)
                 .overlay(
                     VStack(spacing: 2) {
-                        Text("\(Int(point.score))")
+                        Text(point.map { "\(Int($0.score))" } ?? "")
                             .font(.system(size: 14, weight: .bold,
                                           design: .rounded))
                             .foregroundStyle(.white)
 
-                        Image(systemName: point.level.icon)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.8))
+                        if let point {
+                            Image(systemName: point.level.icon)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
                     }
                 )
                 .overlay(
@@ -175,20 +189,22 @@ extension StressView {
                         )
                 )
 
-            Text(formatWeekday(point.date))
+            Text(formatWeekday(date))
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .onTapGesture {
-            InteractionLog.log(.cardTap, element: "stress_calendar", page: "Stress", details: formatWeekday(point.date))
+            guard point != nil else { return }
+            InteractionLog.log(.cardTap, element: "stress_calendar", page: "Stress", details: formatWeekday(date))
             withAnimation(.easeInOut(duration: 0.2)) {
-                viewModel.selectDay(point.date)
+                viewModel.selectDay(date)
             }
         }
         .accessibilityLabel(
-            "\(formatWeekday(point.date)): "
-            + "stress \(Int(point.score)), \(point.level.displayName)"
+            point.map {
+                "\(formatWeekday(date)): stress \(Int($0.score)), \($0.level.displayName)"
+            } ?? "\(formatWeekday(date)): no data"
         )
         .accessibilityAddTraits(.isButton)
     }
@@ -269,10 +285,18 @@ extension StressView {
                 )
         }
         .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            InteractionLog.log(.cardTap, element: "stress_month_day", page: "Stress", details: "day=\(day)")
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.selectDay(point.date)
+            }
+        }
         .accessibilityLabel(
             "Day \(day): stress \(Int(point.score)), "
             + "\(point.level.displayName)"
         )
+        .accessibilityHint("Tap to see hourly breakdown for this day")
     }
 
     // MARK: - Heatmap Legend
@@ -280,7 +304,7 @@ extension StressView {
     var heatmapLegend: some View {
         HStack(spacing: ThumpSpacing.md) {
             legendItem(color: ThumpColors.relaxed, label: "Relaxed")
-            legendItem(color: ThumpColors.balanced, label: "Balanced")
+            legendItem(color: ThumpColors.balanced, label: "Moderate")
             legendItem(color: ThumpColors.elevated, label: "Elevated")
         }
         .frame(maxWidth: .infinity)

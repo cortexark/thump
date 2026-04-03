@@ -36,9 +36,6 @@ struct DashboardView: View {
     /// A/B design variant toggle.
     @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
 
-    /// Design B: whether the driving signals row is expanded.
-    @AppStorage("thump_driving_signals_expanded") var isDrivingSignalsExpanded: Bool = false
-
     // MARK: - Sheet State
 
     /// Controls the Bio Age detail sheet presentation.
@@ -46,6 +43,12 @@ struct DashboardView: View {
 
     /// Controls the Readiness detail sheet presentation.
     @State var showReadinessDetail = false
+
+    /// The pillar "Why?" explanation currently shown (nil = no sheet).
+    @State var pillarWhyText: PillarWhyContent?
+
+    /// Prevents redundant initial refresh work when the tab view re-renders.
+    @State private var didInitialLoad = false
 
     // MARK: - Grid Layout
 
@@ -62,6 +65,8 @@ struct DashboardView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar(.hidden, for: .navigationBar)
                 .task {
+                    guard !didInitialLoad else { return }
+                    didInitialLoad = true
                     #if targetEnvironment(simulator) && DEBUG
                     // Simulator: use MockHealthDataProvider loaded with real Apple Watch
                     // export data. We can't write RHR/VO2/exercise time to HealthKit
@@ -112,7 +117,7 @@ struct DashboardView: View {
         ZStack(alignment: .top) {
             // Layer 1: Extend the hero gradient into the safe area
             heroGradient
-                .frame(height: 380)
+                .frame(height: heroSectionHeight + 44)
                 .ignoresSafeArea(edges: .top)
 
             // Layer 2: Scrollable content
@@ -149,9 +154,20 @@ struct DashboardView: View {
 
     // MARK: - Buddy Hero Section
 
+    private var heroSectionHeight: CGFloat {
+        // Keep enough vertical room for a true 2-line insight on small phones.
+        let screenHeight = UIScreen.main.bounds.height
+        if screenHeight < 760 { return 360 }
+        if screenHeight < 860 { return 372 }
+        return 388
+    }
+
     private var buddyMood: BuddyMood {
         guard let assessment = viewModel.assessment else { return .content }
-        return BuddyMood.from(assessment: assessment)
+        return BuddyMood.from(
+            assessment: assessment,
+            readinessScore: viewModel.readinessResult?.score
+        )
     }
 
     private var buddyHeroSection: some View {
@@ -197,19 +213,24 @@ struct DashboardView: View {
                 // One-line focus insight
                 if let insight = buddyFocusInsight {
                     Text(insight)
-                        .font(.subheadline)
+                        .font(.callout)
                         .fontWeight(.medium)
                         .foregroundStyle(.white.opacity(0.95))
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.96)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44, alignment: .top)
                         .padding(.horizontal, 24)
-                        .padding(.top, 4)
+                        .padding(.top, 6)
                 }
 
                 Spacer()
-                    .frame(height: 20)
+                    .frame(height: 30)
             }
         }
-        .frame(height: 320)
+        .frame(height: heroSectionHeight)
         .clipShape(UnevenRoundedRectangle(
             topLeadingRadius: 0,
             bottomLeadingRadius: 28,
@@ -242,45 +263,47 @@ struct DashboardView: View {
 
     /// Synthesizes ALL engine outputs into one human-readable sentence.
     /// When coordinator is active, delegates to AdvicePresenter.
-    var buddyFocusInsight: String? {
+    private var buddyFocusInsight: String? {
         // Coordinator path: use AdvicePresenter
         if ConfigService.enableCoordinator,
            let adviceState = coordinator.bundle?.adviceState {
-            return AdvicePresenter.focusInsight(for: adviceState)
+            return AdvicePresenter.focusInsight(for: adviceState, surface: .heroCompact)
         }
 
         // Legacy path
         guard let assessment = viewModel.assessment else { return nil }
 
         if assessment.stressFlag, let stress = viewModel.stressResult, stress.level == .elevated {
-            return "Stress markers are above your baseline. Today's work is recovery."
+            return "Stress is running high. A rest day would do you good."
         }
         if let readiness = viewModel.readinessResult, readiness.score < 45 {
             let sleepPillar = readiness.pillars.first(where: { $0.type == .sleep })
             if let sleep = sleepPillar, sleep.score < 50 {
-                return "Sleep was shorter than usual. A gentle day tends to serve you better than a hard push."
+                return "Rough night. Take it easy - your body needs to catch up."
             }
-            return "Recovery score is below your recent baseline. A lighter effort today pays off tomorrow."
+            return "Recovery is low. A light day will help you bounce back."
         }
         if let readiness = viewModel.readinessResult, readiness.score < 65,
            let zones = viewModel.zoneAnalysis,
            zones.recommendation == .tooMuchIntensity {
-            return "You've put in solid work recently. Backing off today is part of the training, not a step back."
+            return "You pushed hard recently. A mellow day helps you absorb those gains."
         }
         if let readiness = viewModel.readinessResult, readiness.score >= 75 {
             if assessment.stressFlag == false,
-               let stress = viewModel.stressResult, stress.level == .relaxed {
-                return "Recovery metrics are tracking above your baseline. Conditions favor a quality effort."
+               let stress = viewModel.stressResult,
+               stress.score > 0,
+               stress.level == .relaxed {
+                return "You recovered well. Ready for a solid day."
             }
-            return "Your body's signals are looking strong. A good day to move with intention."
+            return "Body is charged up. Good day to move."
         }
         if let readiness = viewModel.readinessResult, readiness.score >= 45 {
-            return "Recovery is near your norm. A moderate effort fits well here."
+            return "Decent recovery. A moderate effort works well today."
         }
         if assessment.status == .needsAttention {
-            return "Your signals are pointing toward a lighter day. Your body is doing repair work right now."
+            return "Your body is asking for a lighter day."
         }
-        return "Today's readiness data is in."
+        return "Checking in on your wellness."
     }
 
     // MARK: - Greeting
@@ -291,7 +314,8 @@ struct DashboardView: View {
         switch hour {
         case 0..<12:  greeting = "Good morning"
         case 12..<17: greeting = "Good afternoon"
-        default:       greeting = "Good evening"
+        case 17..<21: greeting = "Good evening"
+        default:       greeting = "Good night"
         }
         let name = viewModel.profileName
         return name.isEmpty ? greeting : "\(greeting), \(name)"
@@ -635,7 +659,17 @@ struct DashboardView: View {
             )
         }
         .buttonStyle(CardButtonStyle())
-        .accessibilityHint("Double tap to view trends")
+        .accessibilityLabel(label)
+        .accessibilityValue(metricTileAccessibilityValue(value: value, unit: unit, decimals: decimals))
+        .accessibilityHint("Double tap to open \(label) trends")
+    }
+
+    private func metricTileAccessibilityValue(value: Double?, unit: String, decimals: Int) -> String {
+        guard let value else { return "No data" }
+        if decimals > 0 {
+            return "\(String(format: "%.\(decimals)f", value)) \(unit)"
+        }
+        return "\(Int(value.rounded())) \(unit)"
     }
 }
 

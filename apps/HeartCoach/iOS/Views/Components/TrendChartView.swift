@@ -24,6 +24,11 @@ import Charts
 /// and shows a dashed average reference line.
 struct TrendChartView: View {
 
+    enum ChartStyle {
+        case lineArea
+        case bar
+    }
+
     // MARK: - Properties
 
     /// The time-series data points to chart.
@@ -35,6 +40,13 @@ struct TrendChartView: View {
     /// The accent color for the chart elements.
     let color: Color
 
+    /// Rendering style for the chart.
+    let style: ChartStyle
+    private let calendar = Calendar.current
+
+    /// The currently selected data point (tap-to-inspect).
+    @State private var selectedDate: Date?
+
     // MARK: - Computed
 
     /// The average value across all data points.
@@ -45,6 +57,9 @@ struct TrendChartView: View {
 
     /// The minimum Y value with some padding for visual breathing room.
     private var yMin: Double {
+        if style == .bar {
+            return 0
+        }
         guard let minVal = dataPoints.map(\.value).min() else { return 0 }
         let range = (dataPoints.map(\.value).max() ?? 0) - minVal
         let padding = range == 0 ? Swift.max(abs(minVal * 0.1), 1.0) : range * 0.1
@@ -61,17 +76,35 @@ struct TrendChartView: View {
 
     // MARK: - Body
 
+    init(
+        dataPoints: [(date: Date, value: Double)],
+        metricLabel: String,
+        color: Color,
+        style: ChartStyle = .lineArea
+    ) {
+        self.dataPoints = dataPoints
+        self.metricLabel = metricLabel
+        self.color = color
+        self.style = style
+    }
+
     var body: some View {
         if dataPoints.isEmpty {
-            emptyState
-        } else {
-            chart
+            return AnyView(emptyState)
         }
+        let chartView: AnyView
+        switch style {
+        case .lineArea:
+            chartView = AnyView(lineAreaChart)
+        case .bar:
+            chartView = AnyView(barChart)
+        }
+        return chartView
     }
 
     // MARK: - Chart
 
-    private var chart: some View {
+    private var lineAreaChart: some View {
         Chart {
             // Area fill below the line
             ForEach(dataPoints.indices, id: \.self) { index in
@@ -119,10 +152,118 @@ struct TrendChartView: View {
                         .padding(.vertical, 2)
                         .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
                 }
+            // Selected point highlight (tap-to-inspect)
+            if let selected = selectedDate,
+               let point = closestPoint(to: selected) {
+                RuleMark(x: .value("Selected", point.date))
+                    .foregroundStyle(color.opacity(0.4))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .annotation(position: .top, spacing: 4) {
+                        VStack(spacing: 2) {
+                            Text(point.date, format: .dateTime.month(.abbreviated).day())
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                            Text(String(format: "%.1f", point.value))
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .fontDesign(.rounded)
+                                .foregroundStyle(color)
+
+                            // Baseline comparison
+                            let diff = point.value - averageValue
+                            let sign = diff >= 0 ? "+" : ""
+                            Text("\(sign)\(String(format: "%.1f", diff)) vs avg")
+                                .font(.system(size: 8))
+                                .foregroundStyle(diff >= 0 ? .green : .orange)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(color.opacity(0.3), lineWidth: 0.5)
+                        )
+                    }
+
+                PointMark(
+                    x: .value("Date", point.date),
+                    y: .value(metricLabel, point.value)
+                )
+                .foregroundStyle(color)
+                .symbolSize(80)
+            }
         }
         .chartYScale(domain: yMin...yMax)
+        .chartXScale(range: .plotDimension(startPadding: 8, endPadding: 16))
+        .chartXSelection(value: $selectedDate)
         .chartXAxis {
-            AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+            AxisMarks(values: axisMarkDates) { _ in
+                AxisGridLine()
+                    .foregroundStyle(Color(.systemGray5))
+                AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading) { _ in
+                AxisGridLine()
+                    .foregroundStyle(Color(.systemGray5))
+                AxisValueLabel()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .chartPlotStyle { plotArea in
+            plotArea
+                .background(Color.clear)
+                .clipped()
+        }
+        .clipped()
+    }
+
+    /// Finds the data point closest to the given date.
+    private func closestPoint(to date: Date) -> (date: Date, value: Double)? {
+        dataPoints.min(by: {
+            abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date))
+        })
+    }
+
+    private var barChart: some View {
+        Chart {
+            ForEach(dataPoints.indices, id: \.self) { index in
+                let point = dataPoints[index]
+                BarMark(
+                    x: .value("Date", point.date),
+                    y: .value(metricLabel, point.value)
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [color.opacity(0.95), color.opacity(0.65)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .cornerRadius(4)
+            }
+
+            RuleMark(y: .value("Average", averageValue))
+                .foregroundStyle(color.opacity(0.5))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [6, 4]))
+                .annotation(position: .top, alignment: .leading) {
+                    Text("Avg: \(formattedAverage)")
+                        .font(.caption2)
+                        .foregroundStyle(color.opacity(0.7))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+                }
+        }
+        .chartYScale(domain: yMin...yMax)
+        .chartXScale(range: .plotDimension(startPadding: 8, endPadding: 16))
+        .chartXAxis {
+            AxisMarks(values: axisMarkDates) { _ in
                 AxisGridLine()
                     .foregroundStyle(Color(.systemGray5))
                 AxisValueLabel(format: .dateTime.month(.abbreviated).day())
@@ -168,6 +309,26 @@ struct TrendChartView: View {
         if count <= 7 { return 1 }
         if count <= 14 { return 2 }
         return 5
+    }
+
+    /// Explicit x-axis dates for stable labeling, always including the latest
+    /// day so users can verify the chart is current.
+    private var axisMarkDates: [Date] {
+        let uniqueDays = Array(
+            Set(dataPoints.map { calendar.startOfDay(for: $0.date) })
+        ).sorted()
+        guard !uniqueDays.isEmpty else { return [] }
+
+        var labels: [Date] = []
+        for (index, day) in uniqueDays.enumerated() where index % axisStride == 0 {
+            labels.append(day)
+        }
+
+        if let last = uniqueDays.last,
+           !(labels.last.map { calendar.isDate($0, inSameDayAs: last) } ?? false) {
+            labels.append(last)
+        }
+        return labels
     }
 
     // MARK: - Formatted Average

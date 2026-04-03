@@ -53,33 +53,86 @@ extension DashboardView {
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Status pills: Recovery | Activity | Stress → Action
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(readinessColor(for: result.level))
+                    Text("Thump Check score: \(result.score)/100")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(readinessColor(for: result.level))
+                    Spacer()
+                    Text("Why?")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(readinessColor(for: result.level).opacity(0.7))
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    InteractionLog.log(.cardTap, element: "readiness_score_tap", page: "Dashboard")
+                    showReadinessDetail = true
+                }
+                .accessibilityHint("Tap to see what's driving your score")
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(readinessColor(for: result.level).opacity(0.08))
+                )
+
+                // Status pills: Recovery | Activity | Stress | Sleep → tappable for "Why?"
                 HStack(spacing: 8) {
                     todaysPlayPill(
                         icon: "heart.fill",
                         label: "Recovery",
                         value: "\(result.score)",
                         color: recoveryPillColor(result)
-                    )
+                    ) {
+                        pillarWhyText = PillarWhyBuilder.recovery(
+                            score: result.score,
+                            rhrTrend: viewModel.assessment?.weekOverWeekTrend.map { "RHR shifted \($0.direction.rawValue) this week." },
+                            hrvBaseline: nil
+                        )
+                    }
                     todaysPlayPill(
                         icon: "flame.fill",
                         label: "Activity",
                         value: {
-                            // Show actual active minutes (consistent with Daily Goals)
-                            // instead of abstract zone quality score
                             let walk = viewModel.todaySnapshot?.walkMinutes ?? 0
                             let workout = viewModel.todaySnapshot?.workoutMinutes ?? 0
                             let total = Int(walk + workout)
                             return total > 0 ? "\(total)" : "—"
                         }(),
                         color: activityPillColor
-                    )
+                    ) {
+                        let walk = viewModel.todaySnapshot?.walkMinutes ?? 0
+                        let workout = viewModel.todaySnapshot?.workoutMinutes ?? 0
+                        pillarWhyText = PillarWhyBuilder.activity(activeMinutes: Int(walk + workout))
+                    }
                     todaysPlayPill(
                         icon: "brain.head.profile",
                         label: "Stress",
                         value: viewModel.stressResult.map { "\(Int($0.score))" } ?? "—",
                         color: stressPillColor
-                    )
+                    ) {
+                        pillarWhyText = PillarWhyBuilder.stress(
+                            score: viewModel.stressResult.map { Int($0.score) } ?? 0,
+                            confidence: viewModel.stressResult?.confidence.rawValue
+                        )
+                    }
+                    todaysPlayPill(
+                        icon: "moon.fill",
+                        label: "Sleep Score",
+                        value: sleepScoreDisplayValue,
+                        color: sleepPillColor
+                    ) {
+                        pillarWhyText = PillarWhyBuilder.sleep(
+                            score: sleepScoreDisplayValue,
+                            sleepHours: viewModel.todaySnapshot?.sleepHours
+                        )
+                    }
+                }
+                .sheet(item: $pillarWhyText) { content in
+                    PillarWhySheet(content: content)
                 }
 
                 // Week-over-week trend indicators
@@ -160,27 +213,27 @@ extension DashboardView {
 
         if let hours = sleepHours, hours > 0, hours < policy.view.sleepLightOnlyHours {
             if hours < policy.view.sleepSkipWorkoutHours {
-                return "\(yesterdayZoneContext)You got \(String(format: "%.1f", hours)) hours of sleep. Skip the workout today — rest and an early bedtime are likely the most valuable things you can do right now."
+                return "\(yesterdayZoneContext)You got \(String(format: "%.1f", hours)) hours of sleep. Skip the workout today. Rest and an early bedtime are likely the most valuable things you can do right now."
             }
-            return "\(yesterdayZoneContext)About \(String(format: "%.1f", hours)) hours of sleep last night. Keep it very light today — a short walk at most. Prioritizing sleep tonight tends to help more than exercise right now."
+            return "\(yesterdayZoneContext)About \(String(format: "%.1f", hours)) hours of sleep last night. Keep it very light today, a short walk at most. Prioritizing sleep tonight tends to help more than exercise right now."
         }
 
         if result.score < 45 {
             if let stress, stress.level == .elevated {
-                return "\(yesterdayZoneContext)Recovery is low and stress is up — take a full rest day. Your body needs it."
+                return "\(yesterdayZoneContext)Recovery is low and stress is up. Take a full rest day. Your body needs it."
             }
             return "\(yesterdayZoneContext)Recovery is low. A gentle walk or stretching is your best move today."
         }
 
         if result.score < 65 {
             if let hours = sleepHours, hours < 6.0 {
-                return "\(yesterdayZoneContext)\(String(format: "%.1f", hours)) hours of sleep. Take it easy — a walk is fine, but skip anything intense."
+                return "\(yesterdayZoneContext)\(String(format: "%.1f", hours)) hours of sleep. Take it easy. A walk is fine, but skip anything intense."
             }
             if let zones, zones.recommendation == .tooMuchIntensity {
                 return "\(yesterdayZoneContext)You've been pushing hard. A moderate effort today lets your body absorb those gains."
             }
             if assessment?.stressFlag == true {
-                return "\(yesterdayZoneContext)Stress is elevated. Keep it light — a calm walk or easy movement."
+                return "\(yesterdayZoneContext)Stress is elevated. Keep it light with a calm walk or easy movement."
             }
             return "\(yesterdayZoneContext)Decent recovery. A moderate effort works well today."
         }
@@ -190,16 +243,16 @@ extension DashboardView {
             if let zones, zones.recommendation == .needsMoreThreshold {
                 return "\(yesterdayZoneContext)You're fully charged. Great day for a harder effort or a sustained cardio session."
             }
-            return "\(yesterdayZoneContext)You're primed. Push it if you want — your body can handle it."
+            return "\(yesterdayZoneContext)You're primed. Push if you want. Your body can handle it."
         }
 
         if sleepTooLow {
-            return "\(yesterdayZoneContext)Your metrics look good, but sleep was short. A moderate effort is fine — don't push too hard."
+            return "\(yesterdayZoneContext)Your metrics look good, but sleep was short. A moderate effort is fine. Do not push too hard."
         }
         if let zones, zones.recommendation == .needsMoreAerobic {
             return "\(yesterdayZoneContext)Good recovery. A steady aerobic session would build your base nicely."
         }
-        return "\(yesterdayZoneContext)Solid recovery. You can go moderate to hard depending on how you feel."
+        return "\(yesterdayZoneContext)Solid recovery. A moderate effort is a good default, and you can add short hard intervals only if stress stays low."
     }
 
     /// Summarizes yesterday's dominant zone activity for context.
@@ -215,7 +268,7 @@ extension DashboardView {
         let zoneName: String
         switch dominant.zone {
         case .recovery:  zoneName = "easy zone"
-        case .fatBurn:   zoneName = "fat-burn zone"
+        case .fatBurn:   zoneName = "fat burn zone"
         case .aerobic:   zoneName = "aerobic zone"
         case .threshold: zoneName = "threshold zone"
         case .peak:      zoneName = "peak zone"
@@ -262,6 +315,7 @@ extension DashboardView {
     /// Stress label from stress engine result.
     var stressLabel: String {
         guard let stress = viewModel.stressResult else { return "—" }
+        guard stress.score > 0 else { return "—" }
         switch stress.level {
         case .relaxed:  return "Low"
         case .balanced: return "Moderate"
@@ -271,6 +325,7 @@ extension DashboardView {
 
     var stressPillColor: Color {
         guard let stress = viewModel.stressResult else { return .secondary }
+        guard stress.score > 0 else { return .secondary }
         switch stress.level {
         case .relaxed:  return Color(hex: 0x22C55E)
         case .balanced: return Color(hex: 0xF59E0B)
@@ -278,8 +333,36 @@ extension DashboardView {
         }
     }
 
+    /// Sleep pillar score from readiness (0-100) when available.
+    var sleepScoreValue: String {
+        guard let pillar = viewModel.readinessResult?.pillars.first(where: { $0.type == .sleep }) else {
+            return "—"
+        }
+        return "\(Int(pillar.score.rounded()))"
+    }
+
+    /// Sleep score with explicit 0-100 denominator for clarity in compact UI.
+    var sleepScoreDisplayValue: String {
+        guard sleepScoreValue != "—" else { return "—" }
+        return "\(sleepScoreValue)/100"
+    }
+
+    var sleepPillColor: Color {
+        guard let pillar = viewModel.readinessResult?.pillars.first(where: { $0.type == .sleep }) else {
+            return .secondary
+        }
+        return pillarColor(score: pillar.score)
+    }
+
     /// A compact status pill showing icon + label + value.
-    func todaysPlayPill(icon: String, label: String, value: String, color: Color) -> some View {
+    func todaysPlayPill(
+        icon: String,
+        label: String,
+        value: String,
+        color: Color,
+        why: String? = nil,
+        onTap: (() -> Void)? = nil
+    ) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.caption)
@@ -300,6 +383,13 @@ extension DashboardView {
             RoundedRectangle(cornerRadius: 10)
                 .fill(color.opacity(0.08))
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let onTap {
+                InteractionLog.log(.cardTap, element: "pillar_\(label.lowercased())", page: "Dashboard")
+                onTap()
+            }
+        }
     }
 
     func readinessPillarView(_ pillar: ReadinessPillar) -> some View {
@@ -439,6 +529,11 @@ extension DashboardView {
         .accessibilityLabel("RHR trend: \(Int(trend.baselineMean)) to \(Int(trend.currentWeekMean)) bpm, \(trendLabel(trend.direction))")
         .onTapGesture {
             InteractionLog.log(.cardTap, element: "wow_trend_banner", page: "Dashboard")
+            NotificationCenter.default.post(
+                name: .thumpOpenTrendsMetric,
+                object: nil,
+                userInfo: [ThumpSharedKeys.trendsMetricKey: recoveryDrillDownMetric]
+            )
             withAnimation { selectedTab = 3 }
         }
     }

@@ -641,6 +641,22 @@ extension DashboardView {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
+                    HStack(spacing: 6) {
+                        Image(systemName: "heart.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(readinessColor(for: result.level))
+                        Text("Thump Check score: \(result.score)/100")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(readinessColor(for: result.level))
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(readinessColor(for: result.level).opacity(0.08))
+                    )
+
                     // Horizontal metric strip
                     HStack(spacing: 0) {
                         metricStripItem(
@@ -662,6 +678,13 @@ extension DashboardView {
                             value: viewModel.stressResult.map { "\(Int($0.score))" } ?? "—",
                             label: "Stress",
                             color: stressPillColor
+                        )
+                        Divider().frame(height: 32)
+                        metricStripItem(
+                            icon: "moon.fill",
+                            value: sleepScoreDisplayValue,
+                            label: "Sleep Score",
+                            color: sleepPillColor
                         )
                     }
                     .padding(.vertical, 4)
@@ -695,9 +718,14 @@ extension DashboardView {
         if !viewModel.hasCheckedInToday {
             VStack(spacing: 10) {
                 HStack {
-                    Label("Daily Check-In", systemImage: "face.smiling.fill")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 8) {
+                        Image(systemName: "face.smiling.fill")
+                            .font(.headline)
+                            .foregroundStyle(Color(hex: 0xF59E0B))
+                        Text("Daily Check-In")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    }
                     Spacer()
                     Text("How are you feeling?")
                         .font(.caption)
@@ -799,6 +827,11 @@ extension DashboardView {
             )
             .onTapGesture {
                 InteractionLog.log(.cardTap, element: "recovery_card_b", page: "Dashboard")
+                NotificationCenter.default.post(
+                    name: .thumpOpenTrendsMetric,
+                    object: nil,
+                    userInfo: [ThumpSharedKeys.trendsMetricKey: recoveryDrillDownMetric]
+                )
                 withAnimation { selectedTab = 3 }
             }
         }
@@ -849,6 +882,16 @@ extension DashboardView {
                         RoundedRectangle(cornerRadius: 14)
                             .strokeBorder(nudgeCategoryColor(rec.category).opacity(0.1), lineWidth: 1)
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        InteractionLog.log(.cardTap, element: "buddy_rec_b", page: "Dashboard", details: rec.title)
+                        // Navigate to Insights tab
+                        NotificationCenter.default.post(
+                            name: .init("ThumpNavigateToTab"),
+                            object: nil,
+                            userInfo: ["tab": 1]
+                        )
+                    }
                 }
             }
             .padding(16)
@@ -931,6 +974,11 @@ extension DashboardView {
         )
         .onTapGesture {
             InteractionLog.log(.cardTap, element: "wow_banner_b", page: "Dashboard")
+            NotificationCenter.default.post(
+                name: .thumpOpenTrendsMetric,
+                object: nil,
+                userInfo: [ThumpSharedKeys.trendsMetricKey: recoveryDrillDownMetric]
+            )
             withAnimation { selectedTab = 3 }
         }
     }

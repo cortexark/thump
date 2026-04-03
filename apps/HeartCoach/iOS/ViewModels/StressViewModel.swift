@@ -31,10 +31,14 @@ final class StressViewModel: ObservableObject {
     /// Hourly stress points for the day view.
     @Published var hourlyPoints: [HourlyStressPoint] = []
 
+    /// The date represented by `hourlyPoints`.
+    /// Usually today; falls back to latest available snapshot day when needed.
+    @Published var hourlyReferenceDate: Date = Date()
+
     /// The currently selected time range.
-    @Published var selectedRange: TimeRange = .week {
+    @Published var selectedRange: TimeRange = .day {
         didSet {
-            Task { await loadData() }
+            Task { await loadData(force: false) }
         }
     }
 
@@ -43,6 +47,12 @@ final class StressViewModel: ObservableObject {
 
     /// Hourly points for the selected day in week view.
     @Published var selectedDayHourlyPoints: [HourlyStressPoint] = []
+
+    /// Selected hourly data point for detail drill-down (day view tap).
+    @Published var selectedHourDetail: HourlyStressPoint?
+
+    /// Controls presentation of the stress explainer sheet.
+    @Published var showStressExplainer: Bool = false
 
     /// Computed trend direction.
     @Published var trendDirection: StressTrendDirection = .steady
@@ -98,6 +108,16 @@ final class StressViewModel: ObservableObject {
     /// Shared engine coordinator for reading pre-computed results (Phase 2).
     private var coordinator: DailyEngineCoordinator?
 
+    /// Optional notification service for scheduling rest reminders.
+    /// Set via `bind(notificationService:)` from the view layer.
+    private var notificationService: NotificationService?
+
+    /// Short-lived load stamp to avoid repeating identical HealthKit work
+    /// when the user switches tabs back and forth quickly.
+    private var lastLoadedRange: TimeRange?
+    private var lastLoadedAt: Date?
+    private let cacheFreshnessSeconds: TimeInterval = 90
+
     /// Readiness level from the latest assessment (set by app coordinator).
     /// Used as a conflict guard so SmartNudgeScheduler doesn't suggest
     /// activity when NudgeGenerator says rest.
@@ -126,7 +146,9 @@ final class StressViewModel: ObservableObject {
         ) { [weak self] notification in
             guard let raw = notification.userInfo?["readinessLevel"] as? String,
                   let level = ReadinessLevel(rawValue: raw) else { return }
-            self?.assessmentReadinessLevel = level
+            Task { @MainActor [weak self] in
+                self?.assessmentReadinessLevel = level
+            }
         }
     }
 
@@ -145,10 +167,23 @@ final class StressViewModel: ObservableObject {
         self.coordinator = coordinator
     }
 
+    /// Binds the notification service so smart actions can schedule reminders.
+    func bind(notificationService: NotificationService) {
+        self.notificationService = notificationService
+    }
+
     // MARK: - Public API
 
     /// Loads historical data and computes all stress metrics.
-    func loadData() async {
+    func loadData(force: Bool = false) async {
+        if !force,
+           lastLoadedRange == selectedRange,
+           let lastLoadedAt,
+           Date().timeIntervalSince(lastLoadedAt) < cacheFreshnessSeconds,
+           currentStress != nil || !trendPoints.isEmpty {
+            return
+        }
+
         isLoading = true
         errorMessage = nil
 
@@ -200,6 +235,8 @@ final class StressViewModel: ObservableObject {
             // Range-dependent computations always run locally (different history window)
             computeTrendAndHourly()
             computeSmartAction()
+            lastLoadedRange = selectedRange
+            lastLoadedAt = Date()
             isLoading = false
         } catch {
             errorMessage = error.localizedDescription
@@ -248,8 +285,11 @@ final class StressViewModel: ObservableObject {
             smartAction = .standardNudge
             startBreathingSession()
 
-        case .restSuggestion:
-            startBreathingSession()
+        case .restSuggestion(let nudge):
+            // "Set Reminder" should schedule a rest reminder, not open breathing.
+            smartActions.removeAll { if case .restSuggestion = $0 { return true } else { return false } }
+            smartAction = .standardNudge
+            scheduleRestReminder(nudge)
 
         case .standardNudge:
             break
@@ -313,6 +353,19 @@ final class StressViewModel: ObservableObject {
         didSendBreathPromptToWatch = true
     }
 
+    /// Schedules a rest reminder when the user taps "Set Reminder".
+    private func scheduleRestReminder(_ nudge: DailyNudge) {
+        guard let notificationService else { return }
+        guard notificationService.isAuthorized else { return }
+        let historySnapshot = history
+        Task {
+            await notificationService.scheduleSmartNudge(
+                nudge: nudge,
+                history: historySnapshot
+            )
+        }
+    }
+
     // MARK: - Computed Properties
 
     /// Average stress score across the current trend points.
@@ -341,16 +394,60 @@ final class StressViewModel: ObservableObject {
         trendPoints.map { (date: $0.date, value: $0.score) }
     }
 
+    /// Plain-language summary that compares the current stress level to the
+    /// distribution across the most recent 24 hourly points.
+    var last24HourMixSummary: String? {
+        guard !hourlyPoints.isEmpty else { return nil }
+
+        let total = hourlyPoints.count
+        let relaxedCount = hourlyPoints.filter { $0.level == .relaxed }.count
+        let balancedCount = hourlyPoints.filter { $0.level == .balanced }.count
+        let elevatedCount = hourlyPoints.filter { $0.level == .elevated }.count
+
+        let relaxedPct = Int((Double(relaxedCount) / Double(total) * 100).rounded())
+        let balancedPct = Int((Double(balancedCount) / Double(total) * 100).rounded())
+        let elevatedPct = Int((Double(elevatedCount) / Double(total) * 100).rounded())
+
+        let currentLabel: String
+        if let current = currentStress {
+            switch current.level {
+            case .relaxed: currentLabel = "low"
+            case .balanced: currentLabel = "moderate"
+            case .elevated: currentLabel = "high"
+            }
+        } else {
+            currentLabel = "unknown"
+        }
+
+        return "Last 24 hours: \(balancedPct)% moderate, \(relaxedPct)% low, \(elevatedPct)% high. Current status is \(currentLabel)."
+    }
+
     /// Data for the week view: last 7 days of stress data.
-    var weekDayPoints: [StressDataPoint] {
+    var weekDaySlots: [(date: Date, point: StressDataPoint?)] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let weekAgo = calendar.date(
             byAdding: .day, value: -6, to: today
         ) else { return [] }
 
-        return trendPoints.filter { $0.date >= weekAgo }
-            .sorted { $0.date < $1.date }
+        var lookup: [Date: StressDataPoint] = [:]
+        for point in trendPoints {
+            let key = calendar.startOfDay(for: point.date)
+            if key >= weekAgo && key <= today {
+                lookup[key] = point
+            }
+        }
+
+        return (0..<7).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: weekAgo) else { return nil }
+            let key = calendar.startOfDay(for: date)
+            return (date: date, point: lookup[key])
+        }
+    }
+
+    /// Data points available for week view.
+    var weekDayPoints: [StressDataPoint] {
+        weekDaySlots.compactMap(\.point)
     }
 
     /// Calendar grid data for month view.
@@ -436,6 +533,7 @@ final class StressViewModel: ObservableObject {
             currentStress = nil
             trendPoints = []
             hourlyPoints = []
+            hourlyReferenceDate = Date()
             trendDirection = .steady
             return
         }
@@ -462,6 +560,7 @@ final class StressViewModel: ObservableObject {
         guard !history.isEmpty else {
             trendPoints = []
             hourlyPoints = []
+            hourlyReferenceDate = Date()
             trendDirection = .steady
             return
         }
@@ -475,11 +574,27 @@ final class StressViewModel: ObservableObject {
         // Compute trend direction
         trendDirection = engine.trendDirection(points: trendPoints)
 
-        // Compute hourly estimates for today (day view)
-        hourlyPoints = engine.hourlyStressForDay(
+        // Compute hourly estimates for today (day view). If no today's snapshot is
+        // available yet, fall back to the latest available day so the screen
+        // doesn't appear empty for users who wore the watch.
+        let today = Date()
+        let todayHourly = engine.hourlyStressForDay(
             snapshots: history,
-            date: Date()
+            date: today
         )
+        if !todayHourly.isEmpty {
+            hourlyReferenceDate = today
+            hourlyPoints = todayHourly
+        } else if let latestDate = history.map(\.date).max() {
+            hourlyReferenceDate = latestDate
+            hourlyPoints = engine.hourlyStressForDay(
+                snapshots: history,
+                date: latestDate
+            )
+        } else {
+            hourlyReferenceDate = today
+            hourlyPoints = []
+        }
 
         // Reset selected day detail
         selectedDayForDetail = nil
@@ -554,8 +669,8 @@ final class StressViewModel: ObservableObject {
 
         if weakest?.type == .hrvTrend {
             nudgeTitle = "Sleep to Rebuild Your HRV"
-            nudgeDescription = "Your HRV is below your recent baseline — your nervous system "
-                + "is still working. The single best thing tonight: 8 hours of sleep. "
+            nudgeDescription = "Your HRV is below your recent baseline, so your body is still under strain. "
+                + "The single best thing tonight: 8 hours of sleep. "
                 + "Every hour directly rebuilds HRV, which lifts readiness by tomorrow morning."
         } else {
             let hrs = today.sleepHours.map { String(format: "%.1f", $0) } ?? "not enough"

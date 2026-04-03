@@ -47,7 +47,17 @@ let package = Package(
                 // SIGSEGV in testFullComparisonSummary (String(format: "%s") crash)
                 "AlgorithmComparisonTests.swift",
                 // EngineTimeSeries has its own target (ThumpTimeSeriesTests)
-                "EngineTimeSeries"
+                "EngineTimeSeries",
+                // Firebase integration tests (need Firestore SDK, not in SPM target)
+                "BugReportFirestoreTests.swift",
+                "FeedbackFirestoreTests.swift",
+                "FirestoreTelemetryIntegrationTests.swift",
+                // Super Reviewer (needs Claude CLI + judge infrastructure)
+                "SuperReviewer",
+                // Proactive notifications (needs UNUserNotificationCenter, iOS-only)
+                "ProactiveNotificationTests.swift",
+                // Advice presenter copy fit (needs iOS Views)
+                "AdvicePresenterCopyFitTests.swift"
             ]
         ),
         // TEST-3: Engine time-series validation suite (280 checkpoints).

@@ -1,0 +1,267 @@
+{
+  "judgeName": "CompetitorBenchmark",
+  "evaluatedAt": "2026-03-29T00:00:00Z",
+  "summary": {
+    "thumpTotal": "22/120",
+    "whoopTotal": "91/120",
+    "ouraTotal": "74/120",
+    "thumpVsLeader": "-69 (vs WHOOP)",
+    "criticalGapCount": 8,
+    "closestDimension": "resilience (gap=2)",
+    "largestGap": "body_temperature (gap=9)"
+  },
+  "dimensions": [
+    {
+      "rank": 1,
+      "id": "body_temperature",
+      "name": "Body Temperature Deviation",
+      "whoop": 8,
+      "oura": 9,
+      "thump": 0,
+      "gap": 9,
+      "hardwareRequired": "Apple Watch Series 8+",
+      "healthKitType": "HKQuantityTypeIdentifier.appleSleepingWristTemperature",
+      "effort": "medium",
+      "priority": "P1 — available on newer hardware, high user value"
+    },
+    {
+      "rank": 2,
+      "id": "respiratory_rate",
+      "name": "Respiratory Rate",
+      "whoop": 8,
+      "oura": 8,
+      "thump": 0,
+      "gap": 8,
+      "hardwareRequired": "Apple Watch Series 3+",
+      "healthKitType": "HKQuantityTypeIdentifier.respiratoryRate",
+      "effort": "low",
+      "priority": "P1 — easy HealthKit read, illness detection signal"
+    },
+    {
+      "rank": 3,
+      "id": "blood_oxygen",
+      "name": "Blood Oxygen (SpO2)",
+      "whoop": 8,
+      "oura": 7,
+      "thump": 0,
+      "gap": 8,
+      "hardwareRequired": "Apple Watch Series 6+",
+      "healthKitType": "HKQuantityTypeIdentifier.oxygenSaturation",
+      "effort": "low",
+      "priority": "P1 — easy HealthKit read, sleep apnea signal"
+    },
+    {
+      "rank": 4,
+      "id": "muscular_load",
+      "name": "Muscular Load Tracking",
+      "whoop": 9,
+      "oura": 2,
+      "thump": 1,
+      "gap": 8,
+      "hardwareRequired": "none (HKWorkout metadata)",
+      "healthKitType": "HKWorkoutType with energyBurned + workoutActivityType",
+      "effort": "medium",
+      "priority": "P2 — differentiator for strength training users"
+    },
+    {
+      "rank": 5,
+      "id": "sleep_debt",
+      "name": "Sleep Debt & Personalized Sleep Need",
+      "whoop": 9,
+      "oura": 7,
+      "thump": 2,
+      "gap": 7,
+      "hardwareRequired": "none (computed from existing sleep data)",
+      "healthKitType": "existing sleep hours + HRV correlation",
+      "effort": "medium",
+      "priority": "P1 — high user value, no new data needed"
+    },
+    {
+      "rank": 6,
+      "id": "sleep_consistency",
+      "name": "Sleep Consistency Score",
+      "whoop": 8,
+      "oura": 7,
+      "thump": 1,
+      "gap": 7,
+      "hardwareRequired": "none (computed from sleep analysis timestamps)",
+      "healthKitType": "existing HKCategoryTypeIdentifier.sleepAnalysis start/end times",
+      "effort": "low",
+      "priority": "P1 — already have the data in SmartNudgeScheduler, just need to surface it"
+    },
+    {
+      "rank": 7,
+      "id": "menstrual_hormonal",
+      "name": "Menstrual & Hormonal Insights",
+      "whoop": 8,
+      "oura": 8,
+      "thump": 1,
+      "gap": 7,
+      "hardwareRequired": "none (HKCategoryTypeIdentifier.menstrualFlow)",
+      "healthKitType": "HKCategoryTypeIdentifier.menstrualFlow + wrist temperature",
+      "effort": "high",
+      "priority": "P2 — important for female users, needs careful clinical framing"
+    },
+    {
+      "rank": 8,
+      "id": "social_community",
+      "name": "Social & Community",
+      "whoop": 7,
+      "oura": 3,
+      "thump": 0,
+      "gap": 7,
+      "hardwareRequired": "none (feature work)",
+      "healthKitType": "n/a",
+      "effort": "high",
+      "priority": "P3 — Family tier exists but no features built. Long-term retention play"
+    },
+    {
+      "rank": 9,
+      "id": "sleep_staging",
+      "name": "Sleep Stage Breakdown",
+      "whoop": 9,
+      "oura": 9,
+      "thump": 3,
+      "gap": 6,
+      "hardwareRequired": "Apple Watch Series 3+ (watchOS 9+)",
+      "healthKitType": "HKCategoryValueSleepAnalysis (.asleepCore, .asleepDeep, .asleepREM, .awake)",
+      "effort": "medium",
+      "priority": "P1 — Apple Watch already writes stage data, just need to read and display"
+    },
+    {
+      "rank": 10,
+      "id": "ai_coach",
+      "name": "AI Conversational Coach",
+      "whoop": 9,
+      "oura": 7,
+      "thump": 3,
+      "gap": 6,
+      "hardwareRequired": "none (on-device LLM or Apple Intelligence API)",
+      "healthKitType": "n/a — uses existing snapshot + history",
+      "effort": "high",
+      "priority": "P2 — major differentiator, but significant engineering effort"
+    },
+    {
+      "rank": 11,
+      "id": "strain_model",
+      "name": "Daily Strain Score",
+      "whoop": 10,
+      "oura": 5,
+      "thump": 4,
+      "gap": 6,
+      "hardwareRequired": "none (computed from existing HR zone data)",
+      "healthKitType": "existing zoneMinutes + workout HR data",
+      "effort": "medium",
+      "priority": "P1 — Thump already has zone data, needs composite scoring"
+    },
+    {
+      "rank": 12,
+      "id": "resilience",
+      "name": "Resilience / CV Age / Longevity",
+      "whoop": 6,
+      "oura": 9,
+      "thump": 7,
+      "gap": 2,
+      "hardwareRequired": "none",
+      "healthKitType": "existing Bio Age inputs",
+      "effort": "low",
+      "priority": "P2 — Bio Age is competitive, add stress-recovery bounce-back metric"
+    }
+  ],
+  "thumpStrengths": [
+    "Bio Age (NTNU-based, 6-input, per-metric breakdown) — ahead of WHOOP, near Oura",
+    "5-zone HR analysis with per-zone targets — ahead of Oura (ring can't do HR zones)",
+    "Coaching copy quality — data-backed, hedged, baseline-anchored language",
+    "Stress heatmap (hourly/daily/weekly/monthly) — more granular than both competitors",
+    "Context-aware stress engine (acute vs desk mode) — unique to Thump",
+    "Readiness with 5-pillar breakdown + cap logic — transparent scoring",
+    "Correlation analysis (activity ↔ metrics) — not available in WHOOP or Oura free tier",
+    "Privacy: all health data on-device — stronger than WHOOP (cloud-first)"
+  ],
+  "improvementPriorities": {
+    "P1_quickWins": {
+      "description": "Close 5 gaps using data Apple Watch already writes to HealthKit — no new hardware needed",
+      "items": [
+        {
+          "id": "sleep_staging",
+          "effort": "2-3 days",
+          "impact": "Closes gap 6 → 0. Apple Watch writes .asleepCore/.asleepDeep/.asleepREM since watchOS 9. Read stages, display stacked bar + percentages, compare to optimal ranges."
+        },
+        {
+          "id": "sleep_consistency",
+          "effort": "1-2 days",
+          "impact": "Closes gap 7 → 0. SmartNudgeScheduler already computes wake patterns. Surface as user-visible metric + chart."
+        },
+        {
+          "id": "respiratory_rate",
+          "effort": "1 day",
+          "impact": "Closes gap 8 → 2. Read .respiratoryRate, show on Trends chart, use for illness detection."
+        },
+        {
+          "id": "blood_oxygen",
+          "effort": "1 day",
+          "impact": "Closes gap 8 → 2. Read .oxygenSaturation, show on Trends chart, flag drops below 95%."
+        },
+        {
+          "id": "sleep_debt",
+          "effort": "3-4 days",
+          "impact": "Closes gap 7 → 1. Build SleepDebtEngine from existing sleep + HRV data. Show debt counter + tonight's target."
+        }
+      ],
+      "totalEffort": "8-10 days",
+      "gapReduction": "36 points closed"
+    },
+    "P1_medium": {
+      "description": "Build new engines from existing data",
+      "items": [
+        {
+          "id": "strain_model",
+          "effort": "3-4 days",
+          "impact": "Closes gap 6 → 1. Composite cardiovascular load from existing zone minutes. Logarithmic 0-20 scale."
+        },
+        {
+          "id": "body_temperature",
+          "effort": "2-3 days",
+          "impact": "Closes gap 9 → 1 (on Series 8+). Read .appleSleepingWristTemperature, show deviation. Graceful degradation on older watches."
+        }
+      ],
+      "totalEffort": "5-7 days",
+      "gapReduction": "14 points closed"
+    },
+    "P2_strategic": {
+      "description": "Larger features that differentiate long-term",
+      "items": [
+        {
+          "id": "ai_coach",
+          "effort": "2-4 weeks",
+          "impact": "Phase 1 ('Why?' taps) = 3 days. Full conversational coach = 2-4 weeks."
+        },
+        {
+          "id": "menstrual_hormonal",
+          "effort": "1-2 weeks",
+          "impact": "Read .menstrualFlow, adjust readiness for luteal phase. Needs careful medical framing."
+        },
+        {
+          "id": "muscular_load",
+          "effort": "3-5 days",
+          "impact": "Infer strength load from HKWorkout metadata. Unique vs Oura (ring can't do this)."
+        },
+        {
+          "id": "resilience",
+          "effort": "2-3 days",
+          "impact": "Add stress-recovery bounce-back speed metric alongside Bio Age."
+        }
+      ]
+    },
+    "P3_longTerm": {
+      "description": "Social features and community — retention play",
+      "items": [
+        {
+          "id": "social_community",
+          "effort": "4-6 weeks",
+          "impact": "Family dashboard, shared streaks, opt-in weekly challenges. Needs backend infrastructure."
+        }
+      ]
+    }
+  }
+}

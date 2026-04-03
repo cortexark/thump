@@ -309,6 +309,20 @@ final class DailyEngineCoordinator: ObservableObject {
 
             AppLogger.engine.info("[Coordinator] Pipeline complete in \(String(format: "%.0f", totalMs))ms — history=\(history.count) days")
 
+            // ── Step 13: Proactive Notifications (fire-and-forget) ──
+            Task(priority: .utility) { [weak self] in
+                guard let self else { return }
+                await self.scheduleProactiveNotifications(
+                    snapshot: snapshot,
+                    assessment: assessment,
+                    readinessResult: readinessResult,
+                    stressResult: stressResult,
+                    adviceState: adviceState,
+                    sleepPatterns: sleepPatterns,
+                    history: history
+                )
+            }
+
         } catch {
             AppLogger.engine.error("[Coordinator] Pipeline failed: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
@@ -419,5 +433,106 @@ final class DailyEngineCoordinator: ObservableObject {
         }
         trace.inputSummary = InputSummaryTrace(snapshot: snapshot, history: history)
         return trace
+    }
+
+    // MARK: - Proactive Notifications
+
+    /// Evaluates and schedules all 7 proactive notification types.
+    /// Called as a fire-and-forget task after each pipeline refresh.
+    private func scheduleProactiveNotifications(
+        snapshot: HeartSnapshot,
+        assessment: HeartAssessment,
+        readinessResult: ReadinessResult?,
+        stressResult: StressResult?,
+        adviceState: AdviceState,
+        sleepPatterns: [SleepPattern],
+        history: [HeartSnapshot]
+    ) async {
+        let proactive = ProactiveNotificationService(localStore: localStore)
+
+        // 1. Morning Briefing (only before noon)
+        if let readiness = readinessResult {
+            let topReason = adviceState.focusInsightID.isEmpty
+                ? "Check your readiness breakdown for today's plan."
+                : AdvicePresenter.focusInsight(for: adviceState) ?? "Open Thump to see your daily plan."
+            await proactive.scheduleMorningBriefing(
+                readinessScore: readiness.score,
+                readinessLevel: readiness.level,
+                topReason: topReason,
+                snapshotDate: snapshot.date
+            )
+        }
+
+        // 2. Bedtime Wind-Down
+        let scheduler = SmartNudgeScheduler()
+        let bedtimeHour = scheduler.bedtimeNudgeHour(patterns: sleepPatterns, for: Date())
+        let sleepDebt = (7.5 - (snapshot.sleepHours ?? 7.0)) * max(1, Double(history.suffix(7).filter { ($0.sleepHours ?? 7.0) < 7.0 }.count))
+        await proactive.scheduleBedtimeWindDown(
+            bedtimeHour: bedtimeHour + 1, // bedtimeNudgeHour is 1h before bed
+            sleepDebtHours: max(0, sleepDebt)
+        )
+
+        // 3. Training Opportunity (Green Light)
+        if let readiness = readinessResult {
+            await proactive.evaluateTrainingOpportunity(
+                readinessScore: readiness.score,
+                stressElevated: assessment.stressFlag,
+                sleepHours: snapshot.sleepHours,
+                isRestDay: adviceState.mode == .fullRest || adviceState.mode == .lightRecovery,
+                overtrained: assessment.consecutiveAlert != nil
+            )
+        }
+
+        // 3b. Post-Workout Recovery (if workout detected today)
+        if let workoutMin = snapshot.workoutMinutes, workoutMin >= 5 {
+            let highIntensity = snapshot.zoneMinutes.count >= 5
+                && (snapshot.zoneMinutes[3] + snapshot.zoneMinutes[4]) > 10
+            await proactive.schedulePostWorkoutRecovery(
+                workoutDurationMinutes: workoutMin,
+                wasHighIntensity: highIntensity,
+                workoutEndDate: Date().addingTimeInterval(-15 * 60) // approximate
+            )
+        }
+
+        // 4. Illness Detection
+        if let alert = assessment.consecutiveAlert, alert.consecutiveDays >= 2 {
+            await proactive.evaluateIllnessDetection(
+                consecutiveDaysFlagged: alert.consecutiveDays
+            )
+        }
+
+        // 5. Evening Recovery Check
+        if let readiness = readinessResult {
+            let highStrain = snapshot.zoneMinutes.count >= 5
+                && (snapshot.zoneMinutes[3] + snapshot.zoneMinutes[4]) > 20
+            await proactive.scheduleEveningRecovery(
+                readinessScore: readiness.score,
+                stressElevated: assessment.stressFlag,
+                highStrainDay: highStrain,
+                bedtimeHour: bedtimeHour + 1
+            )
+        }
+
+        // 6. Rebound Confirmation
+        if let readiness = readinessResult,
+           let yesterday = history.dropLast().last {
+            let yesterdayScore = readinessEngine.compute(
+                snapshot: yesterday,
+                stressScore: nil,
+                stressConfidence: nil,
+                recentHistory: Array(history.dropLast()),
+                consecutiveAlert: nil
+            )
+            if let yScore = yesterdayScore {
+                let wasRestDay = (snapshot.walkMinutes ?? 0) + (snapshot.workoutMinutes ?? 0) < 15
+                await proactive.evaluateRebound(
+                    yesterdayReadiness: yScore.score,
+                    yesterdayWasRestDay: wasRestDay,
+                    todayReadiness: readiness.score
+                )
+            }
+        }
+
+        AppLogger.engine.debug("[Coordinator] Proactive notifications evaluated")
     }
 }
