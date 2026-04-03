@@ -328,8 +328,8 @@ public struct CoachingEngine: Sendable {
             return CoachingInsight(
                 metric: .vo2Max,
                 direction: .stable,
-                message: String(format: "Your cardio fitness is at %.1f mL/kg/min. We need more data to see your trend.", recentAvg),
-                projection: "Consistent cardio exercise (zone 3-4) is the most effective way to boost VO2 max.",
+                message: String(format: "Your aerobic fitness is at %.1f — a measure of how efficiently your body uses oxygen during effort. A few more weeks of data will reveal how it's trending for you.", recentAvg),
+                projection: "Regular cardio sessions — even 30-minute brisk walks — tend to improve aerobic fitness over 6–8 weeks.",
                 changeValue: 0,
                 icon: "lungs.fill"
             )
@@ -341,18 +341,18 @@ public struct CoachingEngine: Sendable {
         let direction: CoachingDirection = change > 0.5 ? .improving : (change < -0.5 ? .declining : .stable)
         let message: String
         if change > 0.5 {
-            message = String(format: "Your cardio fitness improved by %.1f mL/kg/min recently. That's meaningful progress!", change)
+            message = String(format: "Your aerobic fitness has improved by %.1f points compared to your recent baseline — a meaningful shift in the right direction.", change)
         } else if change < -0.5 {
-            message = String(format: "Your cardio fitness dipped slightly (%.1f mL/kg/min). More zone 3-4 training can reverse this.", abs(change))
+            message = String(format: "Your aerobic fitness has dipped %.1f points from your recent baseline. Consistent moderate cardio tends to bring it back over a few weeks.", abs(change))
         } else {
-            message = String(format: "Your cardio fitness is stable at %.1f mL/kg/min.", recentAvg)
+            message = String(format: "Your aerobic fitness is holding steady at %.1f, in line with your recent baseline.", recentAvg)
         }
 
         return CoachingInsight(
             metric: .vo2Max,
             direction: direction,
             message: message,
-            projection: "Research shows 6-8 weeks of interval training can improve VO2 max by 5-15%.",
+            projection: "Consistent moderate-to-hard cardio sessions tend to improve aerobic fitness over 6–8 weeks.",
             changeValue: change,
             icon: "lungs.fill"
         )

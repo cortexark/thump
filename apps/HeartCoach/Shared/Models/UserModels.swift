@@ -137,6 +137,56 @@ public enum BiologicalSex: String, Codable, Equatable, Sendable, CaseIterable {
     }
 }
 
+// MARK: - User Copy Profile
+
+/// Routes mission copy to the appropriate tone pool.
+/// Set to `.constrained` when life context indicates high stress, burnout, therapist
+/// referral, or a chronic condition — language becomes gentler and more supportive.
+public enum UserCopyProfile: String, Codable, Equatable, Sendable, CaseIterable {
+    /// Default copy pool — direct, goal-oriented language.
+    case autonomous
+    /// Softer, supportive copy pool — for high-stress or clinical contexts.
+    case constrained
+}
+
+// MARK: - Training Phase
+
+/// The user's current training phase.
+/// Used to adjust stress thresholds and suppress overtraining alerts
+/// when elevated scores are expected (building load, tapering, etc.).
+///
+/// `peaking` and `racing` are defined now to lock the enum for Codable
+/// migration safety, even though they are not yet surfaced in v1.7 UI.
+public enum TrainingPhase: String, Codable, Equatable, Sendable, CaseIterable {
+    /// No structured training phase active.
+    case none
+    /// Base building phase — progressive load increase.
+    case building
+    /// Pre-competition taper — reduced volume, maintained intensity.
+    case tapering
+    /// High-intensity interval training focus block.
+    case hiit
+    /// Race-peak sharpening phase (deferred — not surfaced in v1.7).
+    case peaking
+    /// Active race period (deferred — not surfaced in v1.7).
+    case racing
+}
+
+// MARK: - Activity Type
+
+/// The primary activity type the user trains in.
+/// Routes AdviceComposer to the appropriate copy pool and scoring logic.
+public enum ActivityType: String, Codable, Equatable, Sendable, CaseIterable {
+    /// General fitness / mixed activity.
+    case general
+    /// Mind-body practices: yoga, pilates, stretching.
+    case mindBody
+    /// High-intensity interval training.
+    case hiit
+    /// Endurance sports: running, cycling, swimming.
+    case endurance
+}
+
 // MARK: - User Profile
 
 /// Local user profile for personalization and streak tracking.
@@ -174,6 +224,25 @@ public struct UserProfile: Codable, Equatable, Sendable {
     /// Nil if the user signed up after the launch promotion ends.
     public var launchFreeStartDate: Date?
 
+    // MARK: - Design System v1.7 Fields
+
+    /// Copy routing profile — determines which tone/language pool is used.
+    /// Set to `.constrained` when life context is high stress, burnout,
+    /// therapist referral, or chronic condition.
+    public var copyProfile: UserCopyProfile
+
+    /// The user's current structured training phase.
+    /// Drives threshold adjustments in StressEngine.
+    public var trainingPhase: TrainingPhase
+
+    /// The user's primary activity type.
+    /// Routes AdviceComposer copy pools and HIIT CNS binary logic.
+    public var activityType: ActivityType
+
+    /// Consecutive days with a daily stress score in the 0–44 "steady" range.
+    /// Incremented by StressEngine; reset when score > 44 for 3 consecutive days.
+    public var steadyStreakDays: Int
+
     public init(
         displayName: String = "",
         joinDate: Date = Date(),
@@ -184,7 +253,11 @@ public struct UserProfile: Codable, Equatable, Sendable {
         dateOfBirth: Date? = nil,
         biologicalSex: BiologicalSex = .notSet,
         email: String? = nil,
-        launchFreeStartDate: Date? = nil
+        launchFreeStartDate: Date? = nil,
+        copyProfile: UserCopyProfile = .autonomous,
+        trainingPhase: TrainingPhase = .none,
+        activityType: ActivityType = .general,
+        steadyStreakDays: Int = 0
     ) {
         self.displayName = displayName
         self.joinDate = joinDate
@@ -196,6 +269,34 @@ public struct UserProfile: Codable, Equatable, Sendable {
         self.biologicalSex = biologicalSex
         self.email = email
         self.launchFreeStartDate = launchFreeStartDate
+        self.copyProfile = copyProfile
+        self.trainingPhase = trainingPhase
+        self.activityType = activityType
+        self.steadyStreakDays = steadyStreakDays
+    }
+
+    // MARK: - Codable (migration-safe)
+
+    /// Custom decoder so pre-v1.7 profiles (missing the four new fields)
+    /// survive the upgrade without wiping existing user data.
+    /// All v1.7 fields fall back to their defaults if not present in the stored JSON.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        displayName          = try c.decode(String.self, forKey: .displayName)
+        joinDate             = try c.decode(Date.self, forKey: .joinDate)
+        onboardingComplete   = try c.decode(Bool.self, forKey: .onboardingComplete)
+        streakDays           = try c.decode(Int.self, forKey: .streakDays)
+        lastStreakCreditDate = try c.decodeIfPresent(Date.self, forKey: .lastStreakCreditDate)
+        nudgeCompletionDates = (try? c.decode(Set<String>.self, forKey: .nudgeCompletionDates)) ?? []
+        dateOfBirth          = try c.decodeIfPresent(Date.self, forKey: .dateOfBirth)
+        biologicalSex        = (try? c.decode(BiologicalSex.self, forKey: .biologicalSex)) ?? .notSet
+        email                = try c.decodeIfPresent(String.self, forKey: .email)
+        launchFreeStartDate  = try c.decodeIfPresent(Date.self, forKey: .launchFreeStartDate)
+        // v1.7 fields — default when absent (pre-v1.7 stored profiles)
+        copyProfile          = (try? c.decode(UserCopyProfile.self, forKey: .copyProfile)) ?? .autonomous
+        trainingPhase        = (try? c.decode(TrainingPhase.self, forKey: .trainingPhase)) ?? .none
+        activityType         = (try? c.decode(ActivityType.self, forKey: .activityType)) ?? .general
+        steadyStreakDays      = (try? c.decode(Int.self, forKey: .steadyStreakDays)) ?? 0
     }
 
     /// Computed chronological age in years from date of birth.
@@ -203,6 +304,23 @@ public struct UserProfile: Codable, Equatable, Sendable {
         guard let dob = dateOfBirth else { return nil }
         let components = Calendar.current.dateComponents([.year], from: dob, to: Date())
         return components.year
+    }
+
+    /// Approximate age in years derived from `dateOfBirth`.
+    /// Mirrors `chronologicalAge` — present for StressEngine compatibility.
+    public var ageApprox: Int? {
+        chronologicalAge
+    }
+
+    /// `true` when the user is in any structured training phase.
+    public var isInTrainingPhase: Bool {
+        trainingPhase != .none
+    }
+
+    /// `true` when `steadyStreakDays` has reached or exceeded 14 days.
+    /// Signals chronic steady-state for copy and threshold routing.
+    public var isChronicSteady: Bool {
+        steadyStreakDays >= 14
     }
 
     /// Whether the user is currently within the launch free year.

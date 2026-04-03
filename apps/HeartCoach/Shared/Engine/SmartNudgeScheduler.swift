@@ -427,6 +427,125 @@ public struct SmartNudgeScheduler: Sendable {
 
         return Array(actions.prefix(3))
     }
+
+    // MARK: - 9pm Forward-Looking Notification
+
+    /// Generate the 9pm evening notification content if conditions are met.
+    ///
+    /// **Forward-looking notification** (design spec §20.11):
+    /// Fires at 9pm when readiness score is > 44 and trending up.
+    /// Suppressed when `isChronicSteady == true`.
+    ///
+    /// **Steady 9pm notification** (design spec §21.5):
+    /// Fires at 9pm when `isChronicSteady == true` AND `copyProfile == .constrained`.
+    /// Suppressed after 3 consecutive dismissals.
+    ///
+    /// **One-per-day rule:** Will not fire if a notification was already sent today
+    /// (determined by `lastNotificationDate`).
+    ///
+    /// - Parameters:
+    ///   - readinessScore: The user's current readiness score (0–100).
+    ///   - trendDirection: The current stress/readiness trend direction.
+    ///   - isChronicSteady: Whether the user has been in Steady state 14+ days.
+    ///   - copyProfile: The user's copy routing profile.
+    ///   - consecutiveDismissals: How many consecutive evenings the user dismissed this notification.
+    ///   - lastNotificationDate: Date the most recent notification was sent. Nil if never sent.
+    ///   - now: The current date (injectable for testing). Defaults to `Date()`.
+    /// - Returns: An `EveningNotification` describing what to send, or `nil` if suppressed.
+    public func eveningNotification(
+        readinessScore: Int,
+        trendDirection: StressTrendDirection,
+        isChronicSteady: Bool,
+        copyProfile: UserCopyProfile,
+        consecutiveDismissals: Int = 0,
+        lastNotificationDate: Date? = nil,
+        now: Date = Date()
+    ) -> EveningNotification? {
+        // One-per-day rule: suppress if already sent today
+        if let lastDate = lastNotificationDate {
+            let calendar = Calendar.current
+            if calendar.isDate(lastDate, inSameDayAs: now) {
+                return nil
+            }
+        }
+
+        // Steady 9pm notification: constrained + chronic steady
+        if isChronicSteady && copyProfile == .constrained {
+            // Suppress after 3 consecutive dismissals
+            if consecutiveDismissals >= 3 {
+                return nil
+            }
+            let bodies = [
+                "You got through today. That's the whole job.",
+                "Today counted. Rest."
+            ]
+            let body = bodies.randomElement() ?? bodies[0]
+            return EveningNotification(
+                title: "Thump",
+                body: body,
+                kind: .steadyAcknowledgment
+            )
+        }
+
+        // Forward-looking notification: score > 44 AND trending up AND not chronic steady
+        if !isChronicSteady && readinessScore > 44 && trendDirection == .rising {
+            return EveningNotification(
+                title: "Thump",
+                body: "Tomorrow is already shaping up — your nervous system is settling.",
+                kind: .forwardLooking
+            )
+        }
+
+        return nil
+    }
+
+    // MARK: - Daily Notification Gate
+
+    /// Returns true if a notification can be sent today.
+    ///
+    /// Enforces the one-notification-per-24h window.
+    ///
+    /// - Parameters:
+    ///   - lastNotificationDate: The date when the last notification was sent.
+    ///   - now: The current date (injectable for testing).
+    /// - Returns: `true` if sending is allowed.
+    public func canSendNotificationToday(
+        lastNotificationDate: Date?,
+        now: Date = Date()
+    ) -> Bool {
+        guard let last = lastNotificationDate else { return true }
+        let calendar = Calendar.current
+        return !calendar.isDate(last, inSameDayAs: now)
+    }
+}
+
+// MARK: - Evening Notification
+
+/// A resolved evening notification ready for scheduling.
+public struct EveningNotification: Sendable, Equatable {
+    /// The notification title.
+    public let title: String
+
+    /// The notification body text.
+    public let body: String
+
+    /// The notification kind (for analytics and suppression logic).
+    public let kind: EveningNotificationKind
+
+    public init(title: String, body: String, kind: EveningNotificationKind) {
+        self.title = title
+        self.body = body
+        self.kind = kind
+    }
+}
+
+/// The kind of evening notification.
+public enum EveningNotificationKind: String, Sendable, Equatable {
+    /// Forward-looking notification: score > 44, trending up, not chronic steady.
+    case forwardLooking
+
+    /// Steady acknowledgment: chronic steady + constrained copy profile.
+    case steadyAcknowledgment
 }
 
 // MARK: - Smart Nudge Action

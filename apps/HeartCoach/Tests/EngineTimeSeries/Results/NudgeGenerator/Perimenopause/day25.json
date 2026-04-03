@@ -2,13 +2,12 @@
   "anomalyScore" : 0.68341251136534664,
   "confidence" : "high",
   "multiNudgeCategories" : [
-    "moderate",
-    "intensity",
-    "hydrate"
+    "hydrate",
+    "intensity"
   ],
-  "multiNudgeCount" : 3,
-  "nudgeCategory" : "moderate",
-  "nudgeTitle" : "Try Something Different Today",
+  "multiNudgeCount" : 2,
+  "nudgeCategory" : "hydrate",
+  "nudgeTitle" : "Quick Hydration Check-In",
   "readinessLevel" : "ready",
   "readinessScore" : 70,
   "regressionFlag" : false,

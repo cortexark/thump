@@ -2,13 +2,13 @@
   "anomalyScore" : 0.43196632340943752,
   "confidence" : "medium",
   "multiNudgeCategories" : [
+    "breathe",
     "rest",
-    "celebrate",
-    "breathe"
+    "celebrate"
   ],
   "multiNudgeCount" : 3,
-  "nudgeCategory" : "rest",
-  "nudgeTitle" : "Rest and Recharge Today",
+  "nudgeCategory" : "breathe",
+  "nudgeTitle" : "A Breathing Reset",
   "readinessLevel" : "recovering",
   "readinessScore" : 20,
   "regressionFlag" : true,
