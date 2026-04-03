@@ -140,6 +140,11 @@ extension DashboardView {
                     weekOverWeekBanner(trend)
                 }
 
+                // Week-over-week trend indicators
+                if let trend = viewModel.assessment?.weekOverWeekTrend {
+                    weekOverWeekBanner(trend)
+                }
+
                 // Recovery context banner — shown when readiness is low.
                 if let ctx = viewModel.assessment?.recoveryContext {
                     recoveryContextBanner(ctx)
@@ -656,6 +661,88 @@ extension DashboardView {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    /// Shows week-over-week RHR change and recovery trend as a compact banner.
+    func weekOverWeekBanner(_ trend: WeekOverWeekTrend) -> some View {
+        let rhrChange = trend.currentWeekMean - trend.baselineMean
+        let rhrArrow = rhrChange <= -1 ? "↓" : rhrChange >= 1 ? "↑" : "→"
+        let rhrColor: Color = rhrChange <= -1
+            ? Color(hex: 0x22C55E)
+            : rhrChange >= 1 ? Color(hex: 0xEF4444) : .secondary
+
+        return VStack(spacing: 6) {
+            // RHR trend line
+            HStack(spacing: 6) {
+                Image(systemName: trend.direction.icon)
+                    .font(.caption2)
+                    .foregroundStyle(rhrColor)
+                Text("RHR \(Int(trend.baselineMean)) \(rhrArrow) \(Int(trend.currentWeekMean)) bpm")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(trendLabel(trend.direction))
+                    .font(.system(size: 9))
+                    .foregroundStyle(rhrColor)
+            }
+
+            // Recovery trend line (if available)
+            if let recovery = viewModel.assessment?.recoveryTrend,
+               recovery.direction != .insufficientData,
+               let current = recovery.currentWeekMean,
+               let baseline = recovery.baselineMean {
+                let recChange = current - baseline
+                let recArrow = recChange >= 1 ? "↑" : recChange <= -1 ? "↓" : "→"
+                let recColor: Color = recChange >= 1
+                    ? Color(hex: 0x22C55E)
+                    : recChange <= -1 ? Color(hex: 0xEF4444) : .secondary
+
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.uturn.up")
+                        .font(.caption2)
+                        .foregroundStyle(recColor)
+                    Text("Recovery \(Int(baseline)) \(recArrow) \(Int(current)) bpm drop")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text(recoveryDirectionLabel(recovery.direction))
+                        .font(.system(size: 9))
+                        .foregroundStyle(recColor)
+                }
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.tertiarySystemGroupedBackground))
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("RHR trend: \(Int(trend.baselineMean)) to \(Int(trend.currentWeekMean)) bpm, \(trendLabel(trend.direction))")
+        .onTapGesture {
+            InteractionLog.log(.cardTap, element: "wow_trend_banner", page: "Dashboard")
+            withAnimation { selectedTab = 3 }
+        }
+    }
+
+    func trendLabel(_ direction: WeeklyTrendDirection) -> String {
+        switch direction {
+        case .significantImprovement: return "Improving fast"
+        case .improving:             return "Trending down"
+        case .stable:                return "Steady"
+        case .elevated:              return "Creeping up"
+        case .significantElevation:  return "Elevated"
+        }
+    }
+
+    func recoveryDirectionLabel(_ direction: RecoveryTrendDirection) -> String {
+        switch direction {
+        case .improving:        return "Getting faster"
+        case .stable:           return "Steady"
+        case .declining:        return "Slowing down"
+        case .insufficientData: return "Not enough data"
+        }
     }
 
     func readinessColor(for level: ReadinessLevel) -> Color {
