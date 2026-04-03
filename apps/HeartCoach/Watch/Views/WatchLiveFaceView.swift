@@ -489,7 +489,7 @@ struct BuddyInsight {
         if nudgeCompleted {
             return BuddyInsight(
                 observation: "You showed up today",
-                suggestion: "That consistency is what moves the needle"
+                suggestion: "That consistency adds up over time"
             )
         }
 
@@ -500,8 +500,8 @@ struct BuddyInsight {
             return BuddyInsight(
                 observation: "Resting HR up \(delta) bpm for \(days) days",
                 suggestion: days >= 4
-                    ? "Your body's been working hard. A lighter day could turn this around"
-                    : "Keeping an eye on it. Rest helps this recover"
+                    ? "A lighter day tends to help this recover"
+                    : "Worth watching. Rest often helps this settle"
             )
         }
 
@@ -518,24 +518,24 @@ struct BuddyInsight {
             switch wow.direction {
             case .significantImprovement:
                 return BuddyInsight(
-                    observation: "Heart rate dropped this week vs last",
-                    suggestion: "Whatever you did last week is working — keep it up"
+                    observation: "Heart rate down from last week",
+                    suggestion: "What you did last week is working"
                 )
             case .improving:
                 return BuddyInsight(
                     observation: "Trending a bit stronger than last week",
-                    suggestion: "Small shifts like this add up over time"
+                    suggestion: "Small shifts like this tend to add up"
                 )
             case .elevated:
                 let delta = Int(wow.currentWeekMean - wow.baselineMean)
                 return BuddyInsight(
                     observation: "Heart working \(delta) bpm harder than your baseline",
-                    suggestion: "This usually responds well to a rest day"
+                    suggestion: "A rest day often brings this back down"
                 )
             case .significantElevation:
                 return BuddyInsight(
-                    observation: "Your heart's been running hotter than usual",
-                    suggestion: "Worth checking in — sleep and stress both affect this"
+                    observation: "Heart rate above your typical range",
+                    suggestion: "Sleep and stress both tend to affect this"
                 )
             case .stable:
                 break // Fall through to next priority
@@ -547,13 +547,13 @@ struct BuddyInsight {
             switch rt.direction {
             case .improving:
                 return BuddyInsight(
-                    observation: "Recovery after exercise is getting faster",
-                    suggestion: "That's a real fitness gain — your heart bounces back quicker"
+                    observation: "Post-exercise recovery is getting faster",
+                    suggestion: "Your heart is bouncing back quicker now"
                 )
             case .declining:
                 return BuddyInsight(
-                    observation: "Taking longer to recover after activity",
-                    suggestion: "Could mean you're pushing harder than your body's ready for"
+                    observation: "Recovery after activity is taking longer",
+                    suggestion: "Your body may need more recovery time"
                 )
             case .stable, .insufficientData:
                 break
@@ -565,33 +565,33 @@ struct BuddyInsight {
             switch scenario {
             case .overtrainingSignals:
                 return BuddyInsight(
-                    observation: "Signs of overtraining showing up",
-                    suggestion: "A recovery day isn't lost time — it's when you get stronger"
+                    observation: "Signs of accumulated strain showing up",
+                    suggestion: "Rest is when your body gets stronger"
                 )
             case .highStressDay:
                 return BuddyInsight(
                     observation: "Your body is carrying extra load today",
-                    suggestion: "One slow breath can shift your nervous system. Tap to try"
+                    suggestion: "One slow breath can shift things. Tap to try"
                 )
             case .greatRecoveryDay:
                 return BuddyInsight(
-                    observation: "Body bounced back well",
-                    suggestion: "Good day to use this energy — or bank it for tomorrow"
+                    observation: "Your body bounced back well",
+                    suggestion: "Good day to push — or save it for tomorrow"
                 )
             case .decliningTrend:
                 return BuddyInsight(
-                    observation: "Metrics have been shifting the past couple weeks",
-                    suggestion: "Sleep and stress are usually the first places to look"
+                    observation: "Metrics have been shifting a couple weeks",
+                    suggestion: "Sleep and stress are usually the first signal"
                 )
             case .improvingTrend:
                 return BuddyInsight(
                     observation: "Two weeks of steady improvement",
-                    suggestion: "Your habits are showing up in the numbers"
+                    suggestion: "Your habits are showing up in the data"
                 )
             case .missingActivity:
                 return BuddyInsight(
-                    observation: "Been a quieter few days",
-                    suggestion: "Even a short walk changes the trajectory"
+                    observation: "Your activity has been lower lately",
+                    suggestion: "A short walk tends to shift the trend"
                 )
             }
         }
@@ -599,8 +599,8 @@ struct BuddyInsight {
         // 6. Stress flag (acute)
         if assessment.stressFlag {
             return BuddyInsight(
-                observation: "Stress pattern showing up",
-                suggestion: "Not dangerous — just your nervous system running warm. Tap to breathe"
+                observation: "A stress pattern is showing up",
+                suggestion: "Your nervous system is elevated. Tap to breathe"
             )
         }
 
@@ -616,46 +616,46 @@ struct BuddyInsight {
             return BuddyInsight(
                 observation: "Your body is in a strong place today",
                 suggestion: hour < 17
-                    ? "Good day to push a little harder if you want to"
+                    ? "Good day to push a little if you want to"
                     : "Protect tonight's sleep to keep this going"
             )
         case .content:
             return BuddyInsight(
-                observation: "Everything looks balanced",
-                suggestion: "Steady days like this build the foundation"
+                observation: "Your numbers look balanced today",
+                suggestion: "Steady days like this build your foundation"
             )
         case .nudging:
             if let mins = assessment.dailyNudge.durationMinutes {
                 return BuddyInsight(
-                    observation: "You've got a window for movement",
+                    observation: "Your body has a window for movement now",
                     suggestion: "\(mins) minutes would make a real difference today"
                 )
             }
             return BuddyInsight(
-                observation: "Your body has energy to use",
-                suggestion: "A little movement now pays off tonight"
+                observation: "Your body has energy available",
+                suggestion: "A little movement now tends to pay off tonight"
             )
         case .stressed:
             return BuddyInsight(
-                observation: "Running a bit activated right now",
-                suggestion: "That's okay — one breath can shift things. Tap to try"
+                observation: "Your nervous system is a bit elevated",
+                suggestion: "That's okay — one breath can help. Tap to try"
             )
         case .tired:
             return BuddyInsight(
                 observation: "Your body is asking for recovery",
                 suggestion: hour >= 17
-                    ? "Early sleep tonight is the highest-leverage thing you can do"
+                    ? "Earlier sleep tonight often turns this around"
                     : "A lighter day lets your body rebuild"
             )
         case .active:
             return BuddyInsight(
-                observation: "You're in motion",
-                suggestion: "Your heart is responding — keep going at your pace"
+                observation: "You're in motion today",
+                suggestion: "Your heart is responding — keep your pace"
             )
         case .celebrating, .conquering:
             return BuddyInsight(
                 observation: "You showed up today",
-                suggestion: "That's the habit that compounds"
+                suggestion: "That's the habit that builds over time"
             )
         }
     }

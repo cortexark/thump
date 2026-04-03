@@ -57,6 +57,15 @@ struct SettingsView: View {
     /// Whether to include a screenshot with the bug report.
     @State private var includeScreenshot: Bool = true
 
+    /// Whether to include health metrics with the bug report (explicit consent).
+    @State private var includeHealthData: Bool = false
+
+    /// Controls presentation of the account deletion confirmation alert.
+    @State private var showDeleteAccount: Bool = false
+
+    /// Whether account deletion is in progress.
+    @State private var isDeletingAccount: Bool = false
+
     /// Controls presentation of the feature request sheet.
     @State private var showFeatureRequest: Bool = false
 
@@ -475,9 +484,21 @@ struct SettingsView: View {
                 }
                 .tint(.pink)
 
-                Text("Your current health metrics and app state will be included to help us investigate.")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                Toggle(isOn: $includeHealthData) {
+                    Label("Include health metrics", systemImage: "heart.text.square")
+                        .font(.caption)
+                }
+                .tint(.pink)
+
+                if includeHealthData {
+                    Text("Your current heart rate, HRV, sleep, steps, and engine scores will be sent to our server to help reproduce the issue. No data is shared with third parties.")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("Only your bug description, app version, and device info will be sent.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
 
                 if bugReportSubmitted {
                     HStack {
@@ -521,7 +542,12 @@ struct SettingsView: View {
     /// Collects all current health metrics and UI state from LocalStore,
     /// then uploads the bug report with full diagnostic context to Firestore.
     private func submitBugReport() {
-        var metrics = collectHealthMetrics()
+        var metrics: [String: Any] = [:]
+
+        // Only collect health metrics when the user explicitly opted in
+        if includeHealthData {
+            metrics = collectHealthMetrics()
+        }
 
         // Capture screenshot of the main window (behind the sheet)
         if includeScreenshot, let screenshot = captureScreenshot() {
@@ -533,7 +559,8 @@ struct SettingsView: View {
             appVersion: appVersion,
             deviceModel: UIDevice.current.model,
             iosVersion: UIDevice.current.systemVersion,
-            healthMetrics: metrics
+            healthMetrics: metrics,
+            includeHealthData: includeHealthData
         ) { error in
             DispatchQueue.main.async {
                 if error == nil {
@@ -777,8 +804,36 @@ struct SettingsView: View {
             } message: {
                 Text("Generates a JSON file with raw health data and engine outputs for debugging. You control who receives this file.")
             }
+            Button(role: .destructive) {
+                InteractionLog.log(.buttonTap, element: "delete_account_button", page: "Settings")
+                showDeleteAccount = true
+            } label: {
+                Label("Delete Account", systemImage: "trash")
+                    .foregroundStyle(.red)
+            }
+            .accessibilityIdentifier("settings_delete_account")
+            .alert("Delete Account", isPresented: $showDeleteAccount) {
+                Button("Delete Everything", role: .destructive) {
+                    performAccountDeletion()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete all your data from our servers, remove your sign-in credentials, and reset the app. This action cannot be undone.")
+            }
         } header: {
             Text("Data")
+        }
+    }
+
+    // MARK: - Account Deletion
+
+    /// Deletes all server and local data, then returns the user to the sign-in screen.
+    private func performAccountDeletion() {
+        isDeletingAccount = true
+        AccountDeletionService.deleteAccount(localStore: localStore) { _ in
+            isDeletingAccount = false
+            // The app will route back to AppleSignInView because
+            // thump_signed_in was cleared by the deletion service.
         }
     }
 
@@ -853,14 +908,16 @@ struct SettingsView: View {
                     + "Numbers shown are estimates, not exact readings."
             )
 
-            // Professional advice
+            // Professional advice (Apple Guideline 1.4.1)
             disclaimerRow(
                 icon: "stethoscope",
                 iconColor: .blue,
-                title: "Consult a Professional",
+                title: "Consult Your Doctor",
                 body: "Always consult a qualified healthcare "
                     + "professional before making changes to your "
-                    + "health routine or if you have concerns."
+                    + "exercise, sleep, or health routine. Use Thump's "
+                    + "suggestions as a starting point, not a substitute "
+                    + "for medical advice."
             )
 
             // Emergency
@@ -877,11 +934,12 @@ struct SettingsView: View {
             disclaimerRow(
                 icon: "lock.shield.fill",
                 iconColor: .green,
-                title: "Your Data Stays on Your Device",
+                title: "Privacy First",
                 body: "All health data is processed on your iPhone "
-                    + "and Apple Watch. No health data is sent to any "
-                    + "server. We collect anonymous usage analytics to "
-                    + "improve the app experience."
+                    + "and Apple Watch. Health metrics are only sent to "
+                    + "our server if you explicitly opt in when filing "
+                    + "a bug report. Anonymous engine scores may be "
+                    + "shared if you enable analytics in Settings."
             )
         } header: {
             Text("Important Information")
@@ -1093,7 +1151,9 @@ struct SettingsView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("Settings") {
     SettingsView()
         .environmentObject(LocalStore.preview)
 }
+#endif

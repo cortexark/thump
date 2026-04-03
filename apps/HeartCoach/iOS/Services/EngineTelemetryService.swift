@@ -68,14 +68,11 @@ final class EngineTelemetryService {
 
     /// Whether telemetry uploads are enabled.
     ///
-    /// Always `true` in DEBUG builds. In production, reads the user's
-    /// opt-in preference from `@AppStorage("thump_telemetry_consent")`.
+    /// Reads the user's opt-in preference from `thump_telemetry_consent`.
+    /// Apple Guideline 5.1.1(ii) requires consent for all data collection,
+    /// including DEBUG and TestFlight builds.
     var isUploadEnabled: Bool {
-        #if DEBUG
-        return true
-        #else
-        return UserDefaults.standard.bool(forKey: "thump_telemetry_consent")
-        #endif
+        UserDefaults.standard.bool(forKey: "thump_telemetry_consent")
     }
 
     // MARK: - Upload
