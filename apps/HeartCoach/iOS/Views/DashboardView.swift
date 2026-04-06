@@ -33,9 +33,6 @@ struct DashboardView: View {
 
     @StateObject var viewModel = DashboardViewModel()
 
-    /// A/B design variant toggle.
-    @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
-
     // MARK: - Sheet State
 
     /// Controls the Bio Age detail sheet presentation.
@@ -46,6 +43,15 @@ struct DashboardView: View {
 
     /// The pillar "Why?" explanation currently shown (nil = no sheet).
     @State var pillarWhyText: PillarWhyContent?
+
+    /// Keeps dashboard navigation aligned with the active tab layout.
+    @AppStorage("useNewTabLayout") var useNewTabLayout: Bool = false
+
+    /// Design A/B toggle — controlled from Settings.
+    @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
+
+    /// Expands the Design B "What's driving this" explainer card.
+    @State var isDrivingSignalsExpanded = false
 
     /// Prevents redundant initial refresh work when the tab view re-renders.
     @State private var didInitialLoad = false
@@ -128,18 +134,17 @@ struct DashboardView: View {
 
                     // Main content cards
                     VStack(alignment: .leading, spacing: 16) {
-                        if useDesignB {
+                        if isUsingDesignB {
                             designBCardStack
                         } else {
-                            checkInSection               // 1. Daily check-in right after hero
-                            readinessSection              // 2. Thump Check (readiness)
-                            howYouRecoveredCard           // 3. How You Recovered (replaces Weekly RHR)
-                            consecutiveAlertCard          // 4. Alert if elevated
-                            dailyGoalsSection             // 5. Daily Goals (engine-driven)
-                            buddyRecommendationsSection   // 6. Buddy Recommendations
-                            zoneDistributionSection       // 7. Heart Rate Zones (dynamic targets)
-                            buddyCoachSection             // 8. Buddy Coach (was "Your Heart Coach")
-                            streakSection                 // 9. Streak
+                            checkInSection
+                            readinessSection
+                            zoneDistributionSection
+                            dailyGoalsSection
+                            nudgeSection
+                            buddyRecommendationsSection
+                            buddyCoachSection
+                            streakSection
                         }
                     }
                     .padding(.horizontal, 16)
@@ -148,6 +153,7 @@ struct DashboardView: View {
                     .background(Color(.systemGroupedBackground))
                 }
             }
+            .accessibilityIdentifier("dashboard_scroll_view")
         }
         .accessibilityIdentifier("dashboard_scroll_view")
     }
@@ -162,11 +168,11 @@ struct DashboardView: View {
         return 388
     }
 
-    private var buddyMood: BuddyMood {
-        guard let assessment = viewModel.assessment else { return .content }
-        return BuddyMood.from(
-            assessment: assessment,
-            readinessScore: viewModel.readinessResult?.score
+    var buddyMood: BuddyMood {
+        DashboardHeroPresentation.mood(
+            assessment: viewModel.assessment,
+            readinessScore: effectiveReadinessScore,
+            hour: dashboardDisplayHour
         )
     }
 
@@ -239,6 +245,7 @@ struct DashboardView: View {
         ))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(greetingText). Buddy is feeling \(buddyMood.label). \(buddyFocusInsight ?? "")")
+        .accessibilityIdentifier("dashboard_hero")
     }
 
     /// Warm gradient that shifts with buddy mood.
@@ -263,7 +270,7 @@ struct DashboardView: View {
 
     /// Synthesizes ALL engine outputs into one human-readable sentence.
     /// When coordinator is active, delegates to AdvicePresenter.
-    private var buddyFocusInsight: String? {
+    var buddyFocusInsight: String? {
         // Coordinator path: use AdvicePresenter
         if ConfigService.enableCoordinator,
            let adviceState = coordinator.bundle?.adviceState {
@@ -308,17 +315,23 @@ struct DashboardView: View {
 
     // MARK: - Greeting
 
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let greeting: String
-        switch hour {
-        case 0..<12:  greeting = "Good morning"
-        case 12..<17: greeting = "Good afternoon"
-        case 17..<21: greeting = "Good evening"
-        default:       greeting = "Good night"
-        }
+    var greetingText: String {
+        let greeting = DashboardHeroPresentation.greetingPrefix(for: dashboardDisplayHour)
         let name = viewModel.profileName
         return name.isEmpty ? greeting : "\(greeting), \(name)"
+    }
+
+    var dashboardDisplayHour: Int {
+        DashboardUITestOverrides.hour
+            ?? Calendar.current.component(.hour, from: Date())
+    }
+
+    var effectiveReadinessScore: Int? {
+        DashboardUITestOverrides.readinessScore ?? viewModel.readinessResult?.score
+    }
+
+    private var isUsingDesignB: Bool {
+        DashboardUITestOverrides.useDesignB || useDesignB
     }
 
     private var formattedDate: String {
@@ -608,7 +621,7 @@ struct DashboardView: View {
                 Spacer()
                 Button {
                     InteractionLog.log(.buttonTap, element: "see_trends", page: "Dashboard")
-                    withAnimation { selectedTab = 3 }
+                    navigate(to: .trends)
                 } label: {
                     HStack(spacing: 4) {
                         Text("See Trends")
@@ -646,7 +659,7 @@ struct DashboardView: View {
     private func metricTileButton(label: String, value: Double?, unit: String, decimals: Int = 0) -> some View {
         Button {
             InteractionLog.log(.cardTap, element: "metric_tile_\(label.lowercased().replacingOccurrences(of: " ", with: "_"))", page: "Dashboard")
-            withAnimation { selectedTab = 3 }
+            navigate(to: .trends)
         } label: {
             MetricTileView(
                 label: label,
@@ -670,6 +683,19 @@ struct DashboardView: View {
             return "\(String(format: "%.\(decimals)f", value)) \(unit)"
         }
         return "\(Int(value.rounded())) \(unit)"
+    }
+
+    func navigate(to destination: DashboardTabDestination) {
+        withAnimation {
+            selectedTab = DashboardTabRouter.tabIndex(
+                for: destination,
+                useNewTabLayout: useNewTabLayout
+            )
+        }
+    }
+
+    func navigate(for category: NudgeCategory) {
+        navigate(to: DashboardTabRouter.destination(for: category))
     }
 }
 

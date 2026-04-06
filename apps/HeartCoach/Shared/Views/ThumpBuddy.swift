@@ -48,7 +48,8 @@ enum BuddyMood: String, Equatable, Sendable {
         readinessScore: Int? = nil,
         nudgeCompleted: Bool = false,
         feedbackType: DailyFeedback? = nil,
-        activityInProgress: Bool = false
+        activityInProgress: Bool = false,
+        currentHour: Int? = nil
     ) -> BuddyMood {
         if nudgeCompleted { return .conquering }
         if feedbackType == .positive { return .conquering }
@@ -69,7 +70,7 @@ enum BuddyMood: String, Equatable, Sendable {
             }
             // Low readiness (< 40): genuinely tired — BUT only show sleeping
             // mood in evening hours. During daytime, show nudging instead.
-            let hour = Calendar.current.component(.hour, from: Date())
+            let hour = currentHour ?? Calendar.current.component(.hour, from: Date())
             let isEvening = hour >= 20 || hour < 6
             return isEvening ? .tired : .nudging
         }

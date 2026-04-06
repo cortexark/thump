@@ -138,6 +138,16 @@ final class DashboardViewModel: ObservableObject {
         errorMessage = nil
         healthDataProvider.clearQueryWarnings()
 
+        // Timeout: if refresh takes more than 15s, stop loading and show error
+        let timeoutTask = Task { @MainActor in
+            try await Task.sleep(nanoseconds: 15_000_000_000)
+            if self.isLoading && self.assessment == nil {
+                AppLogger.engine.warning("Dashboard refresh timed out after 15s")
+                self.errorMessage = "Loading took too long. Check that Health permissions are granted in Settings > Privacy > Health > Thump."
+                self.isLoading = false
+            }
+        }
+
         do {
             // Ensure HealthKit authorization
             if !healthDataProvider.isAuthorized {
@@ -296,6 +306,7 @@ final class DashboardViewModel: ObservableObject {
             let totalMs = (CFAbsoluteTimeGetCurrent() - refreshStart) * 1000
             AppLogger.engine.info("Dashboard refresh complete in \(String(format: "%.0f", totalMs))ms — history=\(history.count) days")
 
+            timeoutTask.cancel()
             isLoading = false
 
             // Write diagnostic snapshot for bug reports (BUG-070)
@@ -331,6 +342,7 @@ final class DashboardViewModel: ObservableObject {
             EngineTelemetryService.shared.uploadTrace(trace)
         } catch {
             AppLogger.engine.error("Dashboard refresh failed: \(error.localizedDescription)")
+            timeoutTask.cancel()
             errorMessage = error.localizedDescription
             isLoading = false
         }

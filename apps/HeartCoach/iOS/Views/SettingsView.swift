@@ -81,10 +81,6 @@ struct SettingsView: View {
     /// Feedback preferences.
     @State private var feedbackPrefs: FeedbackPreferences = FeedbackPreferences()
 
-    /// A/B design variant toggle (false = Design A / current, true = Design B / new).
-    @AppStorage("thump_design_variant_b")
-    private var useDesignB: Bool = false
-
     // MARK: - Body
 
     var body: some View {
@@ -92,7 +88,7 @@ struct SettingsView: View {
             Form {
                 profileSection
                 subscriptionSection
-                designVariantSection
+                designSection
                 feedbackPreferencesSection
                 notificationsSection
                 analyticsSection
@@ -101,6 +97,7 @@ struct SettingsView: View {
                 aboutSection
                 disclaimerSection
             }
+            .accessibilityIdentifier("settings_screen")
             .onAppear {
                 InteractionLog.pageView("Settings")
                 feedbackPrefs = localStore.loadFeedbackPreferences()
@@ -273,6 +270,25 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Design Section
+
+    @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
+
+    private var designSection: some View {
+        Section {
+            Toggle(isOn: $useDesignB) {
+                Label("Design B (Beta)", systemImage: "paintbrush.fill")
+            }
+            .tint(.pink)
+        } header: {
+            Text("Design Experiment")
+        } footer: {
+            Text(useDesignB
+                 ? "You're seeing Design B — a refreshed card layout with enhanced visuals."
+                 : "You're seeing Design A — the standard layout.")
+        }
+    }
+
     // MARK: - Notifications Section
 
     private var notificationsSection: some View {
@@ -331,26 +347,6 @@ struct SettingsView: View {
             Text("Analytics")
         } footer: {
             Text("Help improve Thump by sharing anonymized engine scores and timing data. No raw health data (heart rate, HRV, steps, etc.) is ever shared.")
-        }
-    }
-
-    // MARK: - Design Variant Section
-
-    private var designVariantSection: some View {
-        Section {
-            Toggle(isOn: $useDesignB) {
-                Label("Design B (Beta)", systemImage: "paintbrush.fill")
-            }
-            .tint(.pink)
-            .onChange(of: useDesignB) { _, newValue in
-                InteractionLog.log(.toggleChange, element: "design_variant_b", page: "Settings")
-            }
-        } header: {
-            Text("Design Experiment")
-        } footer: {
-            Text(useDesignB
-                 ? "You're seeing Design B — a refreshed card layout with enhanced visuals."
-                 : "You're seeing Design A — the current standard layout.")
         }
     }
 
@@ -419,6 +415,7 @@ struct SettingsView: View {
             } label: {
                 Label("Report a Bug", systemImage: "ant.fill")
             }
+            .accessibilityIdentifier("settings_bug_report_button")
             .sheet(isPresented: $showBugReport) {
                 bugReportSheet
             }
@@ -429,6 +426,7 @@ struct SettingsView: View {
             } label: {
                 Label("Send Feature Request", systemImage: "sparkles")
             }
+            .accessibilityIdentifier("settings_feature_request_button")
             .sheet(isPresented: $showFeatureRequest) {
                 featureRequestSheet
             }
@@ -682,7 +680,8 @@ struct SettingsView: View {
 
         // Active screen state
         metrics["currentTab"] = "Settings"
-        metrics["designVariantB"] = UserDefaults.standard.bool(forKey: "thump_design_variant_b")
+        metrics["designVariantB"] = true
+        metrics["dashboardDesign"] = "designB"
         metrics["anomalyAlertsEnabled"] = anomalyAlertsEnabled
         metrics["nudgeRemindersEnabled"] = nudgeRemindersEnabled
         metrics["telemetryConsent"] = telemetryConsent

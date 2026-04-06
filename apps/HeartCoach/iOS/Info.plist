@@ -16,6 +16,8 @@
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Thump reads your heart rate, HRV, recovery, VO2 max, steps, exercise, and sleep data to generate wellness insights and training suggestions.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Thump writes debug-only simulator samples so we can validate HealthKit-powered screens end to end during development and testing.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>
