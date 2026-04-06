@@ -78,30 +78,30 @@ final class ConfigServiceTests: XCTestCase {
         )
     }
 
-    // MARK: - Test: All Tiers Can Access All Features (all features are free)
+    // MARK: - Test: Tier-Based Feature Access
 
-    func testFreeTierCanAccessAllFeatures() {
-        XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .free))
-        XCTAssertTrue(ConfigService.canAccessNudges(tier: .free))
-        XCTAssertTrue(ConfigService.canAccessReports(tier: .free))
-        XCTAssertTrue(ConfigService.canAccessCorrelations(tier: .free))
+    func testFreeTierCanAccessOnlyStarterFeatures() {
+        XCTAssertFalse(ConfigService.canAccessFullMetrics(tier: .free))
+        XCTAssertFalse(ConfigService.canAccessNudges(tier: .free))
+        XCTAssertFalse(ConfigService.canAccessReports(tier: .free))
+        XCTAssertFalse(ConfigService.canAccessCorrelations(tier: .free))
     }
 
-    func testProTierCanAccessAllFeatures() {
+    func testProTierCanAccessCorePremiumFeatures() {
         XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .pro))
         XCTAssertTrue(ConfigService.canAccessNudges(tier: .pro))
-        XCTAssertTrue(ConfigService.canAccessReports(tier: .pro))
+        XCTAssertFalse(ConfigService.canAccessReports(tier: .pro))
         XCTAssertTrue(ConfigService.canAccessCorrelations(tier: .pro))
     }
 
-    func testCoachTierCanAccessAllFeatures() {
+    func testCoachTierCanAccessAllPremiumFeatures() {
         XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .coach))
         XCTAssertTrue(ConfigService.canAccessNudges(tier: .coach))
         XCTAssertTrue(ConfigService.canAccessReports(tier: .coach))
         XCTAssertTrue(ConfigService.canAccessCorrelations(tier: .coach))
     }
 
-    func testFamilyTierCanAccessAllFeatures() {
+    func testFamilyTierCanAccessAllPremiumFeatures() {
         XCTAssertTrue(ConfigService.canAccessFullMetrics(tier: .family))
         XCTAssertTrue(ConfigService.canAccessNudges(tier: .family))
         XCTAssertTrue(ConfigService.canAccessReports(tier: .family))

@@ -2,8 +2,8 @@
 // Thump iOS
 //
 // Subscription paywall presented modally. Features a gradient hero section,
-// pricing cards for all three paid tiers, a feature comparison table,
-// and legal links. Integrates with SubscriptionService for purchase and restore flows.
+// a single Coach plan card, a free-vs-paid comparison, and legal links.
+// Integrates with SubscriptionService for purchase and restore flows.
 //
 // Platforms: iOS 17+
 
@@ -11,9 +11,9 @@ import SwiftUI
 
 // MARK: - PaywallView
 
-/// Full-screen subscription paywall with all tier pricing and purchase actions.
+/// Full-screen subscription paywall with the public Coach plan and purchase actions.
 ///
-/// Presents pricing for Pro, Coach, and Family tiers with a monthly/annual toggle.
+/// Presents a single paid plan with monthly and annual billing options.
 /// Restore purchases and legal links are provided at the bottom.
 struct PaywallView: View {
 
@@ -92,15 +92,14 @@ struct PaywallView: View {
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
 
-                Text("Unlock Full Insights")
+                Text("Unlock Coach")
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
 
                 Text(
-                    "Your heart training buddy. Deep analytics, weekly reports, "
-                        + "and wellness insights to help you "
-                        + "understand your heart health trends."
+                    "Go beyond the daily snapshot with the full dashboard, "
+                        + "weekly reviews, deeper trends, and shareable wellness summaries."
                 )
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.9))
@@ -123,7 +122,7 @@ struct PaywallView: View {
             .padding(.horizontal, 24)
 
             if isAnnual {
-                Text("Save up to 37% with annual billing")
+                Text("Annual saves about 50% compared with monthly")
                     .font(.caption)
                     .foregroundStyle(.green)
                     .fontWeight(.medium)
@@ -136,37 +135,19 @@ struct PaywallView: View {
     // MARK: - Pricing Cards
 
     private var pricingCards: some View {
-        VStack(spacing: 16) {
-            pricingCard(
-                tier: .pro,
-                badge: nil,
-                accentColor: .pink
-            )
-
-            pricingCard(
-                tier: .coach,
-                badge: "Most Popular",
-                accentColor: .purple
-            )
-
-            familyCard
-        }
+        coachCard
         .padding(.horizontal, 20)
         .padding(.top, 16)
     }
 
-    private func pricingCard(
-        tier: SubscriptionTier,
-        badge: String?,
-        accentColor: Color
-    ) -> some View {
+    private var coachCard: some View {
+        let tier = SubscriptionTier.merchandisedTier
+        let accentColor = Color.purple
         let price = isAnnual ? tier.annualPrice : tier.monthlyPrice
         let period = isAnnual ? "/year" : "/mo"
         let monthlyEquivalent = isAnnual ? tier.annualPrice / 12 : tier.monthlyPrice
-        let isHighlighted = badge != nil
 
         return VStack(spacing: 14) {
-            // Tier header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
@@ -175,22 +156,22 @@ struct PaywallView: View {
                             .fontWeight(.bold)
                             .foregroundStyle(.primary)
 
-                        if let badge {
-                            Text(badge)
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(accentColor, in: Capsule())
-                        }
+                        Text(isAnnual ? "Best Value" : "Monthly")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(accentColor, in: Capsule())
                     }
 
-                    if isAnnual {
-                        Text("$\(String(format: "%.2f", monthlyEquivalent))/mo equivalent")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(
+                        isAnnual
+                            ? "$\(String(format: "%.2f", monthlyEquivalent))/mo billed yearly"
+                            : "Full dashboard, weekly reviews, and PDF summaries"
+                    )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -209,7 +190,6 @@ struct PaywallView: View {
 
             Divider()
 
-            // Feature list
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(tier.features, id: \.self) { feature in
                     HStack(alignment: .top, spacing: 8) {
@@ -226,7 +206,6 @@ struct PaywallView: View {
                 }
             }
 
-            // Subscribe button
             Button {
                 InteractionLog.log(.buttonTap, element: "subscribe_\(tier.rawValue)", page: "Paywall", details: "annual=\(isAnnual)")
                 subscribe(to: tier)
@@ -236,7 +215,7 @@ struct PaywallView: View {
                         ProgressView()
                             .tint(.white)
                     }
-                    Text("Subscribe to \(tier.displayName)")
+                    Text(isAnnual ? "Start Coach Annual" : "Start Coach Monthly")
                         .fontWeight(.semibold)
                 }
                 .font(.subheadline)
@@ -244,7 +223,7 @@ struct PaywallView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
-                    isHighlighted ? AnyShapeStyle(accentColor) : AnyShapeStyle(accentColor.opacity(0.85)),
+                    AnyShapeStyle(accentColor),
                     in: RoundedRectangle(cornerRadius: 12)
                 )
             }
@@ -258,114 +237,9 @@ struct PaywallView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 18)
                 .strokeBorder(
-                    isHighlighted ? accentColor.opacity(0.4) : Color(.systemGray4),
-                    lineWidth: isHighlighted ? 2 : 1
+                    accentColor.opacity(0.4),
+                    lineWidth: 2
                 )
-        )
-    }
-
-    /// Family plan card — annual-only with a special note about member count.
-    private var familyCard: some View {
-        let accentColor = Color.orange
-
-        return VStack(spacing: 14) {
-            // Tier header
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(SubscriptionTier.family.displayName)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.primary)
-
-                        Text("Up to 5 Members")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(accentColor, in: Capsule())
-                    }
-
-                    Text("Annual plan · one shared subscription")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("$\(String(format: "%.2f", SubscriptionTier.family.annualPrice))")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(accentColor)
-
-                    Text("/year")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if !isAnnual {
-                HStack(spacing: 6) {
-                    Image(systemName: "info.circle")
-                        .font(.caption)
-                        .foregroundStyle(accentColor)
-                    Text("Family plan is available on annual billing only.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 4)
-            }
-
-            Divider()
-
-            // Feature list
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(SubscriptionTier.family.features, id: \.self) { feature in
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(accentColor)
-                            .padding(.top, 2)
-
-                        Text(feature)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-
-            // Subscribe button — always uses annual price
-            Button {
-                InteractionLog.log(.buttonTap, element: "subscribe_family", page: "Paywall", details: "annual=true")
-                subscribe(to: .family)
-            } label: {
-                HStack {
-                    if isPurchasing {
-                        ProgressView()
-                            .tint(.white)
-                    }
-                    Text("Subscribe to Family")
-                        .fontWeight(.semibold)
-                }
-                .font(.subheadline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(accentColor, in: RoundedRectangle(cornerRadius: 12))
-            }
-            .disabled(isPurchasing)
-        }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(accentColor.opacity(0.4), lineWidth: 2)
         )
     }
 
@@ -373,7 +247,7 @@ struct PaywallView: View {
 
     private var featureComparison: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Compare Plans")
+            Text("Free vs Coach")
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 4)
@@ -381,21 +255,19 @@ struct PaywallView: View {
             VStack(spacing: 0) {
                 comparisonHeader
                 Divider()
-                comparisonRow(feature: "Wellness Snapshot", free: true, pro: true, coach: true, family: true)
+                comparisonRow(feature: "Daily wellness snapshot", free: true, coach: true)
                 Divider()
-                comparisonRow(feature: "Full Dashboard", free: false, pro: true, coach: true, family: true)
+                comparisonRow(feature: "Basic trend view", free: true, coach: true)
                 Divider()
-                comparisonRow(feature: "Daily Suggestions", free: false, pro: true, coach: true, family: true)
+                comparisonRow(feature: "Full metrics dashboard", free: false, coach: true)
                 Divider()
-                comparisonRow(feature: "Connections", free: false, pro: true, coach: true, family: true)
+                comparisonRow(feature: "Personalized nudges", free: false, coach: true)
                 Divider()
-                comparisonRow(feature: "Weekly Reviews", free: false, pro: false, coach: true, family: true)
+                comparisonRow(feature: "Stress and anomaly context", free: false, coach: true)
                 Divider()
-                comparisonRow(feature: "Wellness Summaries", free: false, pro: false, coach: true, family: true)
+                comparisonRow(feature: "Weekly reviews", free: false, coach: true)
                 Divider()
-                comparisonRow(feature: "Caregiver Mode", free: false, pro: false, coach: false, family: true)
-                Divider()
-                comparisonRow(feature: "Shared Goals", free: false, pro: false, coach: false, family: true)
+                comparisonRow(feature: "PDF wellness summaries", free: false, coach: true)
             }
             .background(
                 RoundedRectangle(cornerRadius: 14)
@@ -419,25 +291,13 @@ struct PaywallView: View {
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
-                .frame(width: 40)
-
-            Text("Pro")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.pink)
-                .frame(width: 40)
+                .frame(width: 52)
 
             Text("Coach")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(.purple)
-                .frame(width: 40)
-
-            Text("Family")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.orange)
-                .frame(width: 44)
+                .frame(width: 56)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -447,9 +307,7 @@ struct PaywallView: View {
     private func comparisonRow(
         feature: String,
         free: Bool,
-        pro: Bool,
-        coach: Bool,
-        family: Bool
+        coach: Bool
     ) -> some View {
         HStack {
             Text(feature)
@@ -457,10 +315,8 @@ struct PaywallView: View {
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            checkOrCross(free).frame(width: 40)
-            checkOrCross(pro, color: .pink).frame(width: 40)
-            checkOrCross(coach, color: .purple).frame(width: 40)
-            checkOrCross(family, color: .orange).frame(width: 44)
+            checkOrCross(free).frame(width: 52)
+            checkOrCross(coach, color: .purple).frame(width: 56)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -527,9 +383,7 @@ struct PaywallView: View {
         isPurchasing = true
         Task {
             do {
-                // Family plan is always annual; all others respect the toggle.
-                let annual = tier == .family ? true : isAnnual
-                try await subscriptionService.purchase(tier: tier, isAnnual: annual)
+                try await subscriptionService.purchase(tier: tier, isAnnual: isAnnual)
                 await MainActor.run {
                     isPurchasing = false
                     dismiss()

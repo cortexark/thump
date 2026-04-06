@@ -137,8 +137,8 @@ final class UserModelsTests: XCTestCase {
     }
 
     func testSubscriptionTier_coachTier_pricing() {
-        XCTAssertEqual(SubscriptionTier.coach.monthlyPrice, 6.99)
-        XCTAssertEqual(SubscriptionTier.coach.annualPrice, 59.99)
+        XCTAssertEqual(SubscriptionTier.coach.monthlyPrice, 2.99)
+        XCTAssertEqual(SubscriptionTier.coach.annualPrice, 17.99)
     }
 
     func testSubscriptionTier_familyTier_annualOnlyPricing() {
@@ -166,14 +166,30 @@ final class UserModelsTests: XCTestCase {
                       "Pro should have more features than Free")
     }
 
-    func testSubscriptionTier_allTiers_currentlyAllowFullAccess() {
-        // NOTE: Currently all features are free. If this changes, tests should be updated.
-        for tier in SubscriptionTier.allCases {
-            XCTAssertTrue(tier.canAccessFullMetrics)
-            XCTAssertTrue(tier.canAccessNudges)
-            XCTAssertTrue(tier.canAccessReports)
-            XCTAssertTrue(tier.canAccessCorrelations)
-        }
+    func testSubscriptionTier_merchandisedTier_isCoach() {
+        XCTAssertEqual(SubscriptionTier.merchandisedTier, .coach)
+    }
+
+    func testSubscriptionTier_featureGates_matchPlanShape() {
+        XCTAssertFalse(SubscriptionTier.free.canAccessFullMetrics)
+        XCTAssertFalse(SubscriptionTier.free.canAccessNudges)
+        XCTAssertFalse(SubscriptionTier.free.canAccessReports)
+        XCTAssertFalse(SubscriptionTier.free.canAccessCorrelations)
+
+        XCTAssertTrue(SubscriptionTier.pro.canAccessFullMetrics)
+        XCTAssertTrue(SubscriptionTier.pro.canAccessNudges)
+        XCTAssertFalse(SubscriptionTier.pro.canAccessReports)
+        XCTAssertTrue(SubscriptionTier.pro.canAccessCorrelations)
+
+        XCTAssertTrue(SubscriptionTier.coach.canAccessFullMetrics)
+        XCTAssertTrue(SubscriptionTier.coach.canAccessNudges)
+        XCTAssertTrue(SubscriptionTier.coach.canAccessReports)
+        XCTAssertTrue(SubscriptionTier.coach.canAccessCorrelations)
+
+        XCTAssertTrue(SubscriptionTier.family.canAccessFullMetrics)
+        XCTAssertTrue(SubscriptionTier.family.canAccessNudges)
+        XCTAssertTrue(SubscriptionTier.family.canAccessReports)
+        XCTAssertTrue(SubscriptionTier.family.canAccessCorrelations)
     }
 
     // MARK: - AlertMeta

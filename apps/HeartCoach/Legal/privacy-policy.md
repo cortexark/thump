@@ -36,7 +36,7 @@ When you sign in with Apple, we receive an anonymous, app-specific identifier is
 
 ### 1.3 Subscription Information
 
-Thump is free for the first year with full access to all features. No payment information is collected during this period. If you choose to subscribe after the free period, Apple processes your payment. We only receive confirmation of your subscription tier and its status. We do not have access to your payment method, credit card number, or billing address.
+Some users may have grandfathered launch access for a limited period. If you choose to subscribe, Apple processes your payment. We only receive confirmation of your subscription tier and its status. We do not have access to your payment method, credit card number, or billing address.
 
 ### 1.4 Usage Analytics (Opt-In)
 

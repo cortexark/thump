@@ -38,17 +38,17 @@ Thump uses Sign in with Apple for authentication. You are responsible for mainta
 
 ---
 
-## 5. Launch Offer and Subscriptions
+## 5. Launch Access and Subscriptions
 
-### 5.1 First-Year Free Access
+### 5.1 Grandfathered Launch Access
 
-All users who download Thump during the launch period receive **complimentary full access to all features for one (1) year** from the date of their first sign-in. No subscription or payment is required during this period.
+Some users who joined Thump during the original launch period may retain **complimentary Coach access for one (1) year** from the date their launch access began. This launch access is grandfathered and is not guaranteed for all new users.
 
-This includes access to all Pro and Coach tier features at no cost. You will be notified before the free period ends and given the option to subscribe to continue using premium features.
+If you have grandfathered launch access, you will be notified before it ends and given the option to subscribe to continue using premium features.
 
 ### 5.2 Future Subscriptions
 
-After the one-year free period, Thump may offer paid subscription tiers with different feature access levels. Subscription details and pricing will be displayed within the app before any charges apply. You will never be charged without your explicit consent.
+Thump may offer paid subscriptions, including the Coach plan currently presented in the app. Subscription details and pricing will be displayed within the app before any charges apply. You will never be charged without your explicit consent.
 
 ### 5.3 Billing
 

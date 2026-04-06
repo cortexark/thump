@@ -57,7 +57,7 @@ struct AppleSignInView: View {
 
             // Privacy reassurance
             Label(
-                "Your health data stays on your device",
+                "Health insights run on your device; sharing is opt-in",
                 systemImage: "lock.shield.fill"
             )
             .font(.footnote)
@@ -151,7 +151,7 @@ struct AppleSignInView: View {
             }
 
             AppLogger.error("Sign in with Apple failed: \(error.localizedDescription)")
-            errorMessage = "Sign-in failed: \(error.localizedDescription)"
+            errorMessage = friendlyErrorMessage(for: nsError)
             showError = true
 
             InteractionLog.log(
@@ -161,6 +161,27 @@ struct AppleSignInView: View {
                 details: "error: \(error.localizedDescription)"
             )
         }
+    }
+
+    private func friendlyErrorMessage(for error: NSError) -> String {
+        if error.domain == ASAuthorizationError.errorDomain {
+            switch ASAuthorizationError.Code(rawValue: error.code) {
+            case .failed:
+                return "Sign in with Apple could not start correctly. Please check that the app's Sign in with Apple capability is enabled for this build and try again."
+            case .invalidResponse:
+                return "Apple returned an invalid sign-in response. Please try again."
+            case .notHandled:
+                return "The sign-in request was not completed. Please try again."
+            case .unknown, .none:
+                break
+            case .canceled:
+                return "Sign-in was canceled."
+            @unknown default:
+                break
+            }
+        }
+
+        return "Sign-in failed: \(error.localizedDescription)"
     }
 }
 

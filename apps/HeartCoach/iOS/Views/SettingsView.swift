@@ -223,11 +223,10 @@ struct SettingsView: View {
     private var subscriptionSection: some View {
         Section {
             if localStore.profile.isInLaunchFreeYear {
-                // Launch free year — show status instead of paywall
                 HStack {
                     Label("Current Plan", systemImage: "gift.fill")
                     Spacer()
-                    Text("Coach (Free)")
+                    Text("Coach (Launch Access)")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(.green)
@@ -237,36 +236,60 @@ struct SettingsView: View {
                 }
 
                 HStack {
-                    Label("Free Access", systemImage: "clock.fill")
+                    Label("Launch Access", systemImage: "clock.fill")
                     Spacer()
                     Text("\(localStore.profile.launchFreeDaysRemaining) days remaining")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
-                Text("All features are unlocked for your first year. No payment required.")
+                Text("You were part of the launch group, so Coach stays unlocked until your complimentary year ends.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                // Phase 2: Paywall paused — show beta messaging
                 HStack {
-                    Label("Current Plan", systemImage: "gift.fill")
+                    Label("Current Plan", systemImage: "creditcard.fill")
                     Spacer()
-                    Text("All Features (Beta)")
+                    Text(currentTierDisplayName)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(localStore.tier == .free ? Color.secondary : Color.green)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.green.opacity(0.12), in: Capsule())
+                        .background(
+                            (localStore.tier == .free ? Color.gray : Color.green).opacity(0.12),
+                            in: Capsule()
+                        )
                 }
 
-                Text("All features are currently free during the beta period. Subscription plans will be available in a future update.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if localStore.tier == .free {
+                    Text("Coach unlocks the full dashboard, weekly reviews, anomaly context, and PDF wellness summaries.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        InteractionLog.log(.buttonTap, element: "open_paywall", page: "Settings")
+                        showPaywall = true
+                    } label: {
+                        HStack {
+                            Text("View Coach Plan")
+                            Spacer()
+                            Text("$2.99/mo or $17.99/year")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } else {
+                    Text("Billing is managed by Apple. Annual Coach is priced at about 50% off the monthly rate.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         } header: {
             Text("Subscription")
+        } footer: {
+            if !localStore.profile.isInLaunchFreeYear && localStore.tier == .free {
+                Text("Pricing shown in the app should match the App Store listing. If StoreKit products are configured differently, the App Store price wins.")
+            }
         }
     }
 

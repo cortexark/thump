@@ -220,7 +220,7 @@ public struct UserProfile: Codable, Equatable, Sendable {
     /// Email address from Sign in with Apple (optional, only provided on first sign-in).
     public var email: String?
 
-    /// Date when the launch free year started (first sign-in).
+    /// Date when grandfathered launch access started.
     /// Nil if the user signed up after the launch promotion ends.
     public var launchFreeStartDate: Date?
 
@@ -323,14 +323,14 @@ public struct UserProfile: Codable, Equatable, Sendable {
         steadyStreakDays >= 14
     }
 
-    /// Whether the user is currently within the launch free year.
+    /// Whether the user is currently within the grandfathered launch year.
     public var isInLaunchFreeYear: Bool {
         guard let start = launchFreeStartDate else { return false }
         guard let expiryDate = Calendar.current.date(byAdding: .year, value: 1, to: start) else { return false }
         return Date() < expiryDate
     }
 
-    /// Days remaining in the launch free year. Returns 0 if expired or not enrolled.
+    /// Days remaining in the grandfathered launch year. Returns 0 if expired or not enrolled.
     public var launchFreeDaysRemaining: Int {
         guard let start = launchFreeStartDate else { return 0 }
         guard let expiryDate = Calendar.current.date(byAdding: .year, value: 1, to: start) else { return 0 }
@@ -348,6 +348,9 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     case coach
     case family
 
+    /// The only tier currently sold to new subscribers.
+    public static let merchandisedTier: SubscriptionTier = .coach
+
     /// User-facing tier name.
     public var displayName: String {
         switch self {
@@ -363,7 +366,7 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
         switch self {
         case .free: return 0.0
         case .pro: return 3.99
-        case .coach: return 6.99
+        case .coach: return 2.99
         case .family: return 0.0  // Family is annual-only
         }
     }
@@ -373,7 +376,7 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
         switch self {
         case .free: return 0.0
         case .pro: return 29.99
-        case .coach: return 59.99
+        case .coach: return 17.99
         case .family: return 79.99
         }
     }
@@ -398,7 +401,9 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
             ]
         case .coach:
             return [
-                "Everything in Pro",
+                "Full wellness dashboard (HRV, Recovery, VO2, zone activity)",
+                "Personalized daily suggestions and nudges",
+                "Stress pattern awareness and anomaly alerts",
                 "Weekly wellness review and gentle plan tweaks",
                 "Multi-week trend exploration and progress snapshots",
                 "Shareable PDF wellness summaries",
@@ -414,26 +419,42 @@ public enum SubscriptionTier: String, Codable, Equatable, Sendable, CaseIterable
     }
 
     /// Whether this tier grants access to full metric dashboards.
-    /// NOTE: All features are currently free for all users.
     public var canAccessFullMetrics: Bool {
-        return true
+        switch self {
+        case .free:
+            return false
+        case .pro, .coach, .family:
+            return true
+        }
     }
 
     /// Whether this tier grants access to personalized nudges.
-    /// NOTE: All features are currently free for all users.
     public var canAccessNudges: Bool {
-        return true
+        switch self {
+        case .free:
+            return false
+        case .pro, .coach, .family:
+            return true
+        }
     }
 
     /// Whether this tier grants access to weekly reports and trend analysis.
-    /// NOTE: All features are currently free for all users.
     public var canAccessReports: Bool {
-        return true
+        switch self {
+        case .coach, .family:
+            return true
+        case .free, .pro:
+            return false
+        }
     }
 
     /// Whether this tier grants access to activity-trend correlation analysis.
-    /// NOTE: All features are currently free for all users.
     public var canAccessCorrelations: Bool {
-        return true
+        switch self {
+        case .free:
+            return false
+        case .pro, .coach, .family:
+            return true
+        }
     }
 }
