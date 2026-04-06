@@ -129,9 +129,16 @@ struct DashboardView: View {
                     // Hero: Buddy + Greeting + One Focus Insight
                     buddyHeroSection
 
-                    // Main content cards
+                    // Main content cards — Design A (single buddy, clean layout)
                     VStack(alignment: .leading, spacing: 16) {
-                        designBCardStack
+                        checkInSection
+                        readinessSection
+                        zoneDistributionSection
+                        dailyGoalsSection
+                        nudgeSection
+                        buddyRecommendationsSection
+                        buddyCoachSection
+                        streakSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
