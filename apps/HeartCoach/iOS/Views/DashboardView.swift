@@ -47,6 +47,9 @@ struct DashboardView: View {
     /// Keeps dashboard navigation aligned with the active tab layout.
     @AppStorage("useNewTabLayout") var useNewTabLayout: Bool = false
 
+    /// Design A/B toggle — controlled from Settings.
+    @AppStorage("thump_design_variant_b") private var useDesignB: Bool = false
+
     /// Expands the Design B "What's driving this" explainer card.
     @State var isDrivingSignalsExpanded = false
 
@@ -129,16 +132,20 @@ struct DashboardView: View {
                     // Hero: Buddy + Greeting + One Focus Insight
                     buddyHeroSection
 
-                    // Main content cards — Design A (single buddy, clean layout)
+                    // Main content cards
                     VStack(alignment: .leading, spacing: 16) {
-                        checkInSection
-                        readinessSection
-                        zoneDistributionSection
-                        dailyGoalsSection
-                        nudgeSection
-                        buddyRecommendationsSection
-                        buddyCoachSection
-                        streakSection
+                        if useDesignB {
+                            designBCardStack
+                        } else {
+                            checkInSection
+                            readinessSection
+                            zoneDistributionSection
+                            dailyGoalsSection
+                            nudgeSection
+                            buddyRecommendationsSection
+                            buddyCoachSection
+                            streakSection
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
