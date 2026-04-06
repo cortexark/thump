@@ -205,7 +205,7 @@ struct AdvicePresenter {
                     detail: "Stress is calm, but recovery is still catching up. Keep effort light and stay consistent today.",
                     icon: "leaf.fill",
                     colorName: "relaxed",
-                    actions: ["Easy Walk", "Focus Time"]
+                    actions: ["Rest", "Take a Walk"]
                 )
             }
             return StressGuidanceSpec(

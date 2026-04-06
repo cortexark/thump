@@ -61,6 +61,10 @@ public final class LocalStore: ObservableObject {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
+    /// Exposes the backing defaults to same-module extensions that persist
+    /// additional feature state without duplicating configuration.
+    var storageDefaults: UserDefaults { defaults }
+
     // MARK: - Initialization
 
     /// Creates a new `LocalStore` backed by the given `UserDefaults` suite.

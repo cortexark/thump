@@ -271,8 +271,8 @@ extension StressView {
                     icon: "leaf.fill",
                     color: ThumpColors.relaxed,
                     actions: [
-                        QuickAction(label: "Easy Walk", icon: "figure.walk"),
-                        QuickAction(label: "Focus Time", icon: "brain.head.profile")
+                        QuickAction(label: "Rest", icon: "bed.double.fill"),
+                        QuickAction(label: "Take a Walk", icon: "figure.walk")
                     ]
                 )
             }

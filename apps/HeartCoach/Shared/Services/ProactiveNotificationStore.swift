@@ -53,7 +53,7 @@ extension LocalStore {
     // MARK: - Private Persistence
 
     private func loadProactiveHistory() -> [String: [Date]] {
-        guard let data = UserDefaults.standard.data(forKey: Self.proactiveHistoryKey),
+        guard let data = storageDefaults.data(forKey: Self.proactiveHistoryKey),
               let decoded = try? JSONDecoder().decode([String: [Date]].self, from: data) else {
             return [:]
         }
@@ -62,6 +62,6 @@ extension LocalStore {
 
     private func saveProactiveHistory(_ history: [String: [Date]]) {
         guard let data = try? JSONEncoder().encode(history) else { return }
-        UserDefaults.standard.set(data, forKey: Self.proactiveHistoryKey)
+        storageDefaults.set(data, forKey: Self.proactiveHistoryKey)
     }
 }

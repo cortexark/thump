@@ -912,13 +912,23 @@ public struct StressEngine: Sendable {
 
         guard let snapshot = snapshots.first(where: {
             calendar.isDate($0.date, inSameDayAs: targetDay)
-        }), let dailyHRV = snapshot.hrvSDNN else {
+        }) else {
             return []
         }
 
         let preceding = snapshots.filter { $0.date < targetDay }
+        let fallbackDailyHRV = preceding
+            .sorted(by: { $0.date < $1.date })
+            .compactMap(\.hrvSDNN)
+            .last
+        guard let dailyHRV = snapshot.hrvSDNN
+            ?? fallbackDailyHRV
+            ?? computeBaseline(snapshots: preceding) else {
+            return []
+        }
         // Use preceding days for baseline when available; fall back to today's
-        // own HRV so the Day heatmap works on day 1 (BUG-072).
+        // own HRV or the most recent usable HRV so the Day heatmap works even
+        // when the latest daily snapshot is partially missing (BUG-072).
         let baseline = computeBaseline(snapshots: preceding) ?? dailyHRV
 
         return hourlyStressEstimates(
