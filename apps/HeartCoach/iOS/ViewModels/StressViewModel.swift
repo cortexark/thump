@@ -36,7 +36,7 @@ final class StressViewModel: ObservableObject {
     @Published var hourlyReferenceDate: Date = Date()
 
     /// The currently selected time range.
-    @Published var selectedRange: TimeRange = .day {
+    @Published var selectedRange: TimeRange = .week {
         didSet {
             Task { await loadData(force: false) }
         }

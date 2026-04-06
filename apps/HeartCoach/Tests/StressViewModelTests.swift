@@ -317,9 +317,9 @@ final class StressViewModelTests: XCTestCase {
         }))
     }
 
-    // MARK: - Handle Smart Action: restSuggestion Starts Breathing
+    // MARK: - Handle Smart Action: restSuggestion Dismisses Reminder Card
 
-    func testHandleSmartAction_restSuggestion_startsBreathing() {
+    func testHandleSmartAction_restSuggestion_dismissesCardWithoutStartingBreathing() {
         let nudge = DailyNudge(
             category: .rest,
             title: "Rest",
@@ -328,9 +328,16 @@ final class StressViewModelTests: XCTestCase {
             icon: "bed.double.fill"
         )
         let vm = StressViewModel()
+        vm.smartActions = [.restSuggestion(nudge), .standardNudge]
+        vm.smartAction = .restSuggestion(nudge)
+
         vm.handleSmartAction(.restSuggestion(nudge))
 
-        XCTAssertTrue(vm.isBreathingSessionActive)
+        XCTAssertFalse(vm.isBreathingSessionActive)
+        XCTAssertFalse(vm.smartActions.contains(where: {
+            if case .restSuggestion = $0 { return true }
+            return false
+        }))
     }
 
     // MARK: - Custom Breathing Duration

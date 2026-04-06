@@ -816,8 +816,8 @@ final class StressClickableDataFlowTests: XCTestCase {
         XCTAssertTrue(vm.walkSuggestionShown)
     }
 
-    /// handleSmartAction routes .restSuggestion to breathing session.
-    func testHandleSmartAction_restSuggestion_startsBreathing() {
+    /// handleSmartAction routes .restSuggestion to a reminder flow, not breathing.
+    func testHandleSmartAction_restSuggestion_dismissesWithoutBreathing() {
         let vm = StressViewModel()
         let nudge = DailyNudge(
             category: .rest,
@@ -826,8 +826,14 @@ final class StressClickableDataFlowTests: XCTestCase {
             durationMinutes: nil,
             icon: "bed.double.fill"
         )
+        vm.smartActions = [.restSuggestion(nudge), .standardNudge]
+        vm.smartAction = .restSuggestion(nudge)
         vm.handleSmartAction(.restSuggestion(nudge))
-        XCTAssertTrue(vm.isBreathingSessionActive)
+        XCTAssertFalse(vm.isBreathingSessionActive)
+        XCTAssertFalse(vm.smartActions.contains(where: {
+            if case .restSuggestion = $0 { return true }
+            return false
+        }))
     }
 
     // MARK: - Day Selection in Week View
