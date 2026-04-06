@@ -15,15 +15,31 @@ final class ProactiveNotificationTests: XCTestCase {
 
     private var localStore: LocalStore!
     private var service: ProactiveNotificationService!
+    private var suiteName: String!
     private let config = ProactiveNotificationConfig()
 
     override func setUp() {
         super.setUp()
-        localStore = LocalStore()
+        suiteName = "ProactiveNotificationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+        defaults.removePersistentDomain(forName: suiteName)
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        localStore = LocalStore(defaults: defaults)
         service = ProactiveNotificationService(
             localStore: localStore,
             config: config
         )
+    }
+
+    override func tearDown() {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        if let suiteName {
+            UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
+        }
+        suiteName = nil
+        service = nil
+        localStore = nil
+        super.tearDown()
     }
 
     // MARK: - 1. Morning Readiness Briefing
@@ -289,7 +305,7 @@ final class ProactiveNotificationTests: XCTestCase {
         // Smoke test: schedule a morning briefing and check it logged
         await service.scheduleMorningBriefing(
             readinessScore: 45,
-            readinessLevel: .low,
+            readinessLevel: .recovering,
             topReason: "HRV dropped and sleep was short.",
             snapshotDate: Date()
         )

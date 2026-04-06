@@ -145,6 +145,26 @@ final class StressEngineTests: XCTestCase {
         XCTAssertTrue(points.isEmpty)
     }
 
+    func testHourlyStressForDay_missingHRVUsesRecentFallback() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+        let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: today)!
+        let snapshots = [
+            HeartSnapshot(date: twoDaysAgo, restingHeartRate: 61, hrvSDNN: 46, sleepHours: 7.1),
+            HeartSnapshot(date: yesterday, restingHeartRate: 60, hrvSDNN: 49, sleepHours: 7.4),
+            HeartSnapshot(date: today, restingHeartRate: 62, hrvSDNN: nil, sleepHours: 6.8),
+        ]
+
+        let points = engine.hourlyStressForDay(
+            snapshots: snapshots,
+            date: today
+        )
+
+        XCTAssertEqual(points.count, 24)
+        XCTAssertEqual(points.map(\.hour), Array(0..<24))
+    }
+
     // MARK: - Trend Direction
 
     func testTrendDirection_risingScores_returnsRising() {
