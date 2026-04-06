@@ -467,6 +467,55 @@ final class ClickableValidationTests: XCTestCase {
         XCTAssertTrue(hasLongText, "Stressed state must show a mission sentence on Home screen")
     }
 
+    func testDesignBHomeNightState_usesRestfulBuddy() {
+        app.terminate()
+        app.launchArguments = [
+            "-UITestMode",
+            "-UITest_UseDesignB",
+            "-startTab", "0",
+            "-UITestHour", "22",
+            "-UITestReadinessScore", "55"
+        ]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        navigateToTab("Home")
+        let hero = app.otherElements["dashboard_hero"]
+        XCTAssertTrue(hero.waitForExistence(timeout: 5), "Home hero should be visible on Home")
+
+        screenshot("design_b_night_buddy")
+
+        XCTAssertTrue(hero.label.contains("Good night"), "Night hero should use the nighttime greeting")
+        XCTAssertTrue(hero.label.contains("Rest Up"), "Night hero should show the restful buddy mood")
+        XCTAssertFalse(hero.label.contains("Train Your Heart"), "Night hero should not show the daytime nudging face")
+        XCTAssertFalse(hero.label.contains("In the Zone"), "Night hero should not show the active face")
+    }
+
+    func testDesignBHomeNightState_overridesHighReadinessEnergy() {
+        app.terminate()
+        app.launchArguments = [
+            "-UITestMode",
+            "-UITest_UseDesignB",
+            "-startTab", "0",
+            "-UITestHour", "22",
+            "-UITestReadinessScore", "88"
+        ]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        navigateToTab("Home")
+        let hero = app.otherElements["dashboard_hero"]
+        XCTAssertTrue(hero.waitForExistence(timeout: 5), "Home hero should be visible on Home")
+
+        screenshot("design_b_night_high_readiness")
+
+        XCTAssertTrue(hero.label.contains("Good night"), "Night hero should keep the nighttime greeting")
+        XCTAssertTrue(hero.label.contains("Rest Up"), "Night hero should force the resting buddy mood at night")
+        XCTAssertFalse(hero.label.contains("Crushing It"), "Night hero should not show the high-energy thriving face")
+        XCTAssertFalse(hero.label.contains("Heart Happy"), "Night hero should not show the daytime content face")
+        XCTAssertFalse(hero.label.contains("In the Zone"), "Night hero should not show the active face")
+    }
+
     // MARK: - Helpers
 
     private func navigateToTab(_ name: String) {

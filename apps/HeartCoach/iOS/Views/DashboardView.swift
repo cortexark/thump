@@ -134,7 +134,7 @@ struct DashboardView: View {
 
                     // Main content cards
                     VStack(alignment: .leading, spacing: 16) {
-                        if useDesignB {
+                        if isUsingDesignB {
                             designBCardStack
                         } else {
                             checkInSection
@@ -168,11 +168,11 @@ struct DashboardView: View {
         return 388
     }
 
-    private var buddyMood: BuddyMood {
-        guard let assessment = viewModel.assessment else { return .content }
-        return BuddyMood.from(
-            assessment: assessment,
-            readinessScore: viewModel.readinessResult?.score
+    var buddyMood: BuddyMood {
+        DashboardHeroPresentation.mood(
+            assessment: viewModel.assessment,
+            readinessScore: effectiveReadinessScore,
+            hour: dashboardDisplayHour
         )
     }
 
@@ -245,6 +245,7 @@ struct DashboardView: View {
         ))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(greetingText). Buddy is feeling \(buddyMood.label). \(buddyFocusInsight ?? "")")
+        .accessibilityIdentifier("dashboard_hero")
     }
 
     /// Warm gradient that shifts with buddy mood.
@@ -314,17 +315,23 @@ struct DashboardView: View {
 
     // MARK: - Greeting
 
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let greeting: String
-        switch hour {
-        case 5..<12:  greeting = "Good morning"
-        case 12..<17: greeting = "Good afternoon"
-        case 17..<21: greeting = "Good evening"
-        default:       greeting = "Good night"  // 9PM–5AM
-        }
+    var greetingText: String {
+        let greeting = DashboardHeroPresentation.greetingPrefix(for: dashboardDisplayHour)
         let name = viewModel.profileName
         return name.isEmpty ? greeting : "\(greeting), \(name)"
+    }
+
+    var dashboardDisplayHour: Int {
+        DashboardUITestOverrides.hour
+            ?? Calendar.current.component(.hour, from: Date())
+    }
+
+    var effectiveReadinessScore: Int? {
+        DashboardUITestOverrides.readinessScore ?? viewModel.readinessResult?.score
+    }
+
+    private var isUsingDesignB: Bool {
+        DashboardUITestOverrides.useDesignB || useDesignB
     }
 
     private var formattedDate: String {

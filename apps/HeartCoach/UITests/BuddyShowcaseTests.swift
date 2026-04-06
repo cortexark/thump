@@ -2,10 +2,16 @@ import XCTest
 
 final class BuddyShowcaseTests: XCTestCase {
 
-    func testCaptureDashboardBuddy() throws {
+    private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-UITestMode", "-startTab", "0"]
+        app.launchArguments = ["-UITestMode", "-UITest_UseDesignB", "-startTab", "0"]
         app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        return app
+    }
+
+    func testCaptureDashboardBuddy() throws {
+        let app = launchApp()
 
         sleep(4) // Let animations settle
 
@@ -17,9 +23,7 @@ final class BuddyShowcaseTests: XCTestCase {
     }
 
     func testCaptureAllTabs() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-UITestMode", "-startTab", "0"]
-        app.launch()
+        let app = launchApp()
         sleep(3)
 
         // Dashboard (Home)
@@ -29,7 +33,8 @@ final class BuddyShowcaseTests: XCTestCase {
         add(shot1)
 
         // Insights tab
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10))
+        app.tabBars.buttons["Insights"].tap()
         sleep(2)
         let shot2 = XCTAttachment(screenshot: app.screenshot())
         shot2.name = "Tab_Insights"
@@ -37,7 +42,7 @@ final class BuddyShowcaseTests: XCTestCase {
         add(shot2)
 
         // Stress tab
-        app.tabBars.buttons.element(boundBy: 2).tap()
+        app.tabBars.buttons["Stress"].tap()
         sleep(2)
         let shot3 = XCTAttachment(screenshot: app.screenshot())
         shot3.name = "Tab_Stress"
@@ -45,7 +50,7 @@ final class BuddyShowcaseTests: XCTestCase {
         add(shot3)
 
         // Trends tab
-        app.tabBars.buttons.element(boundBy: 3).tap()
+        app.tabBars.buttons["Trends"].tap()
         sleep(2)
         let shot4 = XCTAttachment(screenshot: app.screenshot())
         shot4.name = "Tab_Trends"
@@ -53,7 +58,7 @@ final class BuddyShowcaseTests: XCTestCase {
         add(shot4)
 
         // Settings tab
-        app.tabBars.buttons.element(boundBy: 4).tap()
+        app.tabBars.buttons["Settings"].tap()
         sleep(2)
         let shot5 = XCTAttachment(screenshot: app.screenshot())
         shot5.name = "Tab_Settings"

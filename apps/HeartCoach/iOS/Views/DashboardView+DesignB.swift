@@ -53,9 +53,8 @@ extension DashboardView {
     /// This is the entry point called from DashboardView when useDesignB = true.
     @ViewBuilder
     var designBCardStack: some View {
-        // When embedded in the existing scroll/hero layout, show the new hero
-        // and content sections as cards. Full-screen OLED layout is in designBFullScreen.
-        designBHeroCard
+        // The dashboard already renders its primary hero above this card stack.
+        // Keep the Design B card hierarchy here without a second buddy hero.
         designBDrivingSignalsCard
         designBFeelingVsDataCard
         checkInSectionB
@@ -114,6 +113,8 @@ extension DashboardView {
         )
         .clipShape(RoundedRectangle(cornerRadius: 28))
         .animation(.easeInOut(duration: 0.4), value: designBAppState)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(greetingText). Buddy is feeling \(buddyMood.label). \(designBMissionText ?? "")")
         .accessibilityIdentifier("dashboard_design_b_hero")
     }
 
@@ -139,6 +140,9 @@ extension DashboardView {
             }
         }
         .frame(minHeight: 440)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(greetingText). Buddy is feeling \(buddyMood.label). \(designBMissionText ?? "")")
+        .accessibilityIdentifier("dashboard_design_b_hero")
     }
 
     // MARK: - Content Section (below hero)
@@ -187,7 +191,7 @@ extension DashboardView {
 
             // ThumpBuddy — 210pt hero size (§5: minimum 35% screen height)
             ThumpBuddy(
-                mood: designBAppState.buddyMood,
+                mood: buddyMood,
                 size: 105,   // ThumpBuddy size param = half the display size (frame = size*2)
                 showAura: designBAppState == .steady,  // amber aura for Steady
                 tappable: true
@@ -200,7 +204,7 @@ extension DashboardView {
     /// Score ring — clockwise fill, state color, privacy lock at 6 o'clock.
     @ViewBuilder
     private var designBScoreRing: some View {
-        let score = viewModel.readinessResult?.score ?? 0
+        let score = effectiveReadinessScore ?? 0
         let progress = Double(score) / 100.0
         let state = designBAppState
 
@@ -234,7 +238,7 @@ extension DashboardView {
     /// Chronic Steady: score demoted to 28pt Regular; "Steady" label promoted to 42pt Bold
     @ViewBuilder
     private var designBScoreHierarchy: some View {
-        let score = viewModel.readinessResult?.score ?? 0
+        let score = effectiveReadinessScore ?? 0
         let state = designBAppState
         let isSteady = state == .steady
 
@@ -498,7 +502,7 @@ extension DashboardView {
 
     /// Current app state derived from readiness score + chronic steady flag.
     var designBAppState: AppState {
-        let score = viewModel.readinessResult?.score ?? 0
+        let score = effectiveReadinessScore ?? 0
         // isChronicSteady: placeholder until Tier A lands the DesignTokens property.
         // Will be replaced by a real computed property from the view model.
         return AppState.from(score: score, isChronicSteady: isChronicSteadyState)
@@ -733,10 +737,10 @@ extension DashboardView {
                 }
 
                 HStack(spacing: 8) {
-                    checkInButtonB(emoji: "☀️", label: "Great", mood: .great, color: .green)
-                    checkInButtonB(emoji: "🌤️", label: "Good", mood: .good, color: .teal)
-                    checkInButtonB(emoji: "☁️", label: "Okay", mood: .okay, color: .orange)
-                    checkInButtonB(emoji: "🌧️", label: "Rough", mood: .rough, color: .purple)
+                    checkInButtonB(icon: "sun.max.fill", label: "Great", mood: .great, color: .green)
+                    checkInButtonB(icon: "cloud.sun.fill", label: "Good", mood: .good, color: .teal)
+                    checkInButtonB(icon: "cloud.fill", label: "Okay", mood: .okay, color: .orange)
+                    checkInButtonB(icon: "cloud.rain.fill", label: "Rough", mood: .rough, color: .purple)
                 }
             }
             .padding(16)
@@ -827,12 +831,7 @@ extension DashboardView {
             )
             .onTapGesture {
                 InteractionLog.log(.cardTap, element: "recovery_card_b", page: "Dashboard")
-                NotificationCenter.default.post(
-                    name: .thumpOpenTrendsMetric,
-                    object: nil,
-                    userInfo: [ThumpSharedKeys.trendsMetricKey: recoveryDrillDownMetric]
-                )
-                withAnimation { selectedTab = 3 }
+                navigate(to: .trends)
             }
         }
     }
@@ -928,14 +927,15 @@ extension DashboardView {
         .frame(maxWidth: .infinity)
     }
 
-    private func checkInButtonB(emoji: String, label: String, mood: CheckInMood, color: Color) -> some View {
+    private func checkInButtonB(icon: String, label: String, mood: CheckInMood, color: Color) -> some View {
         Button {
             viewModel.submitCheckIn(mood: mood)
             InteractionLog.log(.buttonTap, element: "check_in_\(label.lowercased())_b", page: "Dashboard")
         } label: {
             VStack(spacing: 4) {
-                Text(emoji)
-                    .font(.title3)
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(color)
                 Text(label)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(color)
@@ -974,12 +974,7 @@ extension DashboardView {
         )
         .onTapGesture {
             InteractionLog.log(.cardTap, element: "wow_banner_b", page: "Dashboard")
-            NotificationCenter.default.post(
-                name: .thumpOpenTrendsMetric,
-                object: nil,
-                userInfo: [ThumpSharedKeys.trendsMetricKey: recoveryDrillDownMetric]
-            )
-            withAnimation { selectedTab = 3 }
+            navigate(to: .trends)
         }
     }
 
@@ -1012,4 +1007,3 @@ extension DashboardView {
         }
     }
 }
-

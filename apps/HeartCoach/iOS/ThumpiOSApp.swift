@@ -49,11 +49,25 @@ struct ThumpiOSApp: App {
     // MARK: - Initialization
 
     init() {
-        FirebaseApp.configure()
+        Self.configureFirebase()
 
         let store = LocalStore()
         _localStore = StateObject(wrappedValue: store)
         _notificationService = StateObject(wrappedValue: NotificationService(localStore: store))
+    }
+
+    private static func configureFirebase() {
+        guard let options = FirebaseOptions.defaultOptions() else {
+            FirebaseApp.configure()
+            return
+        }
+
+        if let bundleID = Bundle.main.bundleIdentifier,
+           options.bundleID != bundleID {
+            options.bundleID = bundleID
+        }
+
+        FirebaseApp.configure(options: options)
     }
 
     // MARK: - Scene
