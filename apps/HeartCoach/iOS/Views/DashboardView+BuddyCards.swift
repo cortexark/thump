@@ -288,30 +288,4 @@ extension DashboardView {
         }
     }
 
-    /// Maps a recommendation category to the metric it improves.
-    func metricImpactLabel(_ category: NudgeCategory) -> String {
-        switch category {
-        case .walk:         return "Improves VO2 max & recovery"
-        case .rest:         return "Lowers resting heart rate"
-        case .hydrate:      return "Supports HRV & recovery"
-        case .breathe:      return "Reduces stress score"
-        case .moderate:     return "Boosts cardio fitness"
-        case .celebrate:    return "Keep it up!"
-        case .seekGuidance: return "Protect your heart health"
-        case .sunlight:     return "Improves sleep & circadian rhythm"
-        }
-    }
-
-    func metricImpactIcon(_ category: NudgeCategory) -> String {
-        switch category {
-        case .walk:         return "arrow.up.heart.fill"
-        case .rest:         return "heart.fill"
-        case .hydrate:      return "waveform.path.ecg"
-        case .breathe:      return "brain.head.profile"
-        case .moderate:     return "lungs.fill"
-        case .celebrate:    return "star.fill"
-        case .seekGuidance: return "shield.fill"
-        case .sunlight:     return "moon.zzz.fill"
-        }
-    }
 }
