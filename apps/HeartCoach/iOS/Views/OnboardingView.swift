@@ -531,8 +531,10 @@ struct OnboardingView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("Onboarding Flow") {
     OnboardingView()
         .environmentObject(LocalStore.preview)
         .environmentObject(HealthKitService.preview)
 }
+#endif
