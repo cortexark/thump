@@ -1394,7 +1394,7 @@ final class SettingsOnboardingDataFlowTests: XCTestCase {
     // MARK: - Profile: Launch Free Year
 
     func testLaunchFreeYear_showsCorrectPlan() {
-        // When isInLaunchFreeYear is true, subscription section shows "Coach (Free)"
+        // Grandfathered launch users should still report an active complimentary plan.
         let isInFreeYear = localStore.profile.isInLaunchFreeYear
         // Just verify the property is accessible and returns a boolean
         XCTAssertTrue(isInFreeYear == true || isInFreeYear == false)

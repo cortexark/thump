@@ -1,16 +1,16 @@
 // LaunchCongratsView.swift
 // Thump iOS
 //
-// Congratulations screen shown after first sign-in to inform the user
-// they have one year of free full access to all features.
+// Grandfathered launch-access screen shown for users who were enrolled
+// in the original complimentary first-year offer.
 // Platforms: iOS 17+
 
 import SwiftUI
 
 // MARK: - Launch Congratulations View
 
-/// Full-screen congratulations view shown once after the user's first
-/// sign-in, informing them of the one-year free Coach access.
+/// Full-screen launch-access view shown for grandfathered users,
+/// informing them that their complimentary Coach access is still active.
 struct LaunchCongratsView: View {
 
     /// Called when the user taps "Get Started" to dismiss and continue.
@@ -59,7 +59,7 @@ struct LaunchCongratsView: View {
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
 
-                    Text("1 Year Free Access")
+                    Text("Grandfathered Launch Access")
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundStyle(
@@ -70,7 +70,7 @@ struct LaunchCongratsView: View {
                             )
                         )
 
-                    Text("You have full access to every Thump feature for one year — completely free. No subscription required.")
+                    Text("You joined during the launch period, so Coach stays unlocked for your complimentary first year.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

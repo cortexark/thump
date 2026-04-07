@@ -57,7 +57,7 @@ struct AppleSignInView: View {
 
             // Privacy reassurance
             Label(
-                "Your health data stays on your device",
+                "Health insights run on your device; sharing is opt-in",
                 systemImage: "lock.shield.fill"
             )
             .font(.footnote)
@@ -76,13 +76,29 @@ struct AppleSignInView: View {
             .padding(.horizontal, 32)
             .padding(.bottom, 16)
 
-            // Skip option for development/testing
+            // Personal Team provisioning cannot use Sign in with Apple on-device.
+            // Keep a clearly labeled debug path so phone builds still work.
             #if DEBUG
-            Button("Skip Sign-In (Debug)") {
-                onSignedIn()
+            VStack(spacing: 8) {
+                Text("Developer build: use Dev Mode if this phone build is signed with a Personal Team account.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                Button("Continue in Dev Mode") {
+                    InteractionLog.log(
+                        .buttonTap,
+                        element: "continue_in_dev_mode",
+                        page: "SignIn",
+                        details: "debug_bypass"
+                    )
+                    AppLogger.info("Using debug sign-in bypass for development build")
+                    onSignedIn()
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
             }
-            .font(.caption)
-            .foregroundStyle(.tertiary)
             .padding(.bottom, 8)
             #endif
 
@@ -151,7 +167,7 @@ struct AppleSignInView: View {
             }
 
             AppLogger.error("Sign in with Apple failed: \(error.localizedDescription)")
-            errorMessage = "Sign-in failed: \(error.localizedDescription)"
+            errorMessage = friendlyErrorMessage(for: nsError)
             showError = true
 
             InteractionLog.log(
@@ -161,6 +177,37 @@ struct AppleSignInView: View {
                 details: "error: \(error.localizedDescription)"
             )
         }
+    }
+
+    private func friendlyErrorMessage(for error: NSError) -> String {
+        if error.domain == ASAuthorizationError.errorDomain {
+            switch ASAuthorizationError.Code(rawValue: error.code) {
+            case .failed:
+                return "Sign in with Apple could not start correctly. Please check that the app's Sign in with Apple capability is enabled for this build and try again."
+            case .invalidResponse:
+                return "Apple returned an invalid sign-in response. Please try again."
+            case .notHandled:
+                return "The sign-in request was not completed. Please try again."
+            case .notInteractive:
+                return "Sign in with Apple is not available interactively in this context. Try again from the app on your phone."
+            case .matchedExcludedCredential:
+                return "Apple matched a credential that this build cannot use. Please try another account or use Dev Mode for local testing."
+            case .credentialImport, .credentialExport:
+                return "This Apple credential could not be used by the current build. Please try again."
+            case .preferSignInWithApple:
+                return "This account prefers Sign in with Apple. Please use the Apple sign-in button to continue."
+            case .deviceNotConfiguredForPasskeyCreation:
+                return "This device is not configured for that Apple sign-in flow yet. Please check iCloud Keychain settings and try again."
+            case .unknown, .none:
+                break
+            case .canceled:
+                return "Sign-in was canceled."
+            @unknown default:
+                break
+            }
+        }
+
+        return "Sign-in failed: \(error.localizedDescription)"
     }
 }
 

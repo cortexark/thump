@@ -142,11 +142,6 @@ struct ThumpiOSApp: App {
             LegalGateView { legalAccepted = true }
         } else if !isSignedIn {
             AppleSignInView {
-                // Record launch free year start date on first sign-in
-                if localStore.profile.launchFreeStartDate == nil {
-                    localStore.profile.launchFreeStartDate = Date()
-                    localStore.saveProfile()
-                }
                 isSignedIn = true
             }
         } else if !launchCongratsShown && localStore.profile.isInLaunchFreeYear {
@@ -219,11 +214,11 @@ struct ThumpiOSApp: App {
         // Sync subscription tier to local store
         await MainActor.run {
             if localStore.profile.isInLaunchFreeYear {
-                // Launch promotion: grant full Coach access for the first year
+                // Preserve grandfathered launch access for existing users only.
                 subscriptionService.currentTier = .coach
                 localStore.tier = .coach
                 localStore.saveTier()
-                AppLogger.info("Launch free year active — Coach tier granted (\(localStore.profile.launchFreeDaysRemaining) days remaining)")
+                AppLogger.info("Grandfathered launch access active — Coach tier granted (\(localStore.profile.launchFreeDaysRemaining) days remaining)")
             } else {
                 #if targetEnvironment(simulator)
                 // Force Coach tier in the simulator for full feature access during development

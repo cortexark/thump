@@ -1122,17 +1122,18 @@ final class PaywallElementTests: XCTestCase {
         XCTAssertTrue(isAnnual, "Can switch back to annual")
     }
 
-    /// Three subscribe tiers exist
-    func testPaywall_threeTiers() {
-        let tiers = ["pro", "coach", "family"]
-        XCTAssertEqual(tiers.count, 3, "Should have Pro, Coach, Family tiers")
+    /// Coach is the only public paid plan.
+    func testPaywall_singlePaidPlan() {
+        let merchandisedTier = SubscriptionTier.merchandisedTier
+        XCTAssertEqual(merchandisedTier, .coach)
     }
 
-    /// Family tier is always annual
-    func testPaywall_familyAlwaysAnnual() {
-        // Family subscribe button always passes annual=true
-        let familyAnnual = true
-        XCTAssertTrue(familyAnnual, "Family tier is always annual")
+    /// Annual Coach pricing lands at about 50% off monthly.
+    func testPaywall_annualCoachDiscountIsAboutHalfOff() {
+        let monthlyAnnualized = SubscriptionTier.coach.monthlyPrice * 12
+        let savingsRatio = 1.0 - (SubscriptionTier.coach.annualPrice / monthlyAnnualized)
+        XCTAssertGreaterThan(savingsRatio, 0.49)
+        XCTAssertLessThan(savingsRatio, 0.51)
     }
 
     /// Restore purchases button exists

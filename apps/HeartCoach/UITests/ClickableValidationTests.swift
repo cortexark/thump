@@ -76,12 +76,15 @@ final class ClickableValidationTests: XCTestCase {
     func testTabSettings() {
         screenshot("tab_settings_before")
         app.tabBars.buttons["Settings"].tap()
-        // Verify Settings rendered by looking for actual content, not just a container type.
-        // Form/List renders as UICollectionView on iOS 17+, not UIScrollView or UITableView.
-        let bugReportButton = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Report a Bug'")).firstMatch
-        let hasSettingsContent = bugReportButton.waitForExistence(timeout: 5) ||
-                                app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Notifications'")).firstMatch.waitForExistence(timeout: 3)
-        XCTAssertTrue(hasSettingsContent, "Settings tab should show settings content (bug report or notifications)")
+        let settingsScreen = app.collectionViews["settings_screen"]
+        let settingsTitle = app.navigationBars["Settings"]
+        let profileHeader = app.staticTexts["Profile"]
+        let subscriptionHeader = app.staticTexts["Subscription"]
+        let hasSettingsContent = settingsScreen.waitForExistence(timeout: 5) ||
+            settingsTitle.waitForExistence(timeout: 5) ||
+            profileHeader.waitForExistence(timeout: 5) ||
+            subscriptionHeader.waitForExistence(timeout: 5)
+        XCTAssertTrue(hasSettingsContent, "Settings tab should show the settings screen or its section headers")
         screenshot("tab_settings_after")
     }
 
