@@ -194,10 +194,6 @@ struct AppleSignInView: View {
                 return "Apple matched a credential that this build cannot use. Please try another account or use Dev Mode for local testing."
             case .credentialImport, .credentialExport:
                 return "This Apple credential could not be used by the current build. Please try again."
-            case .preferSignInWithApple:
-                return "This account prefers Sign in with Apple. Please use the Apple sign-in button to continue."
-            case .deviceNotConfiguredForPasskeyCreation:
-                return "This device is not configured for that Apple sign-in flow yet. Please check iCloud Keychain settings and try again."
             case .unknown, .none:
                 break
             case .canceled:
