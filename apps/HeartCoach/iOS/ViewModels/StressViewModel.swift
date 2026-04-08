@@ -217,6 +217,10 @@ final class StressViewModel: ObservableObject {
             }
             #endif
 
+            // Ensure today is present so day-view stress never falls back to
+            // yesterday by default when the history query excludes the current day.
+            snapshots = await mergeWithTodaySnapshot(snapshots)
+
             history = snapshots
 
             // When coordinator is available, read pre-computed values
@@ -253,9 +257,13 @@ final class StressViewModel: ObservableObject {
             selectedDayHourlyPoints = []
         } else {
             selectedDayForDetail = date
-            selectedDayHourlyPoints = engine.hourlyStressForDay(
+            let points = engine.hourlyStressForDay(
                 snapshots: history,
                 date: date
+            )
+            selectedDayHourlyPoints = visibleHourlyPointsForDisplay(
+                points,
+                on: date
             )
         }
     }
@@ -582,9 +590,13 @@ final class StressViewModel: ObservableObject {
             snapshots: history,
             date: today
         )
-        if !todayHourly.isEmpty {
+        let visibleTodayHourly = visibleHourlyPointsForDisplay(
+            todayHourly,
+            on: today
+        )
+        if !visibleTodayHourly.isEmpty {
             hourlyReferenceDate = today
-            hourlyPoints = todayHourly
+            hourlyPoints = visibleTodayHourly
         } else if let latestDate = history.map(\.date).max() {
             hourlyReferenceDate = latestDate
             hourlyPoints = engine.hourlyStressForDay(
@@ -599,6 +611,49 @@ final class StressViewModel: ObservableObject {
         // Reset selected day detail
         selectedDayForDetail = nil
         selectedDayHourlyPoints = []
+    }
+
+    /// Applies display-time filtering for hourly points.
+    ///
+    /// For today, we only show up to the current local hour so future
+    /// buckets (e.g., 11 PM at 10 AM) are not shown as current data.
+    /// For past days, all 24 hourly buckets remain visible.
+    func visibleHourlyPointsForDisplay(
+        _ points: [HourlyStressPoint],
+        on date: Date,
+        now: Date = Date()
+    ) -> [HourlyStressPoint] {
+        guard Calendar.current.isDate(date, inSameDayAs: now) else {
+            return points
+        }
+        let currentHour = Calendar.current.component(.hour, from: now)
+        return points.filter { $0.hour <= currentHour }
+    }
+
+    /// Adds or replaces today's snapshot so stress day-view calculations
+    /// are anchored to the current day when available.
+    private func mergeWithTodaySnapshot(_ snapshots: [HeartSnapshot]) async -> [HeartSnapshot] {
+        var merged = snapshots
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        do {
+            let todaySnapshot = try await healthKitService.fetchTodaySnapshot()
+            if let existingIndex = merged.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: today) }) {
+                merged[existingIndex] = todaySnapshot
+            } else {
+                merged.append(todaySnapshot)
+            }
+        } catch {
+            AppLogger.healthKit.warning("Today snapshot fetch failed: \(error.localizedDescription)")
+            #if targetEnvironment(simulator)
+            if !merged.contains(where: { calendar.isDateInToday($0.date) }) {
+                merged.append(MockData.mockTodaySnapshot)
+            }
+            #endif
+        }
+
+        return merged.sorted { $0.date < $1.date }
     }
 
     /// Learn sleep patterns from history.

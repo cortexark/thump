@@ -367,4 +367,58 @@ final class StressViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.assessmentReadinessLevel, .recovering)
     }
+
+    // MARK: - Hourly Display Filtering
+
+    func testVisibleHourlyPointsForDisplay_todayFiltersFutureHours() {
+        let vm = StressViewModel()
+        let calendar = Calendar.current
+        let now = calendar.date(
+            bySettingHour: 10,
+            minute: 15,
+            second: 0,
+            of: Date()
+        ) ?? Date()
+        let today = calendar.startOfDay(for: now)
+
+        let points = (0..<24).map { hour in
+            HourlyStressPoint(
+                date: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: today) ?? today,
+                hour: hour,
+                score: 50,
+                level: .balanced
+            )
+        }
+
+        let visible = vm.visibleHourlyPointsForDisplay(points, on: today, now: now)
+        XCTAssertEqual(visible.count, 11, "10 AM should show 0...10 only")
+        XCTAssertEqual(visible.last?.hour, 10)
+    }
+
+    func testVisibleHourlyPointsForDisplay_pastDayKeepsAllHours() {
+        let vm = StressViewModel()
+        let calendar = Calendar.current
+        let now = calendar.date(
+            bySettingHour: 10,
+            minute: 15,
+            second: 0,
+            of: Date()
+        ) ?? Date()
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        let dayStart = calendar.startOfDay(for: yesterday)
+
+        let points = (0..<24).map { hour in
+            HourlyStressPoint(
+                date: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dayStart) ?? dayStart,
+                hour: hour,
+                score: 50,
+                level: .balanced
+            )
+        }
+
+        let visible = vm.visibleHourlyPointsForDisplay(points, on: dayStart, now: now)
+        XCTAssertEqual(visible.count, 24)
+        XCTAssertEqual(visible.first?.hour, 0)
+        XCTAssertEqual(visible.last?.hour, 23)
+    }
 }
