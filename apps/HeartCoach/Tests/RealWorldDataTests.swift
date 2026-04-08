@@ -297,10 +297,17 @@ final class RealWorldDataTests: XCTestCase {
     // MARK: Weekend warrior pattern
 
     func testRealistic_weekendWarrior_noFalseAlarms() {
-        // Build 30 days: sedentary Mon-Fri, very active Sat-Sun
+        // Build 30 days: sedentary Mon-Fri, very active Sat-Sun.
+        // Use a fixed anchor date so weekday/weekend alignment is deterministic
+        // and independent of when CI executes.
+        let calendar = Calendar(identifier: .gregorian)
+        let referenceSunday = calendar.date(
+            from: DateComponents(year: 2026, month: 3, day: 29)
+        )!
+
         let data: [HeartSnapshot] = (0..<30).map { day in
-            let date = Calendar.current.date(byAdding: .day, value: -29 + day, to: Date())!
-            let weekday = Calendar.current.component(.weekday, from: date)
+            let date = calendar.date(byAdding: .day, value: -29 + day, to: referenceSunday)!
+            let weekday = calendar.component(.weekday, from: date)
             let isWeekend = weekday == 1 || weekday == 7
             var rng = SeededRNG(seed: 2000 + UInt64(day))
 

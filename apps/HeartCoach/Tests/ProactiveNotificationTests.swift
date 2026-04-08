@@ -15,6 +15,7 @@ final class ProactiveNotificationTests: XCTestCase {
 
     private var localStore: LocalStore!
     private var service: ProactiveNotificationService!
+    private var notificationCenter: TestProactiveNotificationCenter!
     private var suiteName: String!
     private let config = ProactiveNotificationConfig()
 
@@ -25,9 +26,15 @@ final class ProactiveNotificationTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         localStore = LocalStore(defaults: defaults)
+        notificationCenter = TestProactiveNotificationCenter()
+        let fixedNow = Calendar(identifier: .gregorian).date(
+            from: DateComponents(year: 2026, month: 4, day: 8, hour: 9, minute: 0)
+        ) ?? Date()
         service = ProactiveNotificationService(
+            center: notificationCenter,
             localStore: localStore,
-            config: config
+            config: config,
+            now: { fixedNow }
         )
     }
 
@@ -38,6 +45,7 @@ final class ProactiveNotificationTests: XCTestCase {
         }
         suiteName = nil
         service = nil
+        notificationCenter = nil
         localStore = nil
         super.tearDown()
     }
@@ -313,5 +321,22 @@ final class ProactiveNotificationTests: XCTestCase {
         // If we get here without crash, the service constructed valid content
         let dates = localStore.proactiveNotificationDates(for: .morningBriefing)
         XCTAssertGreaterThan(dates.count, 0, "Smoke test: morning briefing should schedule")
+    }
+}
+
+private final class TestProactiveNotificationCenter: ProactiveNotificationCenter {
+    private var pending: [UNNotificationRequest] = []
+
+    func pendingNotificationRequests() async -> [UNNotificationRequest] {
+        pending
+    }
+
+    func add(_ request: UNNotificationRequest) async throws {
+        pending.removeAll { $0.identifier == request.identifier }
+        pending.append(request)
+    }
+
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {
+        pending.removeAll { identifiers.contains($0.identifier) }
     }
 }
