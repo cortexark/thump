@@ -13,6 +13,18 @@
 import Foundation
 import UserNotifications
 
+// MARK: - Notification Center Abstraction
+
+/// Small abstraction to make scheduling logic testable without relying on
+/// simulator/system notification authorization state.
+protocol ProactiveNotificationCenter {
+    func pendingNotificationRequests() async -> [UNNotificationRequest]
+    func add(_ request: UNNotificationRequest) async throws
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+}
+
+extension UNUserNotificationCenter: ProactiveNotificationCenter {}
+
 // MARK: - Configuration
 
 /// All thresholds in one testable struct — no magic numbers (Gemini design).
@@ -96,24 +108,27 @@ final class ProactiveNotificationService: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let center: UNUserNotificationCenter
+    private let center: any ProactiveNotificationCenter
     private let localStore: LocalStore
     private let config: ProactiveNotificationConfig
     private let calendar: Calendar
+    private let now: @Sendable () -> Date
     private let gate = ProactiveSchedulingGate()
 
     // MARK: - Initialization
 
     init(
-        center: UNUserNotificationCenter = .current(),
+        center: any ProactiveNotificationCenter = UNUserNotificationCenter.current(),
         localStore: LocalStore,
         config: ProactiveNotificationConfig = ProactiveNotificationConfig(),
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.center = center
         self.localStore = localStore
         self.config = config
         self.calendar = calendar
+        self.now = now
     }
 
     // MARK: - 1. Morning Readiness Briefing
@@ -129,7 +144,7 @@ final class ProactiveNotificationService: ObservableObject {
         guard await canSchedule(type: type, snapshotDate: snapshotDate) else { return }
 
         // Only fire before noon
-        let hour = calendar.component(.hour, from: Date())
+        let hour = calendar.component(.hour, from: now())
         guard hour < 12 else { return }
 
         let levelWord: String
@@ -241,7 +256,7 @@ final class ProactiveNotificationService: ObservableObject {
               !overtrained else { return }
 
         // Weekly cap
-        let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: now()) ?? now()
         let recentCount = localStore.proactiveNotificationDates(for: type)
             .filter { $0 > weekAgo }
             .count
@@ -272,7 +287,7 @@ final class ProactiveNotificationService: ObservableObject {
 
         // Strict cooldown: max 1 per 48h
         if let lastSent = localStore.proactiveNotificationDates(for: type).max() {
-            let hoursSince = Date().timeIntervalSince(lastSent) / 3600
+            let hoursSince = now().timeIntervalSince(lastSent) / 3600
             guard hoursSince >= config.illnessDetectionCooldownHours else { return }
         }
 
@@ -373,12 +388,12 @@ final class ProactiveNotificationService: ObservableObject {
     ) async -> Bool {
         // Data freshness
         if let snapshotDate {
-            let staleHours = Date().timeIntervalSince(snapshotDate) / 3600
+            let staleHours = now().timeIntervalSince(snapshotDate) / 3600
             guard staleHours < config.morningBriefingStaleHours else { return false }
         }
 
         // Daily budget (GPT-5.4 fix #6)
-        let today = calendar.startOfDay(for: Date())
+        let today = calendar.startOfDay(for: now())
         let todayCount = ProactiveNotificationType.allCases
             .flatMap { localStore.proactiveNotificationDates(for: $0) }
             .filter { $0 >= today }
@@ -415,7 +430,7 @@ final class ProactiveNotificationService: ObservableObject {
 
         do {
             try await center.add(request)
-            localStore.logProactiveNotification(type: type, at: Date())
+            localStore.logProactiveNotification(type: type, at: now())
             AppLogger.info("[ProactiveNotification] Scheduled: \(type.rawValue)")
         } catch {
             AppLogger.engine.warning("[ProactiveNotification] Failed to schedule \(type.rawValue): \(error.localizedDescription)")
