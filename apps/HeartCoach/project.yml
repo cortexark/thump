@@ -177,6 +177,44 @@ schemes:
     archive:
       config: Release
 
+  Thump Dev:
+    build:
+      targets:
+        Thump: all
+        ThumpCoreTests: [test]
+        ThumpUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - ThumpCoreTests
+        - ThumpUITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  Thump Prod:
+    build:
+      targets:
+        Thump: all
+    run:
+      config: Release
+    test:
+      config: Release
+      targets:
+        - ThumpCoreTests
+    profile:
+      config: Release
+    analyze:
+      config: Release
+    archive:
+      config: Release
+
   ThumpWatch:
     build:
       targets:
