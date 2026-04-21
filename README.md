@@ -2,16 +2,15 @@
 
 A native iOS 17+ and watchOS 10+ app that helps users understand their heart health trends through Apple Watch data, personalized insights, and gentle wellness nudges.
 
-## Demo
+## Video Demo
 
-### iOS App
-https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/ios-demo.mp4
+![Thump Landing Page Demo](apps/HeartCoach/web/Thump_Landing_Page.gif)
 
-### Apple Watch
-https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/watch-demo.mp4
-
-### Website
-https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/website-demo.mp4
+- Full product demo (iOS + Watch + Website): https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/thump-demo.mp4
+- iOS app demo: https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/ios-demo.mp4
+- Apple Watch demo: https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/watch-demo.mp4
+- Website demo: https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/demos/website-demo.mp4
+- Landing page full video: https://github.com/cortexark/thump/raw/main/apps/HeartCoach/web/Thump_Landing_Page.mp4
 
 ## What It Does
 
